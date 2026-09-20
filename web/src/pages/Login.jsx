@@ -1,0 +1,144 @@
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowRight, Loader2, Mail, Lock, Sparkles } from "lucide-react";
+import {
+  AuthShell,
+  AuthField,
+  AuthPrimaryButton,
+  AuthErrorBanner,
+} from "@/components/auth/AuthShell";
+import AILogo from "@/components/layout/AILogo";
+import { useAuth } from "@/context/AuthContext";
+import { useLang } from "@/context/LangContext";
+
+const DEMO = { email: "admin@simata.id", password: "Test@1234" };
+
+export default function Login() {
+  const { login } = useAuth();
+  const { t } = useLang();
+  const nav = useNavigate();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  function fillDemo() {
+    setForm({ ...DEMO });
+    setErr("");
+  }
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setErr("");
+    setLoading(true);
+    try {
+      await login(form);
+      nav("/dashboard");
+    } catch (e) {
+      setErr(e.message || t("auth.loginFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <AuthShell
+      headline={
+        <>
+          {t("auth.headline.login1")}
+          <br />
+          <em style={{ fontStyle: "italic" }}>{t("auth.headline.login2")}</em>
+        </>
+      }
+      subhead={t("auth.login.subhead")}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="mb-12">
+          <AILogo size={48} />
+        </div>
+
+        <h1 className="font-display text-[34px] font-semibold tracking-tight text-[var(--ink)] leading-[1.05]">
+          {t("auth.welcomeBack")}
+        </h1>
+        <p className="text-[var(--ink-muted)] mt-2 text-[15px]">
+          {t("auth.loginDesc")}
+        </p>
+
+        <form onSubmit={onSubmit} className="mt-9 space-y-4">
+          <AuthField
+            label={t("common.email")}
+            type="email"
+            autoComplete="email"
+            value={form.email}
+            onChange={(v) => setForm({ ...form, email: v })}
+            placeholder="you@example.com"
+            icon={Mail}
+          />
+
+          <AuthField
+            label={t("common.password")}
+            type="password"
+            autoComplete="current-password"
+            value={form.password}
+            onChange={(v) => setForm({ ...form, password: v })}
+            placeholder="••••••••"
+            icon={Lock}
+            extra={
+              <Link
+                to="/forgot-password"
+                className="text-xs text-[var(--accent-strong)] font-semibold hover:underline"
+              >
+                {t("auth.forgot")}
+              </Link>
+            }
+          />
+
+          <AuthErrorBanner>{err}</AuthErrorBanner>
+
+          <div className="pt-1">
+            <AuthPrimaryButton type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  {t("auth.signingIn")}
+                </>
+              ) : (
+                <>
+                  {t("auth.signIn")} <ArrowRight size={15} />
+                </>
+              )}
+            </AuthPrimaryButton>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-[var(--border)]" />
+            <span className="text-[11px] uppercase tracking-wider text-[var(--ink-muted)] font-semibold">{t("auth.or")}</span>
+            <div className="h-px flex-1 bg-[var(--border)]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={fillDemo}
+            className="w-full h-12 rounded-2xl border border-dashed border-[var(--accent)]/40 bg-[var(--accent-soft)]/40 text-sm font-semibold text-[var(--accent-strong)] hover:bg-[var(--accent-soft)] transition-colors inline-flex items-center justify-center gap-2"
+          >
+            <Sparkles size={14} /> {t("auth.useDemo")}
+          </button>
+        </form>
+
+        <div className="text-sm text-[var(--ink-muted)] text-center mt-8">
+          {t("auth.noAccount")}{" "}
+          <Link
+            to="/register"
+            className="text-[var(--accent-strong)] font-semibold hover:underline"
+          >
+            {t("auth.createOne")}
+          </Link>
+        </div>
+      </motion.div>
+    </AuthShell>
+  );
+}
