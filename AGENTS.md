@@ -1,31 +1,36 @@
 # AGENTS.md
 
-Go (Fiber v3) API + Vite React SPA in `web/`. Two separate apps, no shared workspace. Backend module `github.com/tertua/invoiceman`, entry `main.go`. Frontend entry `web/src/main.jsx` → `App.jsx` → `routes.jsx`.
+## Repository Shape
 
-## Backend (Go, repo root)
+- The repository contains two independent apps: the Go/Fiber API at the root and the Vite/React SPA in `web/`.
+- Backend entrypoint is `main.go`; frontend entrypoint is `web/src/main.jsx`, with routing in `web/src/routes.jsx`.
+- Keep the application boundaries: `app/` contains business logic (`controllers`, `models`, `queries`) and must not import infrastructure; `pkg/` contains project wiring; `platform/` contains database/cache infrastructure. See the directory-level `BUSINESS_LOGIC.md`, `PROJECT_SPECIFIC.md`, and `PLATFORM_LEVEL.md` files before moving code.
 
-- Base API path is `/api/v1` (`pkg/routes/*_routes.go`); Swagger at `/swagger/index.html`. Regenerate after annotation/controller changes: `swag init` (requires `swag` CLI; also runs as part of `make run`, `make docker.run`). `docs/` is generated but committed.
-- Layering (enforced by convention, see `app/BUSINESS_LOGIC.md`, `pkg/PROJECT_SPECIFIC.md`, `platform/PLATFORM_LEVEL.md`):
-  - `app/` — business logic only: `controllers/`, `models/`, `queries/`. No infra imports.
-  - `pkg/` — project wiring: `configs/`, `middleware/`, `routes/`, `repository/` (consts), `utils/`.
-  - `platform/` — infra: `database/` (pgx/mysql via `OpenDBConnection`, `DB_TYPE=pgx|mysql`), `cache/redis.go`, `migrations/`.
-- Env: `main.go` uses `godotenv/autoload`, so `.env` (gitignored) is required locally — copy from `.env.example`. Tests (`pkg/routes/*_test.go`) load `../../.env.test` explicitly via `godotenv.Load`, not `.env`. Note hostnames differ: `.env.example` uses `template-postgres`/`template-redis` (docker network), `.env.test` uses `host.docker.internal`.
-- Migrations use `golang-migrate/migrate` CLI on `platform/migrations`: `make migrate.up|down` (`make migrate.force version=N`). `Makefile` hardcodes `DATABASE_URL=postgres://postgres:password@template-postgres/postgres?sslmode=disable` — it ignores `.env`, so migrations only work against that docker-network host.
+## Backend
 
-## Makefile gotchas
+- Use Go 1.27. The API is rooted at `/api`; Swagger is at `/swagger/index.html`.
+- Regenerate committed Swagger output in `docs/` with `swag init` after changing API annotations or controllers. `make run` and `make docker.run` also invoke it.
+- `POST /api/auth/register` and `/login` establish HttpOnly JWT session cookies. Private routes use `AuthRequired`; Redis is used when `REDIS_HOST` is set, otherwise sessions are in memory. Bearer authentication is also accepted.
+- API successes expose their data keys directly; errors use `{"error":{"message","details"}}`. Dates are exchanged as `YYYY-MM-DD` strings. Keep frontend parsing aligned with `pkg/utils/response.go` and `web/src/api/client.js`.
+- With an empty `SQL_DSN`, the app uses auto-created SQLite at `SQLITE_PATH` (default `./data/invoiceman.db`); a `postgres://` DSN selects PostgreSQL. Schema setup is GORM `AutoMigrate` at startup and in test setup; do not add or expect migration files or a migration CLI.
+- `.env` is auto-loaded by `main.go`. Local development needs no database or Redis service: SQLite and in-memory sessions are the defaults. Docker builds require a root `.env` because the `Dockerfile` copies it into the scratch image. Start from `.env.example` when needed.
 
-- `make test` = `clean` + `gocritic` + `gosec` + `golangci-lint` + `go test ./...`, and `make build` depends on `test`. Those three linters plus `migrate`/`swag` CLIs may not be installed — for a focused check run `go test ./...` or `go test ./pkg/routes/ -run TestPrivateRoutes -v` directly instead of `make test`.
-- `make run` = `swag` + `build` (build itself re-runs full `test` chain) then runs `./build/apiserver`. Expects Postgres/Redis reachable per `.env`.
-- `make docker.run` chains `network → postgres → swag → fiber → redis → migrate.up` with container names `template-postgres`/`template-fiber`/`template-redis`. `Dockerfile` (scratch image) `COPY`s `.env` into the image, so `.env` must exist before `docker build`.
-- Server port defaults to `5000` (`SERVER_PORT`); Swagger URL `http://127.0.0.1:5000/swagger/index.html`.
+## Verification
 
-## Frontend (`web/`)
+- Focused backend check: `go test ./...`.
+- Focused route flow check: `go test ./pkg/routes/ -run TestClientInvoiceFlow -v`.
+- `make test` additionally runs `clean`, `gocritic`, `gosec`, `golangci-lint`, and verbose coverage; these tools may not be installed. `make build` depends on that full target.
+- `make run` regenerates Swagger, runs the full build/test chain, then starts on port `5000`.
+- The Docker flow is `make docker.run`; it creates `template-network`, `template-postgres`, `template-fiber`, and `template-redis`. Stop it with `make docker.stop`.
 
-- Commands (run in `web/`): `npm run dev` (vite `:5173`), `npm run build`, `npm run lint` (flat `eslint.config.js`, ignores `dist`). No tests.
-- Vite dev proxy sends `/api` → `http://localhost:8000`, but the Go server defaults to port `5000` and serves `/api/v1` book/auth/token routes, while `web/src/api/*.js` calls `/auth/*`, `/invoices`, etc. via `baseURL: "/api"`. Frontend and backend are currently **not wired together** — do not assume an endpoint exists on both sides; verify in `pkg/routes/` vs `web/src/api/`.
-- Conventions: `@` → `src/` (set in both `vite.config.js` and `jsconfig.json`); routing via `createBrowserRouter` in `src/routes.jsx` with `ProtectedShell` (AuthContext) guarding `/dashboard`, `/invoices/*`, `/clients/*`, `/expenses`, `/payments`, `/items`, `/reports`, `/settings`; public `/pay/:token`. Data fetching via TanStack Query (`retry: 1`, no window refocus, 30s stale); axios `apiClient` normalizes errors to `{status, message, details}`.
+## Frontend
 
-## Style / ops
+- From `web/`, use `npm run dev`, `npm run build`, or `npm run lint`. There is no frontend test script.
+- Vite serves on `5173` and proxies `/api` to `http://localhost:5000`; run the Go API separately for API-backed development.
+- `@` aliases to `web/src`. TanStack Query is configured for one retry, no refetch on window focus, and a 30-second stale time. Axios normalizes API failures in `web/src/api/client.js`.
+- Backend routes are currently implemented for auth, clients, invoices, and dashboard. The SPA also calls APIs for items, expenses, payments, settings, reports, public payments, and AI; verify backend support before assuming those calls work.
 
-- `.editorconfig`: 2-space indent everywhere except Go (tabs). No CI workflows or pre-commit hooks in repo. `opencode.json` loads this file as instructions.
-- Language: all code, comments, docs, commit messages in English. Indonesian only for chat with the user, never in the repo.
+## Workflow
+
+- Use 2-space indentation in frontend/config files and tabs in Go, per `.editorconfig`.
+- `opencode.json` loads this file as the repository instruction source. Keep code, comments, and repository documentation in English.
