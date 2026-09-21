@@ -156,7 +156,7 @@ export default function Expenses() {
                 </div>
                 <div className="hidden md:block text-sm text-[var(--ink-muted)] tabular">{formatDate(exp.expense_date)}</div>
                 <div className="text-sm font-semibold text-[var(--ink)] tabular text-right">{formatMoney(exp.amount, exp.currency)}</div>
-                <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center justify-end gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity">
                   <button onClick={(e) => { e.stopPropagation(); setModal(exp); }} className="h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)]"><Pencil size={13} /></button>
                   <button onClick={(e) => onDelete(e, exp)} className="h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]"><Trash2 size={13} /></button>
                 </div>

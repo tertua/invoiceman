@@ -325,7 +325,7 @@ function PaymentCard({ invoice }) {
               <div className="text-sm font-semibold text-[var(--success)] tabular">{formatMoney(p.amount, currency)}</div>
               <button
                 onClick={() => onDelete(p)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
+                className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
                 aria-label={t("common.delete")}
               >
                 <Trash2 size={12} />

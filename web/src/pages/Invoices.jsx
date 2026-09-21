@@ -167,7 +167,7 @@ export default function Invoices() {
                 </div>
                 <div className="flex items-center justify-end gap-1">
                   <StatusBadge status={inv.effective_status} />
-                  <div className="hidden group-hover:flex items-center gap-0.5 ml-1">
+                  <div className="flex md:hidden md:group-hover:flex md:group-focus-within:flex items-center gap-0.5 ml-1">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
