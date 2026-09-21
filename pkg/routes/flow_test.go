@@ -64,8 +64,45 @@ func TestAuthFlow(t *testing.T) {
 	assert.Equal(t, 201, resp.StatusCode)
 	body := decodeBody(t, resp)
 	assert.Equal(t, "flow@example.com", body["user"].(map[string]interface{})["email"])
+	assert.Equal(t, "admin", body["user"].(map[string]interface{})["role"])
 	cookies := resp.Cookies()
 	require.NotEmpty(t, cookies)
+
+	// The next account starts as a regular user and can be promoted by admin.
+	resp = doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Moderator User","email":"moderator@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	moderatorBody := decodeBody(t, resp)
+	moderator := moderatorBody["user"].(map[string]interface{})
+	assert.Equal(t, "user", moderator["role"])
+	moderatorID := moderator["id"].(string)
+
+	resp = doRequest(t, app, "GET", "/api/admin/users", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Len(t, decodeBody(t, resp)["users"].([]interface{}), 2)
+
+	resp = doRequest(t, app, "PATCH", "/api/admin/users/"+moderatorID+"/role", `{"role":"moderator"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "moderator", decodeBody(t, resp)["user"].(map[string]interface{})["role"])
+
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"moderator@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	moderatorCookies := resp.Cookies()
+	assert.Equal(t, "moderator", decodeBody(t, resp)["user"].(map[string]interface{})["role"])
+
+	resp = doRequest(t, app, "GET", "/api/settings", "", moderatorCookies)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "PATCH", "/api/settings", `{"company_name":"Blocked"}`, moderatorCookies)
+	assert.Equal(t, 403, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "GET", "/api/admin/users", "", moderatorCookies)
+	assert.Equal(t, 403, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Moderator Client"}`, moderatorCookies)
+	assert.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
 
 	// Duplicate email is rejected.
 	resp = doRequest(t, app, "POST", "/api/auth/register",
@@ -558,5 +595,42 @@ func TestPublicPaymentFlow(t *testing.T) {
 
 	resp = doRequest(t, app, "POST", "/api/payments/online/send", `{"invoiceId":"`+invoiceID+`","email":"client@example.com"}`, cookies)
 	assert.Equal(t, 501, resp.StatusCode)
+	resp.Body.Close()
+}
+
+// TestAIContractFlow covers auth, validation, and unconfigured-provider behavior.
+func TestAIContractFlow(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "")
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/ai/business-summary", "", nil)
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"AI User","email":"ai@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	// Valid requests return a clear configuration response without contacting Gemini.
+	resp = doRequest(t, app, "POST", "/api/ai/business-summary", "", cookies)
+	assert.Equal(t, 501, resp.StatusCode)
+	assert.Contains(t, decodeBody(t, resp)["error"].(map[string]interface{})["message"], "not configured")
+
+	resp = doRequest(t, app, "POST", "/api/ai/write-note", `{"kind":"invalid"}`, cookies)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/ai/write-note", `{"kind":"terms"}`, cookies)
+	assert.Equal(t, 501, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/ai/payment-reminder", `{"invoiceId":"not-a-uuid","tone":"friendly"}`, cookies)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/ai/receipt-parse", "", cookies)
+	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 }

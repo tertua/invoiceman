@@ -24,6 +24,7 @@ func publicUser(u models.User) fiber.Map {
 		"id":    u.ID,
 		"name":  u.Name,
 		"email": u.Email,
+		"role":  u.UserRole,
 	}
 }
 
@@ -75,6 +76,15 @@ func Register(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database query error", nil)
 	}
 
+	role := repository.UserRoleName
+	count, err := db.CountUsers()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
+	}
+	if count == 0 {
+		role = repository.AdminRoleName
+	}
+
 	user := &models.User{
 		ID:           uuid.New(),
 		CreatedAt:    time.Now(),
@@ -83,7 +93,7 @@ func Register(c fiber.Ctx) error {
 		Email:        payload.Email,
 		PasswordHash: utils.GeneratePassword(payload.Password),
 		UserStatus:   1, // 0 == blocked, 1 == active
-		UserRole:     repository.UserRoleName,
+		UserRole:     role,
 	}
 	if err := utils.NewValidator().Struct(user); err != nil {
 		return utils.ValidationFailed(c, err)

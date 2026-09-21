@@ -23,6 +23,8 @@ function FieldLabel({ children }) {
 
 function CompanySection() {
   const { t } = useLang();
+  const { user } = useAuth();
+  const readOnly = user?.role === "moderator";
   const { data: settings } = useSettings();
   const update = useUpdateSettings();
   const toast = useToast();
@@ -86,6 +88,12 @@ function CompanySection() {
 
   return (
     <form onSubmit={onSave} className="space-y-5 max-w-2xl">
+      {readOnly && (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--ink-muted)]">
+          {t("settings.moderatorReadOnly")}
+        </div>
+      )}
+      <fieldset disabled={readOnly} className="space-y-5">
       <Card padding="lg">
         <CardHeader>
           <div>
@@ -174,9 +182,10 @@ function CompanySection() {
           </div>
         </div>
       </Card>
+      </fieldset>
 
       <div className="flex justify-end">
-        <Button type="submit" variant="accent" disabled={saving}>
+        <Button type="submit" variant="accent" disabled={saving || readOnly}>
           {saving && <Loader2 size={14} className="animate-spin" />}
           {t("settings.saveCompany")}
         </Button>

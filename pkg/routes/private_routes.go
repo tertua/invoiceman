@@ -59,5 +59,15 @@ func PrivateRoutes(a *fiber.App) {
 
 	// Settings routes:
 	route.Get("/settings", controllers.ListSettings)
-	route.Patch("/settings", controllers.UpdateSettings)
+	route.Patch("/settings", middleware.RequireRoles("admin", "user"), controllers.UpdateSettings)
+
+	// AI routes:
+	route.Post("/ai/receipt-parse", controllers.ReceiptParse)
+	route.Post("/ai/business-summary", controllers.BusinessSummary)
+	route.Post("/ai/payment-reminder", controllers.PaymentReminder)
+	route.Post("/ai/write-note", controllers.WriteNote)
+
+	admin := a.Group("/api/admin", middleware.AuthRequired(), middleware.RequireRoles("admin"))
+	admin.Get("/users", controllers.ListUsers)
+	admin.Patch("/users/:id/role", controllers.UpdateUserRole)
 }

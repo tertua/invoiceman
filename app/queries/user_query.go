@@ -55,6 +55,32 @@ func (q *UserQueries) CreateUser(u *models.User) error {
 	return nil
 }
 
+// CountUsers returns the number of registered users.
+func (q *UserQueries) CountUsers() (int64, error) {
+	var count int64
+	if err := q.Model(&models.User{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// ListUsers returns users without loading any related data.
+func (q *UserQueries) ListUsers() ([]models.User, error) {
+	users := make([]models.User, 0)
+	if err := q.Order("created_at ASC").Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// UpdateUserRole changes a user's role.
+func (q *UserQueries) UpdateUserRole(id uuid.UUID, role string) error {
+	return q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"updated_at": time.Now(),
+		"user_role":  role,
+	}).Error
+}
+
 // UpdateUserProfile query for updating user display name.
 func (q *UserQueries) UpdateUserProfile(id uuid.UUID, name string) error {
 	// Send query to database.

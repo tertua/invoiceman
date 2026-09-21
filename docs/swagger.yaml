@@ -175,6 +175,20 @@ definitions:
     - method
     - paid_on
     type: object
+  models.PaymentReminderInput:
+    properties:
+      invoiceId:
+        type: string
+      tone:
+        enum:
+        - friendly
+        - firm
+        - final
+        type: string
+    required:
+    - invoiceId
+    - tone
+    type: object
   models.Register:
     properties:
       email:
@@ -204,6 +218,16 @@ definitions:
     required:
     - new_password
     - token
+    type: object
+  models.RoleInput:
+    properties:
+      role:
+        enum:
+        - user
+        - moderator
+        type: string
+    required:
+    - role
     type: object
   models.SettingsInput:
     properties:
@@ -241,6 +265,27 @@ definitions:
     required:
     - name
     type: object
+  models.WriteNoteInput:
+    properties:
+      client:
+        additionalProperties: true
+        type: object
+      items:
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      kind:
+        enum:
+        - description
+        - terms
+        type: string
+      prompt:
+        maxLength: 2000
+        type: string
+    required:
+    - kind
+    type: object
 info:
   contact:
     email: your@mail.com
@@ -253,6 +298,142 @@ info:
   title: API
   version: "1.0"
 paths:
+  /admin/users:
+    get:
+      description: List registered users.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: list users
+      tags:
+      - Admin
+  /admin/users/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Update a user's role.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RoleInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update user role
+      tags:
+      - Admin
+  /ai/business-summary:
+    post:
+      description: Generate an AI business summary.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: generate business summary
+      tags:
+      - AI
+  /ai/payment-reminder:
+    post:
+      consumes:
+      - application/json
+      description: Generate an AI payment reminder.
+      parameters:
+      - description: Reminder payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PaymentReminderInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: generate payment reminder
+      tags:
+      - AI
+  /ai/receipt-parse:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Parse a receipt with Gemini.
+      parameters:
+      - description: Receipt image or PDF
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: parse receipt
+      tags:
+      - AI
+  /ai/write-note:
+    post:
+      consumes:
+      - application/json
+      description: Generate invoice notes or terms.
+      parameters:
+      - description: Note payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.WriteNoteInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: write invoice note
+      tags:
+      - AI
   /auth/forgot-password:
     post:
       consumes:
