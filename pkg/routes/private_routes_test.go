@@ -1,81 +1,64 @@
 package routes
 
 import (
-	"io"
+	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
-	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPrivateRoutes(t *testing.T) {
-	// Load .env.test file from the root folder.
-	if err := godotenv.Load("../../.env.test"); err != nil {
-		panic(err)
-	}
-
-	// Create a sample data string.
-	dataString := `{"id": "00000000-0000-0000-0000-000000000000"}`
-
-	// Create token with `book:delete` credential.
-	tokenOnlyDelete, err := utils.GenerateNewTokens(
-		uuid.NewString(),
-		[]string{"book:delete"},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	// Create token without any credentials.
-	tokenNoAccess, err := utils.GenerateNewTokens(
-		uuid.NewString(),
-		[]string{},
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	// Define a structure for specifying input and output data of a single test case.
+	// These cases have no session cookie, so no database is required.
 	tests := []struct {
-		description   string
-		route         string // input route
-		method        string // input method
-		tokenString   string // input token
-		body          io.Reader
-		expectedError bool
-		expectedCode  int
+		description  string
+		method       string
+		route        string // input route
+		expectedCode int
 	}{
 		{
-			description:   "delete book without JWT and body",
-			route:         "/api/v1/book",
-			method:        "DELETE",
-			tokenString:   "",
-			body:          nil,
-			expectedError: false,
-			expectedCode:  400,
+			description:  "get session user without cookie",
+			method:       "GET",
+			route:        "/api/auth/me",
+			expectedCode: 401,
 		},
 		{
-			description:   "delete book without right credentials",
-			route:         "/api/v1/book",
-			method:        "DELETE",
-			tokenString:   "Bearer " + tokenNoAccess.Access,
-			body:          strings.NewReader(dataString),
-			expectedError: false,
-			expectedCode:  403,
+			description:  "list clients without cookie",
+			method:       "GET",
+			route:        "/api/clients",
+			expectedCode: 401,
 		},
 		{
-			description:   "delete book with credentials",
-			route:         "/api/v1/book",
-			method:        "DELETE",
-			tokenString:   "Bearer " + tokenOnlyDelete.Access,
-			body:          strings.NewReader(dataString),
-			expectedError: false,
-			expectedCode:  404,
+			description:  "create client without cookie",
+			method:       "POST",
+			route:        "/api/clients",
+			expectedCode: 401,
+		},
+		{
+			description:  "list invoices without cookie",
+			method:       "GET",
+			route:        "/api/invoices",
+			expectedCode: 401,
+		},
+		{
+			description:  "create invoice without cookie",
+			method:       "POST",
+			route:        "/api/invoices",
+			expectedCode: 401,
+		},
+		{
+			description:  "get dashboard without cookie",
+			method:       "GET",
+			route:        "/api/dashboard",
+			expectedCode: 401,
+		},
+		{
+			description:  "logout without cookie",
+			method:       "POST",
+			route:        "/api/auth/logout",
+			expectedCode: 401,
 		},
 	}
 
@@ -88,21 +71,14 @@ func TestPrivateRoutes(t *testing.T) {
 	// Iterate through test single test cases
 	for _, test := range tests {
 		// Create a new http request with the route from the test case.
-		req := httptest.NewRequest(test.method, test.route, test.body)
-		req.Header.Set("Authorization", test.tokenString)
+		req := httptest.NewRequest(test.method, test.route, http.NoBody)
 		req.Header.Set("Content-Type", "application/json")
 
 		// Perform the request plain with the app.
-		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false}) // the -1 disables request latency
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 
-		// Verify, that no error occurred, that is not expected
-		assert.Equalf(t, test.expectedError, err != nil, test.description)
-
-		// As expected errors lead to broken responses,
-		// the next test case needs to be processed.
-		if test.expectedError {
-			continue
-		}
+		// Verify, that no error occurred.
+		assert.Equalf(t, false, err != nil, test.description)
 
 		// Verify, if the status code is as expected.
 		assert.Equalf(t, test.expectedCode, resp.StatusCode, test.description)

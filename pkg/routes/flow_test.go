@@ -1,0 +1,259 @@
+package routes
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// newTestApp builds the full API app for flow tests.
+func newTestApp() *fiber.App {
+	app := fiber.New()
+	PublicRoutes(app)
+	PrivateRoutes(app)
+	return app
+}
+
+// doRequest performs a request against the test app.
+func doRequest(t *testing.T, app *fiber.App, method, route, body string, cookies []*http.Cookie) *http.Response {
+	t.Helper()
+
+	var reader *strings.Reader
+	if body == "" {
+		reader = strings.NewReader("")
+	} else {
+		reader = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(method, route, reader)
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+	require.NoError(t, err)
+	return resp
+}
+
+// decodeBody decodes a JSON response body.
+func decodeBody(t *testing.T, resp *http.Response) map[string]interface{} {
+	t.Helper()
+	defer resp.Body.Close()
+
+	data := map[string]interface{}{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&data))
+	return data
+}
+
+// TestAuthFlow covers register, login, profile and password flows.
+func TestAuthFlow(t *testing.T) {
+	app := newTestApp()
+
+	// Register a new user.
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Flow User","email":"flow@example.com","password":"secret123"}`, nil)
+	assert.Equal(t, 201, resp.StatusCode)
+	body := decodeBody(t, resp)
+	assert.Equal(t, "flow@example.com", body["user"].(map[string]interface{})["email"])
+	cookies := resp.Cookies()
+	require.NotEmpty(t, cookies)
+
+	// Duplicate email is rejected.
+	resp = doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Flow User","email":"flow@example.com","password":"secret123"}`, nil)
+	assert.Equal(t, 409, resp.StatusCode)
+	resp.Body.Close()
+
+	// Session user.
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", cookies)
+	assert.Equal(t, 200, resp.StatusCode)
+	body = decodeBody(t, resp)
+	assert.Equal(t, "Flow User", body["user"].(map[string]interface{})["name"])
+
+	// Update profile.
+	resp = doRequest(t, app, "PATCH", "/api/auth/profile", `{"name":"Renamed"}`, cookies)
+	assert.Equal(t, 200, resp.StatusCode)
+	body = decodeBody(t, resp)
+	assert.Equal(t, "Renamed", body["user"].(map[string]interface{})["name"])
+
+	// Wrong password is rejected.
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"flow@example.com","password":"wrongpass"}`, nil)
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+
+	// Login works.
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"flow@example.com","password":"secret123"}`, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	loginBody := decodeBody(t, resp)
+	userID := loginBody["user"].(map[string]interface{})["id"].(string)
+	cookies = resp.Cookies()
+
+	// Expired access tokens are refreshed transparently via the refresh cookie.
+	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":  userID,
+		"exp": time.Now().Add(-time.Hour).Unix(),
+	})
+	expiredString, err := expiredToken.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
+	require.NoError(t, err)
+	var refreshCookie *http.Cookie
+	for _, cookie := range cookies {
+		if cookie.Name == "refresh_token" {
+			refreshCookie = cookie
+		}
+	}
+	require.NotNil(t, refreshCookie)
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", []*http.Cookie{
+		{Name: "access_token", Value: expiredString},
+		refreshCookie,
+	})
+	assert.Equal(t, 200, resp.StatusCode)
+	refreshedBody := decodeBody(t, resp)
+	assert.Equal(t, "flow@example.com", refreshedBody["user"].(map[string]interface{})["email"])
+	renewed := false
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "access_token" && cookie.Value != "" && cookie.Value != expiredString {
+			renewed = true
+		}
+	}
+	assert.True(t, renewed, "expected a fresh access_token cookie")
+	cookies = resp.Cookies()
+
+	// Change password.
+	resp = doRequest(t, app, "PATCH", "/api/auth/password",
+		`{"currentPassword":"secret123","newPassword":"newsecret123"}`, cookies)
+	assert.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+
+	// Login with the new password.
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"flow@example.com","password":"newsecret123"}`, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies = resp.Cookies()
+	refreshCookie = nil
+	for _, cookie := range cookies {
+		if cookie.Name == "refresh_token" {
+			refreshCookie = cookie
+		}
+	}
+	require.NotNil(t, refreshCookie)
+
+	// Forgot password always succeeds generically.
+	resp = doRequest(t, app, "POST", "/api/auth/forgot-password",
+		`{"email":"flow@example.com"}`, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+
+	// Reset with an unknown token fails.
+	resp = doRequest(t, app, "POST", "/api/auth/reset-password",
+		`{"token":"nope","new_password":"anothersecret123"}`, nil)
+	assert.Equal(t, 400, resp.StatusCode)
+	decodeBody(t, resp)
+
+	// Logout ends the session: cookies are cleared and renewal is revoked.
+	resp = doRequest(t, app, "POST", "/api/auth/logout", "", cookies)
+	assert.Equal(t, 204, resp.StatusCode)
+	cleared := strings.Join(resp.Header.Values("Set-Cookie"), ";")
+	assert.Contains(t, cleared, "access_token=;")
+	assert.Contains(t, cleared, "refresh_token=;")
+	resp.Body.Close()
+
+	// The not-yet-expired access token is still cryptographically valid
+	// (stateless JWT), but it can no longer be renewed after logout.
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", []*http.Cookie{
+		{Name: "access_token", Value: expiredString},
+		refreshCookie,
+	})
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+}
+
+// TestClientInvoiceFlow covers clients, invoices and dashboard.
+func TestClientInvoiceFlow(t *testing.T) {
+	app := newTestApp()
+
+	// Register and keep the session cookies.
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Invoice User","email":"invoice@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	// Create a client.
+	resp = doRequest(t, app, "POST", "/api/clients",
+		`{"name":"Acme","email":"billing@acme.test","company":"Acme Inc"}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+	require.NotEmpty(t, clientID)
+
+	// Client detail starts empty.
+	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	detail := decodeBody(t, resp)
+	assert.Equal(t, float64(0), detail["stats"].(map[string]interface{})["count"])
+
+	// Create an invoice: subtotal 250, discount 10, tax 10% -> total 264.
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"client_id": "`+clientID+`",
+		"status": "draft",
+		"issue_date": "2026-09-01",
+		"due_date": "2026-09-30",
+		"currency": "USD",
+		"tax_rate": 10,
+		"discount": 10,
+		"items": [
+			{"description": "Design", "quantity": 2, "rate": 100},
+			{"description": "Hosting", "quantity": 1, "rate": 50}
+		]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	invoice := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	assert.Equal(t, float64(264), invoice["total"])
+	assert.Equal(t, "draft", invoice["effective_status"])
+	assert.True(t, strings.HasPrefix(invoice["invoice_number"].(string), "INV-"))
+	invoiceID := invoice["id"].(string)
+
+	// List shows the invoice.
+	resp = doRequest(t, app, "GET", "/api/invoices", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	listed := decodeBody(t, resp)["invoices"].([]interface{})
+	require.Len(t, listed, 1)
+
+	// Mark as sent.
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+`/status`,
+		`{"status":"sent"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	updated := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	assert.Equal(t, "sent", updated["status"])
+
+	// Dashboard reflects the new data.
+	resp = doRequest(t, app, "GET", "/api/dashboard", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	dashboard := decodeBody(t, resp)
+	stats := dashboard["stats"].(map[string]interface{})
+	assert.Equal(t, float64(1), stats["invoiceCount"])
+	assert.Equal(t, float64(1), stats["clientCount"])
+	assert.Equal(t, float64(264), stats["outstanding"])
+	assert.Len(t, dashboard["revenueSeries"].([]interface{}), 6)
+	assert.Len(t, dashboard["recentInvoices"].([]interface{}), 1)
+
+	// Cleanup.
+	resp = doRequest(t, app, "DELETE", "/api/invoices/"+invoiceID, "", cookies)
+	assert.Equal(t, 204, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "DELETE", "/api/clients/"+clientID, "", cookies)
+	assert.Equal(t, 204, resp.StatusCode)
+	resp.Body.Close()
+}
