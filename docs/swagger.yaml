@@ -34,6 +34,28 @@ definitions:
     required:
     - name
     type: object
+  models.ExpenseInput:
+    properties:
+      amount:
+        minimum: 0
+        type: number
+      category:
+        maxLength: 100
+        type: string
+      currency:
+        maxLength: 3
+        type: string
+      expense_date:
+        type: string
+      notes:
+        type: string
+      vendor:
+        maxLength: 255
+        type: string
+    required:
+    - category
+    - expense_date
+    type: object
   models.ForgotPassword:
     properties:
       email:
@@ -522,6 +544,101 @@ paths:
       summary: get dashboard aggregates
       tags:
       - Dashboard
+  /expenses:
+    get:
+      description: Get expenses of current user.
+      parameters:
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get expenses
+      tags:
+      - Expenses
+    post:
+      consumes:
+      - application/json
+      description: Create an expense.
+      parameters:
+      - description: Expense payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ExpenseInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: create expense
+      tags:
+      - Expenses
+  /expenses/{id}:
+    delete:
+      description: Delete an expense.
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ok
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: delete expense
+      tags:
+      - Expenses
+    patch:
+      consumes:
+      - application/json
+      description: Update an expense.
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Expense payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ExpenseInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update expense
+      tags:
+      - Expenses
   /invoices:
     get:
       consumes:

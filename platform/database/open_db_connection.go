@@ -14,6 +14,7 @@ type Queries struct {
 	*queries.ClientQueries    // load queries from Client model
 	*queries.InvoiceQueries   // load queries from Invoice model
 	*queries.ItemQueries      // load queries from Item model
+	*queries.ExpenseQueries   // load queries from Expense model
 	*queries.SettingsQueries  // load queries from Settings model
 	*queries.DashboardQueries // load queries for Dashboard aggregates
 }
@@ -45,6 +46,7 @@ func OpenDBConnection() (*Queries, error) {
 		ClientQueries:    &queries.ClientQueries{DB: db},    // from Client model
 		InvoiceQueries:   &queries.InvoiceQueries{DB: db},   // from Invoice model
 		ItemQueries:      &queries.ItemQueries{DB: db},      // from Item model
+		ExpenseQueries:   &queries.ExpenseQueries{DB: db},   // from Expense model
 		SettingsQueries:  &queries.SettingsQueries{DB: db},  // from Settings model
 		DashboardQueries: &queries.DashboardQueries{DB: db}, // for Dashboard aggregates
 	}, nil
@@ -63,6 +65,7 @@ func Migrate() error {
 		&models.Invoice{},
 		&models.InvoiceItem{},
 		&models.Item{},
+		&models.Expense{},
 		&models.Payment{},
 		&models.Settings{},
 		&models.PasswordReset{},
