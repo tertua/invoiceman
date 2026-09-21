@@ -2,7 +2,7 @@ import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tool
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useLang } from "@/context/LangContext";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, localizeAgingBuckets } from "@/lib/utils";
 
 const T1 = "#2dd4bf";
 const T2 = "#14b8a6";
@@ -33,7 +33,7 @@ function StatusDonutCard({ reports, total }) {
 
 function AgingCard({ reports }) {
   const { t } = useLang();
-  const aging = reports?.aging || [];
+  const aging = localizeAgingBuckets(reports?.aging, t);
   const hasData = aging.some((item) => item.value > 0);
   return <Card padding="lg" className="h-full flex flex-col"><CardHeader><div><CardTitle>{t("dash.aging")}</CardTitle><CardDescription>{t("dash.agingDesc")}</CardDescription></div></CardHeader>{!reports ? <ChartSkeleton /> : hasData ? <div className="flex-1 min-h-[180px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={aging} margin={{ top: 8, right: 4, bottom: 0, left: -14 }}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} /><XAxis dataKey="bucket" axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 10 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 11 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} /><Tooltip cursor={{ fill: "var(--surface-2)" }} contentStyle={tooltipStyle} formatter={(v) => [formatMoney(v), t("dash.amount")]} /><Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>{aging.map((_, index) => <Cell key={index} fill={index === 0 ? T2 : index >= 3 ? "var(--danger)" : "var(--warning)"} />)}</Bar></BarChart></ResponsiveContainer></div> : <div className="flex-1 flex items-center justify-center text-center text-sm text-[var(--ink-muted)]">{t("dash.allCaughtUp")}</div>}</Card>;
 }

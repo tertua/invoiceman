@@ -140,8 +140,9 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	for _, key := range []string{"draft", "sent", "overdue", "paid"} {
 		report.StatusBreakdown = append(report.StatusBreakdown, models.ReportValuePoint{Key: key, Name: statusNames[key], Value: statusValues[key]})
 	}
-	for i, label := range []string{"Current", "1-30 days", "31-60 days", "61-90 days", "90+ days"} {
-		report.Aging = append(report.Aging, models.ReportValuePoint{Bucket: label, Value: agingValues[i]})
+	// Aging buckets use stable keys; the frontend localizes them for display.
+	for i, key := range []string{"current", "d1_30", "d31_60", "d61_90", "d90_plus"} {
+		report.Aging = append(report.Aging, models.ReportValuePoint{Key: key, Bucket: key, Value: agingValues[i]})
 	}
 
 	clientNames := make(map[uuid.UUID]string, len(clients))

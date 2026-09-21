@@ -555,6 +555,12 @@ func TestReportsFlow(t *testing.T) {
 	assert.Equal(t, float64(60), totals["outstanding"])
 	assert.Len(t, report["monthly"].([]interface{}), 6)
 	assert.Len(t, report["aging"].([]interface{}), 5)
+	// Aging buckets expose stable keys for frontend localization.
+	agingKeys := make([]string, 0, 5)
+	for _, item := range report["aging"].([]interface{}) {
+		agingKeys = append(agingKeys, item.(map[string]interface{})["bucket"].(string))
+	}
+	assert.Equal(t, []string{"current", "d1_30", "d31_60", "d61_90", "d90_plus"}, agingKeys)
 	assert.Len(t, report["topClients"].([]interface{}), 1)
 	assert.Len(t, report["statusBreakdown"].([]interface{}), 4)
 }
