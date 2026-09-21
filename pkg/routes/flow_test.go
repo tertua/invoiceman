@@ -257,3 +257,41 @@ func TestClientInvoiceFlow(t *testing.T) {
 	assert.Equal(t, 204, resp.StatusCode)
 	resp.Body.Close()
 }
+
+// TestItemFlow covers catalog item CRUD and per-user ownership.
+func TestItemFlow(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Item User","email":"item@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "POST", "/api/items",
+		`{"name":"Consulting","description":"Hourly consulting","rate":125,"unit":"hour"}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	item := decodeBody(t, resp)["item"].(map[string]interface{})
+	itemID := item["id"].(string)
+	assert.Equal(t, "Consulting", item["name"])
+
+	resp = doRequest(t, app, "GET", "/api/items", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	items := decodeBody(t, resp)["items"].([]interface{})
+	require.Len(t, items, 1)
+
+	resp = doRequest(t, app, "PATCH", "/api/items/"+itemID,
+		`{"name":"Strategy","description":"Strategy session","rate":200,"unit":"session"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	updated := decodeBody(t, resp)["item"].(map[string]interface{})
+	assert.Equal(t, "Strategy", updated["name"])
+	assert.Equal(t, float64(200), updated["rate"])
+
+	resp = doRequest(t, app, "DELETE", "/api/items/"+itemID, "", cookies)
+	assert.Equal(t, 204, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "GET", "/api/items", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Empty(t, decodeBody(t, resp)["items"])
+}

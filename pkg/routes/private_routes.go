@@ -34,4 +34,10 @@ func PrivateRoutes(a *fiber.App) {
 
 	// Dashboard routes:
 	route.Get("/dashboard", controllers.GetDashboard) // get dashboard aggregates
+
+	// Catalog item routes:
+	route.Get("/items", controllers.ListItems)
+	route.Post("/items", controllers.CreateItem)
+	route.Patch("/items/:id", controllers.UpdateItem)
+	route.Delete("/items/:id", controllers.DeleteItem)
 }
