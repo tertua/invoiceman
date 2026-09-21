@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"os"
 	"strings"
 	"time"
 
@@ -14,18 +13,23 @@ import (
 	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
 // RelayPayload is the normalized v1 payload forwarded to downstream projects.
+// Gateway identifies the provider (midtrans today, crypto tomorrow);
+// fiat flows use gross_amount_idr, fractional flows use amount_decimal+currency.
 type RelayPayload struct {
 	EventID         string  `json:"event_id"`
 	OrderID         string  `json:"order_id"`
 	ProjectSlug     string  `json:"project_slug"`
+	Gateway         string  `json:"gateway"`
 	ExternalOrderID string  `json:"external_order_id"`
 	Status          string  `json:"status"`
 	GrossAmountIDR  float64 `json:"gross_amount_idr"`
+	AmountDecimal   string  `json:"amount_decimal"`
+	Currency        string  `json:"currency"`
 	TransactionID   string  `json:"transaction_id"`
 	PaymentType     string  `json:"payment_type"`
 	PaidAt          string  `json:"paid_at"`
@@ -42,8 +46,6 @@ func terminalStatus(s string) bool {
 }
 
 // HandleMidtransWebhook is the single Midtrans notification URL.
-// It verifies the Midtrans signature, updates the central transaction,
-// settles local invoices, and relays to the owning downstream project.
 // @Description Handle Midtrans payment notification.
 // @Summary midtrans webhook
 // @Tags Webhooks
@@ -53,19 +55,41 @@ func terminalStatus(s string) bool {
 // @Success 200 {object} map[string]interface{}
 // @Router /webhooks/midtrans [post]
 func HandleMidtransWebhook(c fiber.Ctx) error {
-	raw := append([]byte(nil), c.Body()...)
-	notif, err := midtrans.ParseNotification(raw)
+	return handleGatewayWebhook(c, "midtrans")
+}
+
+// HandleGatewayWebhook handles notifications for any registered gateway.
+// @Description Handle a payment gateway notification.
+// @Summary gateway webhook
+// @Tags Webhooks
+// @Accept json
+// @Produce json
+// @Param gateway path string true "Gateway name"
+// @Param request body object true "Provider notification"
+// @Success 200 {object} map[string]interface{}
+// @Router /webhooks/{gateway} [post]
+func HandleGatewayWebhook(c fiber.Ctx) error {
+	return handleGatewayWebhook(c, strings.ToLower(strings.TrimSpace(c.Params("gateway"))))
+}
+
+func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
+	gw, err := gateway.Get(gatewayName)
 	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid notification", nil)
+		return utils.Fail(c, fiber.StatusNotFound, "unknown payment gateway", nil)
 	}
-	serverKey := strings.TrimSpace(os.Getenv("MIDTRANS_SERVER_KEY"))
-	if serverKey == "" {
-		return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+	raw := append([]byte(nil), c.Body()...)
+	notif, err := gw.ParseAndVerify(raw)
+	if err != nil {
+		switch {
+		case errors.Is(err, gateway.ErrNotConfigured):
+			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+		case errors.Is(err, gateway.ErrInvalidSignature):
+			return utils.Fail(c, fiber.StatusUnauthorized, "invalid signature", nil)
+		default:
+			return utils.Fail(c, fiber.StatusBadRequest, "invalid notification", nil)
+		}
 	}
-	if !midtrans.VerifySignature(notif, serverKey) {
-		return utils.Fail(c, fiber.StatusUnauthorized, "invalid signature", nil)
-	}
-	status := midtrans.MapStatus(notif.TransactionStatus)
+	status := notif.Status
 
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -75,7 +99,7 @@ func HandleMidtransWebhook(c fiber.Ctx) error {
 	_ = db.CreateEvent(&models.GatewayEvent{
 		ID:        uuid.New(),
 		OrderID:   notif.OrderID,
-		Source:    "midtrans",
+		Source:    gatewayName,
 		Verified:  true,
 		Payload:   string(raw),
 		CreatedAt: time.Now(),
@@ -116,7 +140,7 @@ func HandleMidtransWebhook(c fiber.Ctx) error {
 
 	// Settle local invoices on success.
 	if status == models.GatewayStatusSuccess && txn.InvoiceID != nil && txn.UserID != nil {
-		settleLocalInvoice(*db, txn, notif.GrossAmountValue())
+		settleLocalInvoice(*db, txn, float64(notif.GrossMinor))
 	}
 
 	// Local orders have no downstream project to notify.
@@ -136,9 +160,12 @@ func HandleMidtransWebhook(c fiber.Ctx) error {
 		EventID:         "evt_" + eventID,
 		OrderID:         txn.OrderID,
 		ProjectSlug:     txn.ProjectSlug,
+		Gateway:         gatewayName,
 		ExternalOrderID: txn.ExternalOrderID,
 		Status:          status,
-		GrossAmountIDR:  notif.GrossAmountValue(),
+		GrossAmountIDR:  float64(notif.GrossMinor),
+		AmountDecimal:   notif.GrossDecimal,
+		Currency:        notif.Currency,
 		TransactionID:   notif.TransactionID,
 		PaymentType:     notif.PaymentType,
 		PaidAt:          time.Now().UTC().Format(time.RFC3339),
@@ -147,6 +174,7 @@ func HandleMidtransWebhook(c fiber.Ctx) error {
 		ID:          uuid.New(),
 		OrderID:     txn.OrderID,
 		ProjectSlug: txn.ProjectSlug,
+		Gateway:     gatewayName,
 		TargetURL:   project.WebhookURL,
 		Payload:     string(payload),
 		CreatedAt:   time.Now(),
@@ -334,6 +362,7 @@ func deliveryResponse(d models.WebhookDelivery) fiber.Map {
 		"id":           d.ID,
 		"order_id":     d.OrderID,
 		"project_slug": d.ProjectSlug,
+		"gateway":      d.Gateway,
 		"target_url":   d.TargetURL,
 		"attempt":      d.Attempt,
 		"status":       d.Status,

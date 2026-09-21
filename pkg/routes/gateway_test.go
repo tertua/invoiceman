@@ -112,6 +112,12 @@ func TestGatewayRelayFlow(t *testing.T) {
 	orderID := intent["order_id"].(string)
 	require.True(t, strings.HasPrefix(orderID, "EXT-one-api-topup_abc123-"), orderID)
 	assert.Equal(t, "snap-tok-1", intent["snap_token"])
+	assert.Equal(t, "midtrans", intent["gateway"])
+	resp.Body.Close()
+
+	// Unknown gateway webhooks are rejected.
+	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/bogus", `{}`, nil, nil)
+	assert.Equal(t, 404, resp.StatusCode)
 	resp.Body.Close()
 
 	// Missing key is rejected.
@@ -153,6 +159,7 @@ func TestGatewayRelayFlow(t *testing.T) {
 	receiver.mu.Unlock()
 	assert.Equal(t, "topup_abc123", payload["external_order_id"])
 	assert.Equal(t, "success", payload["status"])
+	assert.Equal(t, "midtrans", payload["gateway"])
 	assert.True(t, relay.VerifySignature(receiver.bodies[0], webhookSecret, sig))
 
 	// Replay is idempotent: no second forward.

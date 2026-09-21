@@ -9,6 +9,8 @@ import (
 	"github.com/tertua/invoiceman/pkg/routes"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/invoiceman/platform/midtrans"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -42,6 +44,9 @@ func main() {
 	if err := database.Migrate(); err != nil {
 		log.Fatal("failed to migrate database: ", err)
 	}
+
+	// Register payment gateways (add new providers here, e.g. crypto).
+	gateway.Register(midtrans.Gateway{})
 
 	// Routes.
 	routes.SwaggerRoute(app)  // Register a route for API Docs (Swagger).

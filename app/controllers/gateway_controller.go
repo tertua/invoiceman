@@ -16,7 +16,7 @@ import (
 	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
@@ -60,12 +60,27 @@ func intentResponse(t models.GatewayTransaction) fiber.Map {
 		"order_id":          t.OrderID,
 		"external_order_id": t.ExternalOrderID,
 		"project_slug":      t.ProjectSlug,
+		"gateway":           t.Gateway,
 		"amount_idr":        t.AmountIDR,
+		"amount_decimal":    t.AmountDecimal,
 		"currency":          t.Currency,
 		"status":            t.Status,
 		"snap_token":        t.SnapToken,
 		"redirect_url":      t.RedirectURL,
+		"payment_url":       t.PaymentURL,
+		"address":           t.Address,
 	}
+}
+
+// resolveGateway picks the provider: explicit request > project default > midtrans.
+func resolveGateway(requested, projectDefault string) string {
+	if name := strings.ToLower(strings.TrimSpace(requested)); name != "" {
+		return name
+	}
+	if name := strings.ToLower(strings.TrimSpace(projectDefault)); name != "" {
+		return name
+	}
+	return "midtrans"
 }
 
 // CreateIntent creates a Midtrans Snap transaction for a downstream project.
@@ -90,6 +105,9 @@ func CreateIntent(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
+	if input.AmountIDR <= 0 && strings.TrimSpace(input.AmountDecimal) == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "amount_idr or amount_decimal is required", nil)
+	}
 	db, err := database.OpenDBConnection()
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
@@ -97,22 +115,35 @@ func CreateIntent(c fiber.Ctx) error {
 
 	// Reuse a pending intent for the same external id + amount (safe retry).
 	if existing, err := db.GetTransactionByExternal(project.Slug, input.ExternalOrderID); err == nil {
-		if existing.Status == models.GatewayStatusPending && existing.AmountIDR == input.AmountIDR && existing.SnapToken != "" {
+		if existing.Status == models.GatewayStatusPending && existing.AmountIDR == input.AmountIDR &&
+			existing.AmountDecimal == strings.TrimSpace(input.AmountDecimal) && existing.SnapToken != "" {
 			return utils.OK(c, fiber.StatusOK, intentResponse(existing))
 		}
 	}
 
-	cfg := midtrans.FromEnv()
-	if cfg.ServerKey == "" {
-		return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+	gatewayName := resolveGateway(input.Gateway, project.DefaultGateway)
+	gw, err := gateway.Get(gatewayName)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
 	}
 	orderID, err := relayOrderID(project.Slug, input.ExternalOrderID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create order", nil)
 	}
-	snap, err := midtrans.CreateSnapTransaction(c.Context(), cfg, orderID, input.AmountIDR, input.CustomerEmail, input.CustomerPhone)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if currency == "" {
+		currency = "IDR"
+	}
+	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{
+		OrderID:       orderID,
+		AmountMinor:   input.AmountIDR,
+		AmountDecimal: strings.TrimSpace(input.AmountDecimal),
+		Currency:      currency,
+		Email:         input.CustomerEmail,
+		Phone:         input.CustomerPhone,
+	})
 	if err != nil {
-		if errors.Is(err, midtrans.ErrNotConfigured) {
+		if errors.Is(err, gateway.ErrNotConfigured) {
 			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
 		}
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
@@ -122,14 +153,18 @@ func CreateIntent(c fiber.Ctx) error {
 	txn := &models.GatewayTransaction{
 		OrderID:         orderID,
 		ProjectSlug:     project.Slug,
+		Gateway:         gatewayName,
 		ExternalOrderID: input.ExternalOrderID,
 		AmountIDR:       input.AmountIDR,
-		Currency:        "IDR",
+		AmountDecimal:   strings.TrimSpace(input.AmountDecimal),
+		Currency:        currency,
 		CustomerEmail:   input.CustomerEmail,
 		CustomerPhone:   input.CustomerPhone,
 		Status:          models.GatewayStatusPending,
-		SnapToken:       snap.Token,
-		RedirectURL:     snap.RedirectURL,
+		SnapToken:       created.Token,
+		RedirectURL:     created.RedirectURL,
+		PaymentURL:      created.PaymentURL,
+		Address:         created.Address,
 		RawIntent:       string(raw),
 		CreatedAt:       now,
 		UpdatedAt:       now,
@@ -241,9 +276,9 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if balance <= 0 {
 		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 	}
-	cfg := midtrans.FromEnv()
-	if cfg.ServerKey == "" {
-		return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+	gw, err := gateway.Get("midtrans")
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "payment gateway is not registered", nil)
 	}
 	suffix, err := randHex(4)
 	if err != nil {
@@ -251,9 +286,13 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	}
 	orderID := "INV-" + strings.ReplaceAll(invoice.InvoiceNumber, " ", "") + "-" + suffix
 	amountIDR := int64(balance + 0.5)
-	snap, err := midtrans.CreateSnapTransaction(c.Context(), cfg, orderID, amountIDR, "", "")
+	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{
+		OrderID:     orderID,
+		AmountMinor: amountIDR,
+		Currency:    invoice.Currency,
+	})
 	if err != nil {
-		if errors.Is(err, midtrans.ErrNotConfigured) {
+		if errors.Is(err, gateway.ErrNotConfigured) {
 			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
 		}
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
@@ -262,14 +301,15 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	txn := &models.GatewayTransaction{
 		OrderID:         orderID,
 		ProjectSlug:     "local",
+		Gateway:         "midtrans",
 		ExternalOrderID: invoice.ID.String(),
 		InvoiceID:       &invoice.ID,
 		UserID:          &userID,
 		AmountIDR:       amountIDR,
 		Currency:        invoice.Currency,
 		Status:          models.GatewayStatusPending,
-		SnapToken:       snap.Token,
-		RedirectURL:     snap.RedirectURL,
+		SnapToken:       created.Token,
+		RedirectURL:     created.RedirectURL,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
@@ -281,12 +321,13 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 
 func projectResponse(p models.GatewayProject, revealSecrets bool, apiKey string) fiber.Map {
 	out := fiber.Map{
-		"slug":        p.Slug,
-		"name":        p.Name,
-		"webhook_url": p.WebhookURL,
-		"is_active":   p.IsActive,
-		"created_at":  p.CreatedAt,
-		"updated_at":  p.UpdatedAt,
+		"slug":            p.Slug,
+		"name":            p.Name,
+		"webhook_url":     p.WebhookURL,
+		"default_gateway": p.DefaultGateway,
+		"is_active":       p.IsActive,
+		"created_at":      p.CreatedAt,
+		"updated_at":      p.UpdatedAt,
 	}
 	if revealSecrets {
 		out["webhook_secret"] = p.WebhookSecret
@@ -318,6 +359,10 @@ func CreateProject(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
+	defaultGateway := resolveGateway(input.DefaultGateway, "midtrans")
+	if _, err := gateway.Get(defaultGateway); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
+	}
 	db, err := database.OpenDBConnection()
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
@@ -335,14 +380,15 @@ func CreateProject(c fiber.Ctx) error {
 	}
 	now := time.Now()
 	p := &models.GatewayProject{
-		Slug:          input.Slug,
-		Name:          strings.TrimSpace(input.Name),
-		APIKeyHash:    relay.HashKey(apiKey),
-		WebhookURL:    strings.TrimSpace(input.WebhookURL),
-		WebhookSecret: secret,
-		IsActive:      true,
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		Slug:           input.Slug,
+		Name:           strings.TrimSpace(input.Name),
+		APIKeyHash:     relay.HashKey(apiKey),
+		WebhookURL:     strings.TrimSpace(input.WebhookURL),
+		WebhookSecret:  secret,
+		DefaultGateway: defaultGateway,
+		IsActive:       true,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	if err := db.CreateProject(p); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create project", nil)
@@ -407,6 +453,13 @@ func UpdateProject(c fiber.Ctx) error {
 	}
 	if strings.TrimSpace(input.WebhookURL) != "" {
 		p.WebhookURL = strings.TrimSpace(input.WebhookURL)
+	}
+	if strings.TrimSpace(input.DefaultGateway) != "" {
+		name := resolveGateway(input.DefaultGateway, "")
+		if _, err := gateway.Get(name); err != nil {
+			return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
+		}
+		p.DefaultGateway = name
 	}
 	if input.IsActive != nil {
 		p.IsActive = *input.IsActive

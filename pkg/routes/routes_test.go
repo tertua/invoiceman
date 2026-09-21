@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/invoiceman/platform/midtrans"
 )
 
 // TestMain runs route tests against in-memory SQLite with an in-memory
@@ -22,6 +24,9 @@ func TestMain(m *testing.M) {
 	if err := database.Migrate(); err != nil {
 		panic("test migrate failed: " + err.Error())
 	}
+
+	// Register gateways for tests (main.go does this in production).
+	gateway.Register(midtrans.Gateway{})
 
 	os.Exit(m.Run())
 }

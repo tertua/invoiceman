@@ -20,4 +20,6 @@ func PublicRoutes(a *fiber.App) {
 	route.Get("/public/pay/:token/status", controllers.GetPublicPaymentStatus)
 	// Single Midtrans notification URL for the whole account (central relay).
 	route.Post("/webhooks/midtrans", controllers.HandleMidtransWebhook)
+	// Generic provider webhooks for current and future gateways (e.g. crypto).
+	route.Post("/webhooks/:gateway", controllers.HandleGatewayWebhook)
 }

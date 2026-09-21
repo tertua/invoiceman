@@ -24,16 +24,20 @@ const (
 type GatewayTransaction struct {
 	OrderID         string     `gorm:"primaryKey;size:128" db:"order_id" json:"order_id"`
 	ProjectSlug     string     `gorm:"size:64;index" db:"project_slug" json:"project_slug"`
+	Gateway         string     `gorm:"size:32;index;default:midtrans" db:"gateway" json:"gateway"`
 	ExternalOrderID string     `gorm:"size:128;index" db:"external_order_id" json:"external_order_id"`
 	InvoiceID       *uuid.UUID `gorm:"type:uuid;index" db:"invoice_id" json:"invoice_id"`
 	UserID          *uuid.UUID `gorm:"type:uuid;index" db:"user_id" json:"user_id"`
 	AmountIDR       int64      `db:"amount_idr" json:"amount_idr"`
+	AmountDecimal   string     `gorm:"size:64" db:"amount_decimal" json:"amount_decimal"`
 	Currency        string     `gorm:"size:8;default:IDR" db:"currency" json:"currency"`
 	CustomerEmail   string     `gorm:"size:255" db:"customer_email" json:"customer_email"`
 	CustomerPhone   string     `gorm:"size:64" db:"customer_phone" json:"customer_phone"`
 	Status          string     `gorm:"size:32;index;default:pending" db:"status" json:"status"`
 	SnapToken       string     `gorm:"size:255" db:"snap_token" json:"snap_token"`
 	RedirectURL     string     `gorm:"size:1024" db:"redirect_url" json:"redirect_url"`
+	PaymentURL      string     `gorm:"size:1024" db:"payment_url" json:"payment_url"`
+	Address         string     `gorm:"size:255" db:"address" json:"address"`
 	MidtransTxnID   string     `gorm:"size:128" db:"midtrans_txn_id" json:"midtrans_txn_id"`
 	PaymentType     string     `gorm:"size:64" db:"payment_type" json:"payment_type"`
 	RawIntent       string     `db:"raw_intent" json:"-"`
@@ -45,9 +49,15 @@ type GatewayTransaction struct {
 
 // IntentInput is the service-to-service payload for creating a payment.
 // Project identity comes from the API key header, not from this body.
+// Gateway defaults to the project's default_gateway ("midtrans").
+// Fiat flows use amount_idr; fractional/crypto flows use amount_decimal
+// with currency (e.g. "0.0005", "BTC").
 type IntentInput struct {
 	ExternalOrderID string `json:"external_order_id" validate:"required,lte=128"`
-	AmountIDR       int64  `json:"amount_idr" validate:"required,gt=0"`
+	Gateway         string `json:"gateway" validate:"omitempty,lte=32"`
+	AmountIDR       int64  `json:"amount_idr" validate:"gte=0"`
+	AmountDecimal   string `json:"amount_decimal" validate:"omitempty,lte=64"`
+	Currency        string `json:"currency" validate:"omitempty,lte=8"`
 	CustomerEmail   string `json:"customer_email" validate:"omitempty,email,lte=255"`
 	CustomerPhone   string `json:"customer_phone" validate:"omitempty,lte=64"`
 }
@@ -67,6 +77,7 @@ type WebhookDelivery struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id"`
 	OrderID     string     `gorm:"size:128;index" db:"order_id" json:"order_id"`
 	ProjectSlug string     `gorm:"size:64;index" db:"project_slug" json:"project_slug"`
+	Gateway     string     `gorm:"size:32;index;default:midtrans" db:"gateway" json:"gateway"`
 	TargetURL   string     `gorm:"size:1024" db:"target_url" json:"target_url"`
 	Payload     string     `db:"payload" json:"-"`
 	Signature   string     `gorm:"size:128" db:"signature" json:"-"`

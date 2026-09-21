@@ -5,9 +5,11 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 // Notification is the subset of the Midtrans payment notification used here.
@@ -25,10 +27,10 @@ type Notification struct {
 func ParseNotification(raw []byte) (*Notification, error) {
 	n := &Notification{}
 	if err := json.Unmarshal(raw, n); err != nil {
-		return nil, errors.New("midtrans decode: invalid JSON")
+		return nil, fmt.Errorf("%w: invalid JSON", gateway.ErrInvalidPayload)
 	}
 	if strings.TrimSpace(n.OrderID) == "" {
-		return nil, errors.New("midtrans decode: missing order_id")
+		return nil, fmt.Errorf("%w: missing order_id", gateway.ErrInvalidPayload)
 	}
 	return n, nil
 }
