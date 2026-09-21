@@ -8,6 +8,7 @@ import {
   Package,
   BarChart3,
   Settings,
+  ShieldCheck,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -134,6 +135,9 @@ export function Sidebar() {
           {NAV.map((item) => (
             <NavItem key={item.to} {...item} />
           ))}
+          {user?.role === "admin" && (
+            <NavItem to="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
+          )}
         </nav>
       </div>
 

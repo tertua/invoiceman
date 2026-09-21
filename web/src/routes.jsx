@@ -22,6 +22,7 @@ const Payments = lazy(() => import("@/pages/Payments"));
 const Items = lazy(() => import("@/pages/Items"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const AdminUsers = lazy(() => import("@/pages/AdminUsers"));
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
@@ -35,6 +36,11 @@ function ProtectedShell() {
   }
   if (!user) return <Navigate to="/login" replace />;
   return <AppShell />;
+}
+
+function AdminRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <AdminUsers /> : <Navigate to="/dashboard" replace />;
 }
 
 export const router = createBrowserRouter([
@@ -61,6 +67,7 @@ export const router = createBrowserRouter([
       { path: "items", element: <Items /> },
       { path: "reports", element: <Reports /> },
       { path: "settings", element: <Settings /> },
+      { path: "admin/users", element: <AdminRoute /> },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },
