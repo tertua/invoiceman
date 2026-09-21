@@ -139,7 +139,16 @@ export default function Expenses() {
               <div
                 key={exp.id}
                 onClick={() => setModal(exp)}
-                className="group grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] gap-x-4 gap-y-1 px-5 py-4 cursor-pointer hover:bg-[var(--surface-2)] transition-colors items-center"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.target.closest?.("button")) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setModal(exp);
+                  }
+                }}
+                className="group grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] gap-x-4 gap-y-1 px-5 py-4 cursor-pointer hover:bg-[var(--surface-2)] transition-colors items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]/40"
               >
                 <div className="font-medium text-sm text-[var(--ink)] truncate">{exp.vendor || "—"}</div>
                 <div className="order-3 md:order-none col-span-2 md:col-span-1">

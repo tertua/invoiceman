@@ -136,7 +136,16 @@ export default function Invoices() {
               <div
                 key={inv.id}
                 onClick={() => nav(`/invoices/${inv.id}`)}
-                className="group grid grid-cols-2 md:grid-cols-[1.4fr_1.6fr_1fr_1fr_0.9fr_auto] gap-x-4 gap-y-1 px-5 py-4 cursor-pointer hover:bg-[var(--surface-2)] transition-colors items-center"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.target.closest?.("button")) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    nav(`/invoices/${inv.id}`);
+                  }
+                }}
+                className="group grid grid-cols-2 md:grid-cols-[1.4fr_1.6fr_1fr_1fr_0.9fr_auto] gap-x-4 gap-y-1 px-5 py-4 cursor-pointer hover:bg-[var(--surface-2)] transition-colors items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]/40"
               >
                 <div className="font-semibold text-sm text-[var(--ink)] tabular">
                   {inv.invoice_number}

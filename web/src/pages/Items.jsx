@@ -55,7 +55,7 @@ export default function Items() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((item) => (
-            <Card key={item.id} padding="lg" className="group cursor-pointer" onClick={() => setModal(item)}>
+            <Card key={item.id} padding="lg" className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40" onClick={() => setModal(item)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.target.closest?.("button")) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setModal(item); } }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="font-semibold text-[var(--ink)] truncate">{item.name}</div>

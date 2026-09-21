@@ -77,8 +77,17 @@ export default function Clients() {
             <Card
               key={c.id}
               padding="lg"
-              className="cursor-pointer group"
+              className="cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40"
               onClick={() => nav(`/clients/${c.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.target.closest?.("button")) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  nav(`/clients/${c.id}`);
+                }
+              }}
             >
               <div className="flex items-start gap-3">
                 <div className="h-11 w-11 rounded-full bg-[var(--accent-soft)] text-[var(--accent-strong)] flex items-center justify-center font-semibold shrink-0">
