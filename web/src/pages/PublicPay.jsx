@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import { publicPayApi } from "@/api/publicPay";
+import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
 
@@ -74,7 +75,16 @@ export default function PublicPay() {
     setPayErr("");
     try {
       const res = await publicPayApi.createTransaction(token);
-      window.location.href = res.redirect_url;
+      if (res.snap_token && data.gateway?.client_key) {
+        const snap = await loadMidtransSnap(data.gateway.is_production);
+        snap.pay(res.snap_token, {
+          onClose: () => setPaying(false),
+          onError: () => setPaying(false),
+          onSuccess: () => window.location.reload(),
+        });
+        return;
+      }
+      if (res.redirect_url) window.location.href = res.redirect_url;
     } catch (e) {
       setPayErr(e.message || t(lang, "public.notPayable"));
       setPaying(false);

@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/Input";
 import { useInvoices } from "@/hooks/useInvoices";
 import { usePaymentMutations } from "@/hooks/useFeatures";
 import { paymentsApi } from "@/api/features";
+import { gatewayApi } from "@/api/gateway";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, todayDateInput } from "@/lib/utils";
+import { loadMidtransSnap } from "@/lib/midtrans";
 
 export const PAYMENT_METHODS = ["Cash", "Bank transfer", "Online"];
 
@@ -43,6 +45,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
   const [emailState, setEmailState] = useState(""); // "" | "sending" | "sent" | "error"
   const [emailErr, setEmailErr] = useState("");
   const [copied, setCopied] = useState(false);
+  const [onlinePaying, setOnlinePaying] = useState(false);
 
   const fixed = !!invoiceId;
 
@@ -136,6 +139,21 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
     }
   }
 
+  async function payInvoice() {
+    setOnlinePaying(true);
+    setEmailErr("");
+    try {
+      const config = await gatewayApi.config();
+      if (!config.client_key) throw Object.assign(new Error(t("payments.gatewayUnavailable")), { status: 501 });
+      const intent = await gatewayApi.createInvoiceIntent(form.invoiceId);
+      const snap = await loadMidtransSnap(config.is_production);
+      snap.pay(intent.snap_token, { onClose: () => setOnlinePaying(false), onError: () => setOnlinePaying(false) });
+    } catch (ex) {
+      setEmailErr(ex.message || t("payments.saveFailed"));
+      setOnlinePaying(false);
+    }
+  }
+
   return (
     <AnimatePresence>
       {open && (
@@ -172,6 +190,10 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
                     <ExternalLink size={14} /> {t("payments.onlineOpen")}
                   </Button>
                 </a>
+                <Button variant="accent" className="w-full mb-3" onClick={payInvoice} disabled={onlinePaying}>
+                  {onlinePaying ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                  {t("payments.onlinePayNow")}
+                </Button>
                 <div className="flex items-center gap-2">
                   <Input value={sendEmail} onChange={(e) => setSendEmail(e.target.value)} placeholder={t("payments.onlineEmailPlaceholder")} />
                   <Button variant="accent" onClick={sendLink} disabled={emailState === "sending"}>

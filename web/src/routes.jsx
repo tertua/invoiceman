@@ -23,6 +23,7 @@ const Items = lazy(() => import("@/pages/Items"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers"));
+const AdminGateway = lazy(() => import("@/pages/AdminGateway"));
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
@@ -42,6 +43,11 @@ function ProtectedShell() {
 function AdminRoute() {
   const { user } = useAuth();
   return user?.role === "admin" ? <AdminUsers /> : <Navigate to="/dashboard" replace />;
+}
+
+function AdminPage({ children }) {
+  const { user } = useAuth();
+  return user?.role === "admin" ? children : <Navigate to="/dashboard" replace />;
 }
 
 export const router = createBrowserRouter([
@@ -69,6 +75,7 @@ export const router = createBrowserRouter([
       { path: "reports", element: <Reports /> },
       { path: "settings", element: <Settings /> },
       { path: "admin/users", element: <AdminRoute /> },
+      { path: "admin/gateway", element: <AdminPage><AdminGateway /></AdminPage> },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },

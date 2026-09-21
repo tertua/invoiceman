@@ -22,4 +22,5 @@ func PublicRoutes(a *fiber.App) {
 	route.Post("/webhooks/midtrans", controllers.HandleMidtransWebhook)
 	// Generic provider webhooks for current and future gateways (e.g. crypto).
 	route.Post("/webhooks/:gateway", controllers.HandleGatewayWebhook)
+	route.Get("/public/gateway/config", controllers.GatewayConfig)
 }

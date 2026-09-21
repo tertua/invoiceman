@@ -9,6 +9,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
+  Waypoints,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -136,7 +137,10 @@ export function Sidebar() {
             <NavItem key={item.to} {...item} />
           ))}
           {user?.role === "admin" && (
-            <NavItem to="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
+            <>
+              <NavItem to="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
+              <NavItem to="/admin/gateway" icon={Waypoints} labelKey="sidebar.adminGateway" />
+            </>
           )}
         </nav>
       </div>

@@ -559,7 +559,7 @@ func TestReportsFlow(t *testing.T) {
 	assert.Len(t, report["statusBreakdown"].([]interface{}), 4)
 }
 
-// TestPublicPaymentFlow covers public payment links and simulated settlement.
+// TestPublicPaymentFlow covers public payment links and unconfigured gateway behavior.
 func TestPublicPaymentFlow(t *testing.T) {
 	app := newTestApp()
 
@@ -573,8 +573,8 @@ func TestPublicPaymentFlow(t *testing.T) {
 		"status":"sent",
 		"issue_date":"2026-09-01",
 		"due_date":"2026-09-30",
-		"currency":"USD",
-		"items":[{"description":"Public service","quantity":1,"rate":100}]
+		"currency":"IDR",
+		"items":[{"description":"Public service","quantity":1,"rate":100000}]
 	}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
@@ -590,19 +590,20 @@ func TestPublicPaymentFlow(t *testing.T) {
 	publicData := decodeBody(t, resp)
 	assert.True(t, publicData["can_pay"].(bool))
 	assert.Equal(t, invoiceID, publicData["invoice"].(map[string]interface{})["id"].(string))
+	assert.Equal(t, "midtrans", publicData["gateway"].(map[string]interface{})["name"])
 
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
-	require.Equal(t, 200, resp.StatusCode)
-	assert.Contains(t, decodeBody(t, resp)["redirect_url"], "?paid=1")
+	require.Equal(t, 501, resp.StatusCode)
+	resp.Body.Close()
 
 	resp = doRequest(t, app, "GET", "/api/public/pay/"+token+"/status", "", nil)
 	require.Equal(t, 200, resp.StatusCode)
 	status := decodeBody(t, resp)
-	assert.Equal(t, "paid", status["status"])
-	assert.Equal(t, float64(0), status["balance"])
+	assert.NotEqual(t, "paid", status["status"])
+	assert.NotEqual(t, float64(0), status["balance"])
 
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
-	assert.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, 501, resp.StatusCode)
 	resp.Body.Close()
 
 	resp = doRequest(t, app, "POST", "/api/payments/online/send", `{"invoiceId":"`+invoiceID+`","email":"client@example.com"}`, cookies)

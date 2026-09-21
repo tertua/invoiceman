@@ -17,6 +17,7 @@ import (
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/invoiceman/platform/midtrans"
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
@@ -230,6 +231,26 @@ func ListMyTransactions(c fiber.Ctx) error {
 		out = append(out, intentResponse(t))
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"transactions": out})
+}
+
+// GatewayConfig returns public browser configuration for the active gateway.
+// Server credentials are never exposed here; the client key is intentionally
+// public and is required by the provider's browser SDK.
+// @Description Get public payment gateway browser configuration.
+// @Summary get gateway browser config
+// @Tags Gateway
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /gateway/config [get]
+func GatewayConfig(c fiber.Ctx) error {
+	cfg := midtrans.FromEnv()
+	return utils.OK(c, fiber.StatusOK, fiber.Map{
+		"gateway":       "midtrans",
+		"client_key":    cfg.ClientKey,
+		"is_production": cfg.IsProd,
+		"configured":    cfg.ServerKey != "",
+	})
 }
 
 // CreateInvoiceIntent creates a Snap transaction for a local invoice.

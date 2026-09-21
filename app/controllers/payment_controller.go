@@ -15,6 +15,7 @@ import (
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/mail"
 )
 
@@ -331,6 +332,11 @@ func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map,
 			"company_name": settings.CompanyName,
 			"logo_url":     settings.LogoURL,
 		},
+		"gateway": fiber.Map{
+			"name":          "midtrans",
+			"client_key":    strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
+			"is_production": strings.EqualFold(strings.TrimSpace(os.Getenv("MIDTRANS_IS_PROD")), "true"),
+		},
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
 }
@@ -359,8 +365,8 @@ func GetPublicPayment(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, data)
 }
 
-// CreatePublicTransaction records a simulated online payment for the invoice balance.
-// @Description Complete a public payment without an external gateway.
+// CreatePublicTransaction creates a real gateway intent for the invoice balance.
+// @Description Create a public payment gateway transaction.
 // @Summary create public payment transaction
 // @Tags Public Payments
 // @Produce json
@@ -387,12 +393,40 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	if invoice.Total <= paid {
 		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 	}
-	now := time.Now()
-	payment := &models.Payment{ID: uuid.New(), CreatedAt: now, UserID: link.UserID, InvoiceID: invoice.ID, Amount: invoice.Total - paid, Method: "Online", PaidOn: &now}
-	if err := db.CreatePayment(payment); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment", nil)
+	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total-paid)
+}
+
+func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance float64) error {
+	if !strings.EqualFold(strings.TrimSpace(invoice.Currency), "IDR") {
+		return utils.Fail(c, fiber.StatusBadRequest, "online payment is currently available for IDR invoices only", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"redirect_url": "/pay/" + link.Token + "?paid=1"})
+	gw, err := gateway.Get("midtrans")
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "payment gateway is not registered", nil)
+	}
+	orderID := "INV-" + strings.ReplaceAll(invoice.InvoiceNumber, " ", "") + "-" + link.Token[:8]
+	if existing, err := db.GetTransaction(orderID); err == nil {
+		return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": existing.SnapToken, "redirect_url": existing.RedirectURL, "order_id": existing.OrderID})
+	}
+	amountIDR := int64(balance + 0.5)
+	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{OrderID: orderID, AmountMinor: amountIDR, Currency: invoice.Currency})
+	if err != nil {
+		if errors.Is(err, gateway.ErrNotConfigured) {
+			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+		}
+		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
+	}
+	now := time.Now()
+	txn := &models.GatewayTransaction{
+		OrderID: orderID, ProjectSlug: "local", Gateway: "midtrans", ExternalOrderID: invoice.ID.String(),
+		InvoiceID: &invoice.ID, UserID: &link.UserID, AmountIDR: amountIDR, Currency: invoice.Currency,
+		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.CreateTransaction(txn); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": txn.SnapToken, "redirect_url": txn.RedirectURL, "order_id": txn.OrderID})
 }
 
 // GetPublicPaymentStatus returns the current public payment status.
