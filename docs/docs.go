@@ -1391,12 +1391,42 @@ const docTemplate = `{
         },
         "/payments/online/send": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Send a public payment link by email.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "Payments"
                 ],
                 "summary": "send payment link email",
-                "responses": {}
+                "parameters": [
+                    {
+                        "description": "Payment link email payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.OnlineLinkEmailInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
             }
         },
         "/payments/{id}": {
@@ -1831,6 +1861,22 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "models.OnlineLinkEmailInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "invoiceId"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "invoiceId": {
+                    "type": "string"
                 }
             }
         },

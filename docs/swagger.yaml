@@ -154,6 +154,17 @@ definitions:
     - email
     - password
     type: object
+  models.OnlineLinkEmailInput:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      invoiceId:
+        type: string
+    required:
+    - email
+    - invoiceId
+    type: object
   models.PaymentInput:
     properties:
       amount:
@@ -1184,8 +1195,26 @@ paths:
       - Payments
   /payments/online/send:
     post:
+      consumes:
+      - application/json
       description: Send a public payment link by email.
-      responses: {}
+      parameters:
+      - description: Payment link email payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.OnlineLinkEmailInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
       summary: send payment link email
       tags:
       - Payments

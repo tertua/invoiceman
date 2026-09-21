@@ -16,6 +16,12 @@ type PaymentInput struct {
 	Notes     string  `json:"notes"`
 }
 
+// OnlineLinkEmailInput describes a request to email a public payment link.
+type OnlineLinkEmailInput struct {
+	InvoiceID string `json:"invoiceId" validate:"required,uuid4"`
+	Email     string `json:"email" validate:"required,email,lte=255"`
+}
+
 // PaymentListRow contains payment data formatted for the payments page.
 type PaymentListRow struct {
 	PaymentID       uuid.UUID  `db:"payment_id"`

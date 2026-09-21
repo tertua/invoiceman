@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -12,6 +15,7 @@ import (
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/mail"
 )
 
 func newPaymentToken() (string, error) {
@@ -238,13 +242,78 @@ func CreateOnlineLink(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"url": "/pay/" + link.Token, "token": link.Token})
 }
 
-// SendOnlineLink is intentionally unavailable until an email provider is configured.
+func publicURL(path string) string {
+	base := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_PUBLIC_URL")), "/")
+	if base == "" {
+		base = "http://localhost:5173"
+	}
+	return base + path
+}
+
+// SendOnlineLink emails a public payment link to the requested recipient.
 // @Description Send a public payment link by email.
 // @Summary send payment link email
 // @Tags Payments
+// @Accept json
+// @Produce json
+// @Param request body models.OnlineLinkEmailInput true "Payment link email payload"
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
 // @Router /payments/online/send [post]
 func SendOnlineLink(c fiber.Ctx) error {
-	return utils.Fail(c, fiber.StatusNotImplemented, "email provider is not configured", nil)
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	input := &models.OnlineLinkEmailInput{}
+	if err := c.Bind().Body(input); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(input); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+	invoiceID, err := uuid.Parse(input.InvoiceID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	invoice, err := db.GetInvoice(userID, invoiceID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+	}
+	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment link", nil)
+		}
+		token, tokenErr := newPaymentToken()
+		if tokenErr != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
+		}
+		link = models.PaymentLink{Token: token, InvoiceID: invoiceID, UserID: userID, CreatedAt: time.Now()}
+		if err := db.CreatePaymentLink(&link); err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
+		}
+	}
+	mailer, err := mail.NewFromEnv()
+	if errors.Is(err, mail.ErrNotConfigured) {
+		return utils.Fail(c, fiber.StatusNotImplemented, "email provider is not configured", nil)
+	}
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "email provider configuration is invalid", nil)
+	}
+	url := publicURL("/pay/" + link.Token)
+	body := fmt.Sprintf("Hello,\n\nPlease use the following link to pay invoice %s:\n%s\n\nThank you.", invoice.InvoiceNumber, url)
+	if err := mailer.Send(input.Email, "Payment link for invoice "+invoice.InvoiceNumber, body); err != nil {
+		return utils.Fail(c, fiber.StatusBadGateway, "failed to send payment link email", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "payment link sent"})
 }
 
 func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map, error) {
