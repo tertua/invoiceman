@@ -975,6 +975,22 @@ paths:
       summary: delete payment
       tags:
       - Payments
+  /reports:
+    get:
+      description: Get financial reports.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get financial reports
+      tags:
+      - Reports
   /settings:
     get:
       description: Get settings of current user.

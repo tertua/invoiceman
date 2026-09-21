@@ -16,6 +16,7 @@ type Queries struct {
 	*queries.ItemQueries      // load queries from Item model
 	*queries.ExpenseQueries   // load queries from Expense model
 	*queries.PaymentQueries   // load queries from Payment model
+	*queries.ReportQueries    // load queries for Reports aggregates
 	*queries.SettingsQueries  // load queries from Settings model
 	*queries.DashboardQueries // load queries for Dashboard aggregates
 }
@@ -49,6 +50,7 @@ func OpenDBConnection() (*Queries, error) {
 		ItemQueries:      &queries.ItemQueries{DB: db},      // from Item model
 		ExpenseQueries:   &queries.ExpenseQueries{DB: db},   // from Expense model
 		PaymentQueries:   &queries.PaymentQueries{DB: db},   // from Payment model
+		ReportQueries:    &queries.ReportQueries{DB: db},    // for Reports aggregates
 		SettingsQueries:  &queries.SettingsQueries{DB: db},  // from Settings model
 		DashboardQueries: &queries.DashboardQueries{DB: db}, // for Dashboard aggregates
 	}, nil
