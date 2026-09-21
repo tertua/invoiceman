@@ -28,7 +28,7 @@
 - From `web/`, use `npm run dev`, `npm run build`, or `npm run lint`. There is no frontend test script.
 - Vite serves on `5173` and proxies `/api` to `http://localhost:5000`; run the Go API separately for API-backed development.
 - `@` aliases to `web/src`. TanStack Query is configured for one retry, no refetch on window focus, and a 30-second stale time. Axios normalizes API failures in `web/src/api/http.js`.
-- Backend routes are currently implemented for auth, clients, invoices, dashboard, items, expenses, payments, reports, settings, AI, admin users, public payments, and the central multi-gateway payment relay (`/api/gateway/*` service intents + `POST /api/webhooks/:gateway` + `/api/admin/gateway/*`; providers implement `platform/gateway.Gateway`, Midtrans is the first). The SPA also calls all of these; verify any new frontend call has backend support before assuming it works.
+- Backend routes are currently implemented for auth, clients, invoices, dashboard, items, expenses, payments, reports, settings, AI, admin users, public payments, and the central multi-gateway payment relay (`/api/gateway/*` service intents + `POST /api/webhooks/:gateway` + `/api/admin/gateway/*`; providers implement `platform/gateway.Gateway` (Midtrans + NOWPayments crypto). The SPA also calls all of these; verify any new frontend call has backend support before assuming it works.
 
 ## Structure Conventions
 

@@ -11,6 +11,7 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/invoiceman/platform/nowpayments"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -47,6 +48,7 @@ func main() {
 
 	// Register payment gateways (add new providers here, e.g. crypto).
 	gateway.Register(midtrans.Gateway{})
+	gateway.Register(nowpayments.Gateway{})
 
 	// Routes.
 	routes.SwaggerRoute(app)  // Register a route for API Docs (Swagger).

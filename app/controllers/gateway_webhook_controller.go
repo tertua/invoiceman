@@ -212,6 +212,18 @@ func truncateErr(s string) string {
 	return s
 }
 
+// gatewayDisplayName maps a registry name to a human payment method label.
+func gatewayDisplayName(name string) string {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "nowpayments":
+		return "NOWPayments"
+	case "", "midtrans":
+		return "Midtrans"
+	default:
+		return strings.TrimSpace(name)
+	}
+}
+
 // settleLocalInvoice records a payment against a local invoice on success.
 // It is best-effort and idempotent via the invoice balance check.
 func settleLocalInvoice(db database.Queries, txn models.GatewayTransaction, gross float64) {
@@ -241,10 +253,10 @@ func settleLocalInvoice(db database.Queries, txn models.GatewayTransaction, gros
 		UserID:    *txn.UserID,
 		InvoiceID: *txn.InvoiceID,
 		Amount:    amount,
-		Method:    "Midtrans",
+		Method:    gatewayDisplayName(txn.Gateway),
 		PaidOn:    &now,
 		TxnID:     txn.MidtransTxnID,
-		Notes:     "Midtrans " + txn.OrderID,
+		Notes:     gatewayDisplayName(txn.Gateway) + " " + txn.OrderID,
 	})
 }
 
