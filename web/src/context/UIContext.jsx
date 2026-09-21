@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,23 +49,24 @@ export function UIProvider({ children }) {
     [dismiss]
   );
 
-  // Convenience helpers
-  toast.success = (title, description, opts) =>
-    toast({ title, description, variant: "success", ...opts });
-  toast.error = (title, description, opts) =>
-    toast({ title, description, variant: "error", ...opts });
-  toast.info = (title, description, opts) =>
-    toast({ title, description, variant: "info", ...opts });
+  const toastApi = useMemo(() => {
+    return {
+      success: (title, description, opts) => toast({ title, description, variant: "success", ...opts }),
+      error: (title, description, opts) => toast({ title, description, variant: "error", ...opts }),
+      info: (title, description, opts) => toast({ title, description, variant: "info", ...opts }),
+    };
+  }, [toast]);
 
   useEffect(() => {
+    const activeTimers = timers.current;
     return () => {
-      timers.current.forEach((t) => clearTimeout(t));
-      timers.current.clear();
+      activeTimers.forEach((t) => clearTimeout(t));
+      activeTimers.clear();
     };
   }, []);
 
   return (
-    <UIContext.Provider value={{ toast, dismiss }}>
+    <UIContext.Provider value={{ toast: toastApi, dismiss }}>
       {children}
       <ToastViewport toasts={toasts} dismiss={dismiss} />
     </UIContext.Provider>

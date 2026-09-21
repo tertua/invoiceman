@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { CheckCircle2, Loader2, ArrowRight, ShieldCheck, FileDown } from "lucide-react";
@@ -25,7 +25,7 @@ function Row({ label, value, bold }) {
 
 export default function PublicPay() {
   const { token } = useParams();
-  const lang = useRef(detectLang()).current;
+  const lang = detectLang();
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [paying, setPaying] = useState(false);

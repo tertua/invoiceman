@@ -24,7 +24,6 @@ import {
   Building2,
   Receipt,
   TrendingUp,
-  Clock,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -88,9 +87,12 @@ export default function ClientDetail() {
   const del = useDeleteClient();
   const [editOpen, setEditOpen] = useState(false);
 
-  const invoices = data?.invoices || [];
-  const stats = data?.stats || { count: 0, totalBilled: 0, outstanding: 0 };
-  const insights = useMemo(() => computeInsights(invoices, stats, t), [invoices, stats, t]);
+  const invoiceList = useMemo(() => data?.invoices || [], [data?.invoices]);
+  const clientStats = useMemo(
+    () => data?.stats || { count: 0, totalBilled: 0, outstanding: 0 },
+    [data?.stats]
+  );
+  const insights = useMemo(() => computeInsights(invoiceList, clientStats, t), [invoiceList, clientStats, t]);
 
   if (isLoading) {
     return (
@@ -149,9 +151,9 @@ export default function ClientDetail() {
 
       {/* Stats — full-width row so currency values have room */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-        <MiniStat label={t("clientDetail.invoices")} value={stats.count} />
-        <MiniStat label={t("common.totalBilled")} value={formatMoney(stats.totalBilled)} />
-        <MiniStat label={t("common.outstanding")} value={formatMoney(stats.outstanding)} warn={stats.outstanding > 0} />
+        <MiniStat label={t("clientDetail.invoices")} value={clientStats.count} />
+        <MiniStat label={t("common.totalBilled")} value={formatMoney(clientStats.totalBilled)} />
+        <MiniStat label={t("common.outstanding")} value={formatMoney(clientStats.outstanding)} warn={clientStats.outstanding > 0} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
@@ -180,7 +182,7 @@ export default function ClientDetail() {
         <div className="lg:col-span-2">
           <Card padding="lg">
             <CardTitle className="mb-4">{t("clientDetail.invoiceHistory")}</CardTitle>
-            {invoices.length === 0 ? (
+            {invoiceList.length === 0 ? (
               <div className="py-10 text-center">
                 <p className="text-sm text-[var(--ink-muted)]">{t("clientDetail.noInvoices")}</p>
                 <Button variant="soft" size="sm" className="mt-3" onClick={() => nav(`/invoices/new?client=${id}`)}>
@@ -189,7 +191,7 @@ export default function ClientDetail() {
               </div>
             ) : (
               <div className="divide-y divide-[var(--border)]">
-                {invoices.map((inv) => (
+                {invoiceList.map((inv) => (
                   <button
                     key={inv.id}
                     onClick={() => nav(`/invoices/${inv.id}`)}
@@ -218,9 +220,9 @@ export default function ClientDetail() {
       </div>
 
       {/* Insights row — aligns with the columns above (1 / 2 split) */}
-      {invoices.length > 0 && (
+      {invoiceList.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5 items-start">
-          <PaymentStatusCard insights={insights} stats={stats} />
+          <PaymentStatusCard insights={insights} />
           <div className="lg:col-span-2">
             <BillingChartCard insights={insights} />
           </div>
@@ -232,7 +234,7 @@ export default function ClientDetail() {
   );
 }
 
-function PaymentStatusCard({ insights, stats }) {
+function PaymentStatusCard({ insights }) {
   const { t } = useLang();
   const { breakdown, avgInvoice, largest, paidRate } = insights;
   const hasData = breakdown.length > 0;

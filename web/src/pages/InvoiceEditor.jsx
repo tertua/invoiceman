@@ -93,7 +93,7 @@ export default function InvoiceEditor() {
         items: [blankItem()],
       });
     }
-  }, [isEdit, existing, settings, form, t]);
+  }, [isEdit, existing, settings, form, preselectClient, t]);
 
   const totals = useMemo(() => {
     if (!form) return { subtotal: 0, taxAmount: 0, total: 0 };
