@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { PDFDownloadLink } from "@react-pdf/renderer";
 import {
   ArrowLeft,
   Pencil,
   Trash2,
-  Download,
   Loader2,
   Send,
   Undo2,
@@ -17,10 +15,10 @@ import {
   Wallet,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
-import { Button, buttonVariants } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { InvoiceDocument } from "@/components/invoice/InvoiceDocument";
+import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import {
   useInvoice,
   useSetInvoiceStatus,
@@ -87,17 +85,7 @@ export default function InvoiceDetail() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <PDFDownloadLink
-            document={<InvoiceDocument invoice={invoice} settings={settings} lang={lang} />}
-            fileName={`${invoice.invoice_number}.pdf`}
-          >
-            {({ loading }) => (
-              <span className={buttonVariants({ variant: "outline", size: "md" })}>
-                {loading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                PDF
-              </span>
-            )}
-          </PDFDownloadLink>
+          <InvoicePdfDownload invoice={invoice} settings={settings} lang={lang} label="PDF" />
           <Button variant="outline" onClick={() => nav(`/invoices/${id}/edit`)}>
             <Pencil size={15} /> {t("common.edit")}
           </Button>

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import { CheckCircle2, Loader2, ArrowRight, ShieldCheck, FileDown } from "lucide-react";
+import { CheckCircle2, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { InvoiceDocument } from "@/components/invoice/InvoiceDocument";
+import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import { publicPayApi } from "@/api/publicPay";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
@@ -142,14 +141,13 @@ export default function PublicPay() {
               ))}
             </div>
             <div className="mt-4">
-              <PDFDownloadLink document={<InvoiceDocument invoice={invoice} settings={branding} lang={lang} />} fileName={`${invoice.invoice_number}.pdf`}>
-                {({ loading }) => (
-                  <Button variant="accent" className="w-full" disabled={loading}>
-                    {loading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                    {t(lang, "public.downloadPdf")}
-                  </Button>
-                )}
-              </PDFDownloadLink>
+              <InvoicePdfDownload
+                invoice={invoice}
+                settings={branding}
+                lang={lang}
+                publicView
+                label={t(lang, "public.downloadPdf")}
+              />
             </div>
           </div>
         ) : can_pay ? (

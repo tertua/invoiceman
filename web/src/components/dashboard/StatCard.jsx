@@ -1,32 +1,49 @@
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar } from "recharts";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
 function MiniLine({ data, color }) {
+  const values = data.map((point) => Number(point?.v) || 0);
+  const min = Math.min(...values);
+  const range = Math.max(...values) - min || 1;
+  const points = values
+    .map((value, index) => {
+      const x = values.length === 1 ? 55 : (index / (values.length - 1)) * 110;
+      const y = 36 - ((value - min) / range) * 30;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+
   return (
-    <ResponsiveContainer width="100%" height={42}>
-      <LineChart data={data} margin={{ top: 6, right: 0, bottom: 0, left: 0 }}>
-        <Line
-          type="monotone"
-          dataKey="v"
-          stroke={color}
-          strokeWidth={2}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <svg viewBox="0 0 110 42" width="110" height="42" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
 function MiniBars({ data, color }) {
+  const values = data.map((point) => Number(point?.v) || 0);
+  const max = Math.max(...values, 1);
+  const gap = values.length > 1 ? 4 : 0;
+  const width = values.length ? (110 - gap * (values.length - 1)) / values.length : 0;
+
   return (
-    <ResponsiveContainer width="100%" height={42}>
-      <BarChart data={data} margin={{ top: 6, right: 0, bottom: 0, left: 0 }}>
-        <Bar dataKey="v" fill={color} radius={[3, 3, 0, 0]} barSize={6} />
-      </BarChart>
-    </ResponsiveContainer>
+    <svg viewBox="0 0 110 42" width="110" height="42" aria-hidden="true">
+      {values.map((value, index) => {
+        const height = Math.max((value / max) * 30, 2);
+        return (
+          <rect
+            key={index}
+            x={index * (width + gap)}
+            y={36 - height}
+            width={Math.max(width, 1)}
+            height={height}
+            rx="3"
+            fill={color}
+          />
+        );
+      })}
+    </svg>
   );
 }
 
