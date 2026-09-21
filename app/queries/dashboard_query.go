@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/utils"
 	"gorm.io/gorm"
 )
 
@@ -172,7 +173,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 	for _, row := range rows {
 		issueDate := ""
 		if row.IssueDate != nil {
-			issueDate = row.IssueDate.Format("2006-01-02")
+			issueDate = row.IssueDate.Format(utils.DateLayout)
 		}
 		invoices = append(invoices, models.RecentInvoice{
 			ID:              row.ID.String(),

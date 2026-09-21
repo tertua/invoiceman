@@ -36,7 +36,7 @@ func paymentResponse(row models.PaymentListRow) fiber.Map {
 		"invoice_currency": row.InvoiceCurrency,
 		"amount":           row.Amount,
 		"method":           row.Method,
-		"paid_on":          formatDate(row.PaidOn),
+		"paid_on":          utils.FormatDate(row.PaidOn),
 		"txn_id":           row.TxnID,
 		"notes":            row.Notes,
 	}
@@ -109,7 +109,7 @@ func CreatePayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 	}
-	paidOn, err := parseDate(input.PaidOn)
+	paidOn, err := utils.ParseDate(input.PaidOn)
 	if err != nil || paidOn == nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid paid_on, expected YYYY-MM-DD", nil)
 	}
@@ -151,7 +151,7 @@ func CreatePayment(c fiber.Ctx) error {
 		"invoice_id": payment.InvoiceID,
 		"amount":     payment.Amount,
 		"method":     payment.Method,
-		"paid_on":    formatDate(payment.PaidOn),
+		"paid_on":    utils.FormatDate(payment.PaidOn),
 		"txn_id":     payment.TxnID,
 		"notes":      payment.Notes,
 	}})

@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/tertua/invoiceman/pkg/utils"
 
 	jwtMiddleware "github.com/gofiber/contrib/v3/jwt"
 )
@@ -21,17 +22,12 @@ func JWTProtected() func(fiber.Ctx) error {
 }
 
 func jwtError(c fiber.Ctx, err error) error {
-	// Return status 401 and failed authentication error.
+	// Keep the shared {"error":{"message","details"}} envelope so the
+	// frontend apiClient interceptor reads the server message correctly.
 	if err.Error() == "Missing or malformed JWT" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+		return utils.Fail(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	// Return status 401 and failed authentication error.
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-		"error": true,
-		"msg":   err.Error(),
-	})
+	return utils.Fail(c, fiber.StatusUnauthorized, err.Error(), nil)
 }

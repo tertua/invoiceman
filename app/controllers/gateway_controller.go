@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -95,7 +94,7 @@ func resolveGateway(requested, projectDefault string) string {
 // @Success 201 {object} map[string]interface{}
 // @Router /gateway/intents [post]
 func CreateIntent(c fiber.Ctx) error {
-	project, err := middleware.CurrentProject(c)
+	project, err := utils.CurrentServiceProject(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
@@ -185,7 +184,7 @@ func CreateIntent(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /gateway/intents/{order_id} [get]
 func GetIntent(c fiber.Ctx) error {
-	project, err := middleware.CurrentProject(c)
+	project, err := utils.CurrentServiceProject(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
@@ -214,7 +213,7 @@ func GetIntent(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /gateway/transactions [get]
 func ListMyTransactions(c fiber.Ctx) error {
-	project, err := middleware.CurrentProject(c)
+	project, err := utils.CurrentServiceProject(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 )
 
-// ListSettings returns settings for the current user.
+// GetSettings returns settings for the current user.
 // @Description Get settings of current user.
 // @Summary get current user settings
 // @Tags Settings
@@ -15,7 +15,7 @@ import (
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
 // @Router /settings [get]
-func ListSettings(c fiber.Ctx) error {
+func GetSettings(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)

@@ -57,8 +57,8 @@ func PrivateRoutes(a *fiber.App) {
 	// Reports routes:
 	route.Get("/reports", controllers.GetReports)
 
-	// Settings routes:
-	route.Get("/settings", controllers.ListSettings)
+	// Settings routes (GET for any session user; PATCH restricted to admin/user):
+	route.Get("/settings", controllers.GetSettings)
 	route.Patch("/settings", middleware.RequireRoles("admin", "user"), controllers.UpdateSettings)
 
 	// AI routes:

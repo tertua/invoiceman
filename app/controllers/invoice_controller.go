@@ -13,36 +13,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// dateLayout is the date format exchanged with the frontend.
-const dateLayout = "2006-01-02"
-
-// parseDate parses an optional YYYY-MM-DD date string.
-func parseDate(value string) (*time.Time, error) {
-	if value == "" {
-		return nil, nil
-	}
-	parsed, err := time.Parse(dateLayout, value)
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
-// formatDate formats an optional date for the frontend.
-func formatDate(value *time.Time) string {
-	if value == nil {
-		return ""
-	}
-	return value.Format(dateLayout)
-}
-
 // buildInvoice computes invoice and item rows from user input.
 func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice, []models.InvoiceItem, error) {
-	issueDate, err := parseDate(input.IssueDate)
+	issueDate, err := utils.ParseDate(input.IssueDate)
 	if err != nil {
 		return nil, nil, errors.New("invalid issue_date, expected YYYY-MM-DD")
 	}
-	dueDate, err := parseDate(input.DueDate)
+	dueDate, err := utils.ParseDate(input.DueDate)
 	if err != nil {
 		return nil, nil, errors.New("invalid due_date, expected YYYY-MM-DD")
 	}
@@ -130,7 +107,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		paymentMaps = append(paymentMaps, fiber.Map{
 			"id":      payment.ID,
 			"amount":  payment.Amount,
-			"paid_on": formatDate(payment.PaidOn),
+			"paid_on": utils.FormatDate(payment.PaidOn),
 			"method":  payment.Method,
 			"txn_id":  payment.TxnID,
 		})
@@ -154,8 +131,8 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		"client_name":      clientName,
 		"client_company":   clientCompany,
 		"client_email":     clientEmail,
-		"issue_date":       formatDate(invoice.IssueDate),
-		"due_date":         formatDate(invoice.DueDate),
+		"issue_date":       utils.FormatDate(invoice.IssueDate),
+		"due_date":         utils.FormatDate(invoice.DueDate),
 		"currency":         invoice.Currency,
 		"subtotal":         invoice.Subtotal,
 		"discount":         invoice.Discount,
@@ -213,8 +190,8 @@ func ListInvoices(c fiber.Ctx) error {
 			"invoice_number":   row.InvoiceNumber,
 			"client_name":      row.ClientName,
 			"client_company":   row.ClientCompany,
-			"issue_date":       formatDate(row.IssueDate),
-			"due_date":         formatDate(row.DueDate),
+			"issue_date":       utils.FormatDate(row.IssueDate),
+			"due_date":         utils.FormatDate(row.DueDate),
 			"total":            row.Total,
 			"currency":         row.Currency,
 			"effective_status": row.EffectiveStatus(),

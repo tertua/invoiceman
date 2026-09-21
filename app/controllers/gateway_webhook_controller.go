@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -277,7 +276,7 @@ func ListDeliveries(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /gateway/deliveries [get]
 func ListMyDeliveries(c fiber.Ctx) error {
-	project, err := middleware.CurrentProject(c)
+	project, err := utils.CurrentServiceProject(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}

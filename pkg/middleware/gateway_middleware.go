@@ -11,8 +11,9 @@ import (
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
-// GatewayProjectKey is the context locals key holding the authenticated project.
-const GatewayProjectKey = "gatewayProject"
+// GatewayProjectKey aliases the canonical key in pkg/utils so existing
+// callers keep compiling; new code should use utils.GatewayProjectKey.
+const GatewayProjectKey = utils.GatewayProjectKey
 
 // GatewayAuth authenticates downstream projects by service API key.
 // Identity is derived server-side from the key hash; client-supplied
@@ -43,10 +44,8 @@ func GatewayAuth() fiber.Handler {
 }
 
 // CurrentProject returns the project stored by GatewayAuth.
+// Deprecated: prefer utils.CurrentServiceProject to keep app/ free of
+// middleware imports; kept here for backward compatibility.
 func CurrentProject(c fiber.Ctx) (models.GatewayProject, error) {
-	project, ok := c.Locals(GatewayProjectKey).(models.GatewayProject)
-	if !ok || project.Slug == "" {
-		return models.GatewayProject{}, errors.New("missing project")
-	}
-	return project, nil
+	return utils.CurrentServiceProject(c)
 }

@@ -92,8 +92,8 @@ func GetClient(c fiber.Ctx) error {
 		invoices = append(invoices, fiber.Map{
 			"id":             row.ID,
 			"invoice_number": row.InvoiceNumber,
-			"issue_date":     formatDate(row.IssueDate),
-			"due_date":       formatDate(row.DueDate),
+			"issue_date":     utils.FormatDate(row.IssueDate),
+			"due_date":       utils.FormatDate(row.DueDate),
 			"total":          row.Total,
 			"currency":       row.Currency,
 			"status":         row.Status,

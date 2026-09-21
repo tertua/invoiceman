@@ -12,16 +12,12 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 )
 
-func parseExpenseDate(value string) (time.Time, error) {
-	return time.Parse(dateLayout, value)
-}
-
 func expenseResponse(expense models.Expense) fiber.Map {
 	return fiber.Map{
 		"id":           expense.ID,
 		"vendor":       expense.Vendor,
 		"category":     expense.Category,
-		"expense_date": expense.ExpenseDate.Format(dateLayout),
+		"expense_date": utils.FormatTime(expense.ExpenseDate),
 		"amount":       expense.Amount,
 		"currency":     expense.Currency,
 		"notes":        expense.Notes,
@@ -108,7 +104,7 @@ func CreateExpense(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	expenseDate, err := parseExpenseDate(input.ExpenseDate)
+	expenseDate, err := utils.ParseRequiredDate(input.ExpenseDate)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense_date, expected YYYY-MM-DD", nil)
 	}
@@ -170,7 +166,7 @@ func UpdateExpense(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	expenseDate, err := parseExpenseDate(input.ExpenseDate)
+	expenseDate, err := utils.ParseRequiredDate(input.ExpenseDate)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense_date, expected YYYY-MM-DD", nil)
 	}
