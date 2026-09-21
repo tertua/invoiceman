@@ -103,6 +103,23 @@ definitions:
     required:
     - status
     type: object
+  models.ItemInput:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      rate:
+        minimum: 0
+        type: number
+      unit:
+        maxLength: 50
+        type: string
+    required:
+    - name
+    type: object
   models.Login:
     properties:
       email:
@@ -641,6 +658,96 @@ paths:
       summary: update invoice status
       tags:
       - Invoices
+  /items:
+    get:
+      description: Get catalog items of current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get catalog items
+      tags:
+      - Items
+    post:
+      consumes:
+      - application/json
+      description: Create a catalog item.
+      parameters:
+      - description: Item payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ItemInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: create catalog item
+      tags:
+      - Items
+  /items/{id}:
+    delete:
+      description: Delete a catalog item.
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ok
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: delete catalog item
+      tags:
+      - Items
+    patch:
+      consumes:
+      - application/json
+      description: Update a catalog item.
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ItemInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update catalog item
+      tags:
+      - Items
 securityDefinitions:
   ApiKeyAuth:
     in: header
