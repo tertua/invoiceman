@@ -51,7 +51,13 @@ export default function Reports() {
   if (isLoading) return <ReportsSkeleton />;
   if (!data) return <EmptyState icon={BarChart3} title={t("reports.noData")} description={t("reports.noDataDesc")} />;
 
-  const { totals, monthly, aging, topClients, statusBreakdown } = data;
+  const {
+    totals = {},
+    monthly = [],
+    aging = [],
+    topClients = [],
+    statusBreakdown = [],
+  } = data;
   const statusData = statusBreakdown.filter((s) => s.value > 0);
   const agingHasData = aging.some((a) => a.value > 0);
   const maxClient = Math.max(1, ...topClients.map((c) => c.billed));

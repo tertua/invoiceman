@@ -16,7 +16,12 @@ type ReportQueries struct {
 
 // GetReports aggregates invoices, payments, expenses, and clients for a user.
 func (q *ReportQueries) GetReports(userID uuid.UUID) (models.Reports, error) {
-	report := models.Reports{}
+	report := models.Reports{
+		Monthly:         make([]models.ReportMonthlyPoint, 0),
+		Aging:           make([]models.ReportValuePoint, 0),
+		TopClients:      make([]models.ReportClientPoint, 0),
+		StatusBreakdown: make([]models.ReportValuePoint, 0),
+	}
 	var invoices []models.Invoice
 	if err := q.Where("user_id = ?", userID).Find(&invoices).Error; err != nil {
 		return report, err

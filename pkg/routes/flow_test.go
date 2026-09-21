@@ -460,6 +460,15 @@ func TestReportsFlow(t *testing.T) {
 	cookies := resp.Cookies()
 	today := time.Now().Format("2006-01-02")
 
+	// Empty reports use arrays instead of null values for frontend safety.
+	resp = doRequest(t, app, "GET", "/api/reports", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	emptyReport := decodeBody(t, resp)
+	assert.NotNil(t, emptyReport["monthly"])
+	assert.NotNil(t, emptyReport["aging"])
+	assert.Empty(t, emptyReport["topClients"])
+	assert.NotNil(t, emptyReport["statusBreakdown"])
+
 	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Report Client"}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
