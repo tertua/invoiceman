@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "check:bundles": "node scripts/check-bundles.mjs",
     "check:bundles:strict": "BUNDLE_BUDGET=strict node scripts/check-bundles.mjs",
+    "sync:version": "node ../scripts/sync-version.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

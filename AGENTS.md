@@ -50,4 +50,5 @@
   - User-visible strings: backend sends stable English messages, frontend localizes via `api.*` keys in `web/src/lib/i18n.js` (en+id). Never hardcode display text outside the dictionary.
   - Verify by execution, not by reading: `go test ./...` for backend changes; `npm run lint` plus `npm run build` from `web/` for frontend changes; add or extend a flow test when behavior changes. If a check cannot run, say so explicitly.
   - Regenerate Swagger (`swag init`) when API annotations or controller signatures change.
+  - Versioning: the root `VERSION` file is the single source of truth; `web/package.json` follows it via `npm --prefix web run sync:version` (never bump by hand). The `version-check` CI job fails when they drift. Only the pilot declares a feature STABLE; the version bump gets its own commit and tag as the revert/release anchor.
   - One commit per completed step with a conventional message; never commit secrets or local-only files.

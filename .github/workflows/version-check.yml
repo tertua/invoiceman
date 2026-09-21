@@ -1,0 +1,26 @@
+name: Version Check
+
+on:
+  push:
+    paths:
+      - "VERSION"
+      - "web/package.json"
+      - ".github/workflows/version-check.yml"
+  pull_request:
+    paths:
+      - "VERSION"
+      - "web/package.json"
+      - ".github/workflows/version-check.yml"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          expected="$(tr -d ' \t\r\n' < VERSION)"
+          actual="$(node -p "require('./web/package.json').version")"
+          if [ "$expected" != "$actual" ]; then
+            echo "VERSION ($expected) != web/package.json ($actual). Run: npm --prefix web run sync:version"
+            exit 1
+          fi
