@@ -83,7 +83,7 @@ export default function InvoiceEditor() {
         status: "draft",
         issue_date: todayISO(),
         due_date: plusDays(30),
-        currency: settings.currency || "USD",
+        currency: settings.currency || "IDR",
         tax_rate: Number(settings.tax_rate) || 0,
         discount: 0,
         notes: "",
@@ -170,7 +170,7 @@ export default function InvoiceEditor() {
 
   const selectClass =
     "h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
-  const symbol = CURRENCIES.find((c) => c.code === form.currency)?.symbol || "$";
+  const symbol = CURRENCIES.find((c) => c.code === form.currency)?.symbol || "Rp";
 
   return (
     <div className="max-w-[1100px]">

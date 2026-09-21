@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
 
 export function InvoiceDocument({ invoice, settings, lang = "en" }) {
   const s = settings || {};
-  const currency = invoice.currency || "USD";
+  const currency = invoice.currency || "IDR";
   const statusLabel = t(lang, "status." + (invoice.effective_status || invoice.status || "draft")).toUpperCase();
 
   return (

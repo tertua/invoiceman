@@ -346,7 +346,7 @@ func TestSettingsFlow(t *testing.T) {
 	resp = doRequest(t, app, "GET", "/api/settings", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	settings := decodeBody(t, resp)["settings"].(map[string]interface{})
-	assert.Equal(t, "USD", settings["currency"])
+	assert.Equal(t, "IDR", settings["currency"])
 	assert.Equal(t, "INV-", settings["invoice_prefix"])
 
 	resp = doRequest(t, app, "PATCH", "/api/settings", `{
@@ -392,7 +392,7 @@ func TestExpenseFlow(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	expense := decodeBody(t, resp)["expense"].(map[string]interface{})
 	expenseID := expense["id"].(string)
-	assert.Equal(t, "USD", expense["currency"])
+	assert.Equal(t, "IDR", expense["currency"])
 
 	resp = doRequest(t, app, "POST", "/api/expenses", `{
 		"vendor":"Office Supply",

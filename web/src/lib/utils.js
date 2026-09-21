@@ -8,7 +8,7 @@ export function cn(...inputs) {
 
 let currentLang = "en";
 let currentLocale = "en-US";
-let currentCurrency = "USD";
+let currentCurrency = "IDR";
 
 export function setLocale(lang) {
   currentLang = lang === "id" ? "id" : "en";

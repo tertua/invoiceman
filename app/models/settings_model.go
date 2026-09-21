@@ -38,7 +38,7 @@ func DefaultSettings(userID uuid.UUID) *Settings {
 	return &Settings{
 		UserID:        userID,
 		UpdatedAt:     time.Now(),
-		Currency:      "USD",
+		Currency:      "IDR",
 		TaxRate:       0,
 		InvoicePrefix: "INV-",
 		InvoiceSeq:    0,

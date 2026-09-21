@@ -10,13 +10,16 @@ import { setDefaultCurrency } from "@/lib/utils";
 export function AppShell() {
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [currency, setCurrency] = useState("IDR");
   const { data: settings } = useSettings();
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
 
   useEffect(() => {
-    setDefaultCurrency(settings?.currency);
+    const nextCurrency = settings?.currency || "IDR";
+    setDefaultCurrency(nextCurrency);
+    setCurrency(nextCurrency);
   }, [settings?.currency]);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export function AppShell() {
         <Topbar onOpenPalette={openPalette} />
         <AnimatePresence mode="wait">
           <motion.div
-            key={location.pathname}
+            key={`${location.pathname}:${currency}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
