@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tertua/invoiceman/pkg/middleware"
 )
 
 // newTestApp builds the full API app for flow tests.
@@ -662,6 +663,35 @@ func TestAIContractFlow(t *testing.T) {
 
 	resp = doRequest(t, app, "POST", "/api/ai/receipt-parse", "", cookies)
 	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+}
+
+// TestCORSOrigins covers credentialed CORS for configured frontend origins.
+func TestCORSOrigins(t *testing.T) {
+	t.Setenv("CORS_ORIGINS", "https://app.example.com, https://admin.example.com")
+	// Mirror main.go wiring: middleware first so CORS headers apply to routes.
+	app := fiber.New()
+	middleware.FiberMiddleware(app)
+	PublicRoutes(app)
+	GatewayRoutes(app)
+	PrivateRoutes(app)
+
+	preflight := func(origin string) *http.Response {
+		req := httptest.NewRequest("OPTIONS", "/api/config", nil)
+		req.Header.Set("Origin", origin)
+		req.Header.Set("Access-Control-Request-Method", "GET")
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+		require.NoError(t, err)
+		return resp
+	}
+
+	resp := preflight("https://app.example.com")
+	assert.Equal(t, "https://app.example.com", resp.Header.Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "true", resp.Header.Get("Access-Control-Allow-Credentials"))
+	resp.Body.Close()
+
+	resp = preflight("https://evil.example.com")
+	assert.NotEqual(t, "https://evil.example.com", resp.Header.Get("Access-Control-Allow-Origin"))
 	resp.Body.Close()
 }
 
