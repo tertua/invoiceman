@@ -164,3 +164,21 @@ export function localizeMonthLabels(rows) {
     return { ...r, label: monthKeyToLabel(r.key, r.label) };
   });
 }
+
+// Backend error messages are English-only; map known stable messages to
+// localized text. Unknown messages pass through untouched.
+// Must never throw — fall back to the raw message.
+const API_ERROR_I18N = {
+  "unauthorized, please sign in again": "api.unauthorized",
+};
+
+export function localizeApiError(message) {
+  if (typeof message !== "string" || !message) return message;
+  try {
+    const key = API_ERROR_I18N[message];
+    if (!key) return message;
+    return t(currentLang, key);
+  } catch {
+    return message;
+  }
+}
