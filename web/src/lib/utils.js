@@ -92,7 +92,9 @@ export function addDaysDateInput(days) {
 }
 
 export function relativeTime(date) {
-  const d = typeof date === "string" ? new Date(date) : date;
+  if (!date) return "";
+  const d = parseDate(date);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
   const diff = (Date.now() - d.getTime()) / 1000;
   if (diff < 60) return t(currentLang, "relative.justNow");
   if (diff < 3600) return t(currentLang, "relative.minAgo", { n: Math.floor(diff / 60) });

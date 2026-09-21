@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // DashboardStats struct to describe dashboard aggregate numbers.
 type DashboardStats struct {
 	InvoiceCount  int     `db:"invoice_count" json:"invoiceCount"`
@@ -19,11 +21,12 @@ type RevenuePoint struct {
 
 // RecentInvoice struct to describe one dashboard recent invoice entry.
 type RecentInvoice struct {
-	ID              string  `db:"id" json:"id"`
-	InvoiceNumber   string  `db:"invoice_number" json:"invoice_number"`
-	ClientName      string  `db:"client_name" json:"client_name"`
-	IssueDate       string  `db:"issue_date" json:"issue_date"`
-	Total           float64 `db:"total" json:"total"`
-	Currency        string  `db:"currency" json:"currency"`
-	EffectiveStatus string  `db:"effective_status" json:"effective_status"`
+	ID              string    `db:"id" json:"id"`
+	InvoiceNumber   string    `db:"invoice_number" json:"invoice_number"`
+	ClientName      string    `db:"client_name" json:"client_name"`
+	IssueDate       string    `db:"issue_date" json:"issue_date"`
+	Total           float64   `db:"total" json:"total"`
+	Currency        string    `db:"currency" json:"currency"`
+	EffectiveStatus string    `db:"effective_status" json:"effective_status"`
+	CreatedAt       time.Time `db:"created_at" json:"created_at"`
 }

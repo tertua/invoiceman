@@ -140,6 +140,7 @@ type recentInvoiceRow struct {
 	Status        string
 	DueDate       *time.Time
 	PaidAmount    float64
+	CreatedAt     time.Time
 }
 
 // GetRecentInvoices returns the 5 most recent invoices of a user.
@@ -155,7 +156,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 		Select(`invoices.id, invoices.invoice_number,
 			COALESCE(clients.name, '') AS client_name,
 			invoices.issue_date, invoices.total, invoices.currency,
-			invoices.status, invoices.due_date,
+			invoices.status, invoices.due_date, invoices.created_at,
 			COALESCE(pay.paid, 0) AS paid_amount`).
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
 		Joins("LEFT JOIN (?) AS pay ON pay.invoice_id = invoices.id", paidSubquery).
@@ -183,6 +184,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 			Total:           row.Total,
 			Currency:        row.Currency,
 			EffectiveStatus: models.ResolveEffectiveStatus(row.Status, row.DueDate, row.Total, row.PaidAmount),
+			CreatedAt:       row.CreatedAt,
 		})
 	}
 

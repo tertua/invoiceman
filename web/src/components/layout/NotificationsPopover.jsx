@@ -117,7 +117,7 @@ export function NotificationsPopover() {
                             </div>
                           </div>
                           <div className="text-[10px] text-[var(--ink-muted)] shrink-0 tabular-nums mt-0.5">
-                            {relativeTime(inv.created_at)}
+                            {relativeTime(inv.created_at || inv.issue_date)}
                           </div>
                         </button>
                       </li>
