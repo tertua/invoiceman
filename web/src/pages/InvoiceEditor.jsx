@@ -176,7 +176,7 @@ export default function InvoiceEditor() {
     <div className="max-w-[1100px]">
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={() => nav(-1)}
             className="h-9 w-9 rounded-full flex items-center justify-center border border-[var(--border)] bg-[var(--surface)] text-[var(--ink-muted)] hover:text-[var(--ink)] shadow-card"
           >
@@ -326,7 +326,7 @@ export default function InvoiceEditor() {
                   <div className="text-right text-sm font-semibold tabular text-[var(--ink)] pr-1">
                     {formatMoney((Number(it.quantity) || 0) * (Number(it.rate) || 0), form.currency)}
                   </div>
-                  <button
+                  <button type="button"
                     onClick={() => removeItem(i)}
                     className="h-8 w-8 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--danger)] hover:bg-[var(--surface-2)] justify-self-end"
                     title={t("invEditor.removeLine")}
@@ -476,7 +476,7 @@ function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs font-medium text-[var(--ink-muted)]">{label}</span>
-        <button
+        <button type="button"
           onClick={writeWithAI}
           disabled={loading || unavailable}
           className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)] hover:underline disabled:opacity-50"
@@ -572,7 +572,7 @@ function ReceiptScanButton({ onParsed }) {
       {err && (
         <span className="text-[11px] text-[var(--danger)] flex items-center gap-1">
           {err}
-          <button onClick={() => setErr("")}>
+          <button type="button" onClick={() => setErr("")}>
             <X size={11} />
           </button>
         </span>

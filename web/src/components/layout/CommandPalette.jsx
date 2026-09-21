@@ -128,7 +128,7 @@ export function CommandPalette({ open, onClose }) {
     const Icon = it.icon;
     const isActive = idx === activeIdx;
     return (
-      <button
+      <button type="button"
         key={it.id}
         data-idx={idx}
         onMouseEnter={() => setActiveIdx(idx)}

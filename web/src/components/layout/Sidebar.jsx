@@ -88,7 +88,7 @@ function ActionRow({ icon: Icon, label, onClick, to }) {
   }
 
   return (
-    <button onClick={onClick} title={label} className="block">
+    <button type="button" onClick={onClick} title={label} className="block">
       {inner(false)}
     </button>
   );

@@ -17,13 +17,13 @@ export default function RouteError() {
         </h2>
         <p className="text-sm text-[var(--ink-muted)] mt-2 break-words">{message}</p>
         <div className="flex items-center justify-center gap-2 mt-6">
-          <button
+          <button type="button"
             onClick={() => nav(-1)}
             className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-semibold border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
           >
             <ArrowLeft size={15} /> Go back
           </button>
-          <button
+          <button type="button"
             onClick={() => window.location.reload()}
             className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-semibold bg-[var(--ink)] text-[var(--bg)]"
           >

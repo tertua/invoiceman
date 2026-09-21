@@ -64,13 +64,13 @@ export default function Items() {
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); setModal(item); }}
                     className="h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
                   >
                     <Pencil size={13} />
                   </button>
-                  <button
+                  <button type="button"
                     onClick={(e) => onDelete(e, item)}
                     className="h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
                   >

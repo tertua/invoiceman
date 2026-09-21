@@ -189,7 +189,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
                 </div>
                 <div className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 mb-4">
                   <span className="flex-1 min-w-0 text-sm text-[var(--ink)] truncate">{link.url}</span>
-                  <button onClick={copyLink} className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)]">
+                  <button type="button" onClick={copyLink} className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)]">
                     {copied ? <Check size={12} /> : <Copy size={12} />}
                     {copied ? t("payments.onlineCopied") : t("payments.onlineCopy")}
                   </button>

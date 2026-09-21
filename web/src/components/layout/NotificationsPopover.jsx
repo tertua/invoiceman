@@ -95,7 +95,7 @@ export function NotificationsPopover() {
                     const Icon = ICON[st] || FileText;
                     return (
                       <li key={inv.id}>
-                        <button
+                        <button type="button"
                           onClick={() => {
                             navigate(`/invoices/${inv.id}`);
                             setOpen(false);
@@ -127,7 +127,7 @@ export function NotificationsPopover() {
               )}
             </div>
 
-            <button
+            <button type="button"
               onClick={() => {
                 navigate("/invoices");
                 setOpen(false);

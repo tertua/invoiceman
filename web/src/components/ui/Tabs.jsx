@@ -30,6 +30,7 @@ export function TabsTrigger({ value, children, className }) {
   const active = ctx.value === value;
   return (
     <button
+      type="button"
       onClick={() => ctx.onValueChange(value)}
       className={cn(
         "relative px-3.5 h-8 text-xs font-medium rounded-full transition-colors",

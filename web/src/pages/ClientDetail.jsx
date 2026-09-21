@@ -105,7 +105,7 @@ export default function ClientDetail() {
     <div>
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={() => nav("/clients")}
             className="h-9 w-9 rounded-full flex items-center justify-center border border-[var(--border)] bg-[var(--surface)] text-[var(--ink-muted)] hover:text-[var(--ink)] shadow-card"
           >
@@ -180,7 +180,7 @@ export default function ClientDetail() {
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {invoiceList.map((inv) => (
-                  <button
+                  <button type="button"
                     key={inv.id}
                     onClick={() => nav(`/invoices/${inv.id}`)}
                     className="w-full flex items-center gap-3 py-3 text-left hover:opacity-90"

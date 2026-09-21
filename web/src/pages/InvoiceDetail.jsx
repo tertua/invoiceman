@@ -65,7 +65,7 @@ export default function InvoiceDetail() {
       {/* header */}
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={() => nav("/invoices")}
             className="h-9 w-9 rounded-full flex items-center justify-center border border-[var(--border)] bg-[var(--surface)] text-[var(--ink-muted)] hover:text-[var(--ink)] shadow-card"
           >
@@ -136,7 +136,7 @@ export default function InvoiceDetail() {
 
 function StatusButton({ active, onClick, icon: Icon, label, tone }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-semibold border transition-colors",
@@ -323,7 +323,7 @@ function PaymentCard({ invoice }) {
                 <div className="text-[11px] text-[var(--ink-muted)]">{p.method || "—"}{p.txn_id ? ` · ${p.txn_id}` : ""}</div>
               </div>
               <div className="text-sm font-semibold text-[var(--success)] tabular">{formatMoney(p.amount, currency)}</div>
-              <button
+              <button type="button"
                 onClick={() => onDelete(p)}
                 className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
                 aria-label={t("common.delete")}
@@ -424,7 +424,7 @@ function PaymentReminderCard({ invoiceId }) {
 
       <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--surface-2)] mb-3">
         {TONES.map((toneItem) => (
-          <button
+          <button type="button"
             key={toneItem.key}
             onClick={() => setTone(toneItem.key)}
             className={cn(
@@ -448,7 +448,7 @@ function PaymentReminderCard({ invoiceId }) {
         <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="text-xs font-semibold text-[var(--ink)] truncate">{draft.subject}</div>
-            <button
+            <button type="button"
               onClick={copy}
               className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)]"
             >

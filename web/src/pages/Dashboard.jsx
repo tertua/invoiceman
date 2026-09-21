@@ -288,7 +288,7 @@ function RecentInvoices({ invoices, onOpen }) {
       ) : (
         <div className="flex flex-col divide-y divide-[var(--border)]">
           {rows.map((inv) => (
-            <button key={inv.id} onClick={() => onOpen(inv.id)} className="group flex items-center gap-3 py-3 text-left hover:opacity-90 transition-opacity">
+            <button type="button" key={inv.id} onClick={() => onOpen(inv.id)} className="group flex items-center gap-3 py-3 text-left hover:opacity-90 transition-opacity">
               <div className="h-9 w-9 rounded-full bg-[var(--accent-soft)] text-[var(--accent-strong)] flex items-center justify-center font-semibold text-sm shrink-0">
                 {inv.client_name?.[0]?.toUpperCase() || "?"}
               </div>

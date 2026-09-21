@@ -74,7 +74,7 @@ export default function Invoices() {
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-5">
         <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-card w-fit">
           {STATUS_TABS.map((tab) => (
-            <button
+            <button type="button"
               key={tab.key}
               onClick={() => setStatus(tab.key)}
               className={cn(
@@ -168,7 +168,7 @@ export default function Invoices() {
                 <div className="flex items-center justify-end gap-1">
                   <StatusBadge status={inv.effective_status} />
                   <div className="flex md:hidden md:group-hover:flex md:group-focus-within:flex items-center gap-0.5 ml-1">
-                    <button
+                    <button type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         nav(`/invoices/${inv.id}/edit`);
@@ -178,7 +178,7 @@ export default function Invoices() {
                     >
                       <Pencil size={13} />
                     </button>
-                    <button
+                    <button type="button"
                       onClick={(e) => onDelete(e, inv)}
                       title={t("invoices.deleteTitle")}
                       className="h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]"
@@ -198,7 +198,7 @@ export default function Invoices() {
 
 function SortHead({ label, active, order, onClick }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-1 uppercase tracking-wider text-[11px] font-semibold hover:text-[var(--ink)] transition-colors w-fit",
