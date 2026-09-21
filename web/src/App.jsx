@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -16,6 +17,14 @@ const queryClient = new QueryClient({
   },
 });
 
+function PageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--ink-muted)] text-sm">
+      Loading...
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -23,7 +32,9 @@ export default function App() {
         <LangProvider>
           <UIProvider>
             <AuthProvider>
-              <RouterProvider router={router} />
+              <Suspense fallback={<PageLoading />}>
+                <RouterProvider router={router} />
+              </Suspense>
             </AuthProvider>
           </UIProvider>
         </LangProvider>

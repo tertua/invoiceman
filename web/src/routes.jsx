@@ -1,25 +1,27 @@
+import { lazy } from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import RouteError from "@/components/ui/RouteError";
-import Dashboard from "@/pages/Dashboard";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ResetPassword from "@/pages/ResetPassword";
-import Landing from "@/pages/Landing";
-import PublicPay from "@/pages/PublicPay";
-import Invoices from "@/pages/Invoices";
-import InvoiceEditor from "@/pages/InvoiceEditor";
-import InvoiceDetail from "@/pages/InvoiceDetail";
-import Clients from "@/pages/Clients";
-import ClientDetail from "@/pages/ClientDetail";
-import Expenses from "@/pages/Expenses";
-import Payments from "@/pages/Payments";
-import Items from "@/pages/Items";
-import Reports from "@/pages/Reports";
-import Settings from "@/pages/Settings";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
+
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Login = lazy(() => import("@/pages/Login"));
+const Register = lazy(() => import("@/pages/Register"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const Landing = lazy(() => import("@/pages/Landing"));
+const PublicPay = lazy(() => import("@/pages/PublicPay"));
+const Invoices = lazy(() => import("@/pages/Invoices"));
+const InvoiceEditor = lazy(() => import("@/pages/InvoiceEditor"));
+const InvoiceDetail = lazy(() => import("@/pages/InvoiceDetail"));
+const Clients = lazy(() => import("@/pages/Clients"));
+const ClientDetail = lazy(() => import("@/pages/ClientDetail"));
+const Expenses = lazy(() => import("@/pages/Expenses"));
+const Payments = lazy(() => import("@/pages/Payments"));
+const Items = lazy(() => import("@/pages/Items"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Settings = lazy(() => import("@/pages/Settings"));
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
