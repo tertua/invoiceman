@@ -53,6 +53,11 @@ func ExtractTokenMetadata(c fiber.Ctx) (*TokenMetadata, error) {
 }
 
 func extractToken(c fiber.Ctx) string {
+	// Cookie session first (set by IssueSession).
+	if token := c.Cookies(AccessCookieName); token != "" {
+		return token
+	}
+
 	bearToken := c.Get("Authorization")
 
 	// Normally Authorization HTTP header.

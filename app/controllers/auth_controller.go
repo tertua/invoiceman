@@ -2,9 +2,14 @@ package controllers
 
 import (
 	"context"
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
+	"errors"
 	"time"
 
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/repository"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
@@ -13,252 +18,358 @@ import (
 	"github.com/google/uuid"
 )
 
-// UserSignUp method to create a new user.
-// @Description Create a new user.
-// @Summary create a new user
-// @Tags User
+// publicUser returns the user fields exposed to the frontend.
+func publicUser(u models.User) fiber.Map {
+	return fiber.Map{
+		"id":    u.ID,
+		"name":  u.Name,
+		"email": u.Email,
+	}
+}
+
+// saveRefreshToken stores the refresh token in the session store.
+func saveRefreshToken(userID uuid.UUID, refresh string) error {
+	store, err := cache.Sessions()
+	if err != nil {
+		return err
+	}
+	return store.Set(context.Background(), userID.String(), refresh, cache.RefreshTTL())
+}
+
+// deleteRefreshToken removes the refresh token from the session store.
+func deleteRefreshToken(userID uuid.UUID) error {
+	store, err := cache.Sessions()
+	if err != nil {
+		return err
+	}
+	return store.Delete(context.Background(), userID.String())
+}
+
+// Register creates a new user and starts a session.
+// @Description Register a new user.
+// @Summary register a new user
+// @Tags Auth
 // @Accept json
 // @Produce json
-// @Param email body string true "Email"
-// @Param password body string true "Password"
-// @Param user_role body string true "User role"
-// @Success 200 {object} models.User
-// @Router /v1/user/sign/up [post]
-func UserSignUp(c fiber.Ctx) error {
-	// Create a new user auth struct.
-	signUp := &models.SignUp{}
+// @Param request body models.Register true "Register payload"
+// @Success 201 {object} map[string]interface{}
+// @Router /auth/register [post]
+func Register(c fiber.Ctx) error {
+	payload := &models.Register{}
 
-	// Checking received data from JSON body.
-	if err := c.Bind().Body(signUp); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+	if err := c.Bind().Body(payload); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(payload); err != nil {
+		return utils.ValidationFailed(c, err)
 	}
 
-	// Create a new validator for a User model.
-	validate := utils.NewValidator()
-
-	// Validate sign up fields.
-	if err := validate.Struct(signUp); err != nil {
-		// Return, if some fields are not valid.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   utils.ValidatorErrors(err),
-		})
-	}
-
-	// Create database connection.
 	db, err := database.OpenDBConnection()
 	if err != nil {
-		// Return status 500 and database connection error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	// Checking role from sign up data.
-	role, err := utils.VerifyRole(signUp.UserRole)
-	if err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+	if _, err := db.GetUserByEmail(payload.Email); err == nil {
+		return utils.Fail(c, fiber.StatusConflict, "email is already registered", nil)
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database query error", nil)
 	}
 
-	// Create a new user struct.
-	user := &models.User{}
-
-	// Set initialized default data for user:
-	user.ID = uuid.New()
-	user.CreatedAt = time.Now()
-	user.Email = signUp.Email
-	user.PasswordHash = utils.GeneratePassword(signUp.Password)
-	user.UserStatus = 1 // 0 == blocked, 1 == active
-	user.UserRole = role
-
-	// Validate user fields.
-	if err := validate.Struct(user); err != nil {
-		// Return, if some fields are not valid.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   utils.ValidatorErrors(err),
-		})
+	user := &models.User{
+		ID:           uuid.New(),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		Name:         payload.Name,
+		Email:        payload.Email,
+		PasswordHash: utils.GeneratePassword(payload.Password),
+		UserStatus:   1, // 0 == blocked, 1 == active
+		UserRole:     repository.UserRoleName,
 	}
-
-	// Create a new user with validated data.
+	if err := utils.NewValidator().Struct(user); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
 	if err := db.CreateUser(user); err != nil {
-		// Return status 500 and create user process error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
 	}
 
-	// Delete password hash field from JSON view.
-	user.PasswordHash = ""
+	// Create default settings row (ignored when it already exists).
+	settings := models.DefaultSettings(user.ID)
+	if err := db.CreateSettings(settings); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user settings", nil)
+	}
 
-	// Return status 200 OK.
-	return c.JSON(fiber.Map{
-		"error": false,
-		"msg":   nil,
-		"user":  user,
-	})
+	tokens, err := utils.IssueSession(c, user.ID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
+	}
+	if err := saveRefreshToken(user.ID, tokens.Refresh); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
+	}
+
+	user.PasswordHash = ""
+	return utils.OK(c, fiber.StatusCreated, fiber.Map{"user": publicUser(*user)})
 }
 
-// UserSignIn method to auth user and return access and refresh tokens.
-// @Description Auth user and return access and refresh token.
-// @Summary auth user and return access and refresh token
-// @Tags User
+// Login authenticates a user and starts a session.
+// @Description Auth user and start session.
+// @Summary auth user and start session
+// @Tags Auth
 // @Accept json
 // @Produce json
-// @Param email body string true "User Email"
-// @Param password body string true "User Password"
-// @Success 200 {string} status "ok"
-// @Router /v1/user/sign/in [post]
-func UserSignIn(c fiber.Ctx) error {
-	// Create a new user auth struct.
-	signIn := &models.SignIn{}
+// @Param request body models.Login true "Login payload"
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/login [post]
+func Login(c fiber.Ctx) error {
+	payload := &models.Login{}
 
-	// Checking received data from JSON body.
-	if err := c.Bind().Body(signIn); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+	if err := c.Bind().Body(payload); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(payload); err != nil {
+		return utils.ValidationFailed(c, err)
 	}
 
-	// Create database connection.
 	db, err := database.OpenDBConnection()
 	if err != nil {
-		// Return status 500 and database connection error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	// Get user by email.
-	foundedUser, err := db.GetUserByEmail(signIn.Email)
+	user, err := db.GetUserByEmail(payload.Email)
 	if err != nil {
-		// Return, if user not found.
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": true,
-			"msg":   "user with the given email is not found",
-		})
+		return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
+	}
+	if !utils.ComparePasswords(user.PasswordHash, payload.Password) {
+		return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
+	}
+	if user.UserStatus != 1 {
+		return utils.Fail(c, fiber.StatusForbidden, "account is blocked", nil)
 	}
 
-	// Compare given user password with stored in found user.
-	compareUserPassword := utils.ComparePasswords(foundedUser.PasswordHash, signIn.Password)
-	if !compareUserPassword {
-		// Return, if password is not compare to stored in database.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   "wrong user email address or password",
-		})
-	}
-
-	// Get role credentials from founded user.
-	credentials, err := utils.GetCredentialsByRole(foundedUser.UserRole)
+	tokens, err := utils.IssueSession(c, user.ID)
 	if err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
+	}
+	if err := saveRefreshToken(user.ID, tokens.Refresh); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
 	}
 
-	// Generate a new pair of access and refresh tokens.
-	tokens, err := utils.GenerateNewTokens(foundedUser.ID.String(), credentials)
-	if err != nil {
-		// Return status 500 and token generation error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
-	}
-
-	// Define user ID.
-	userID := foundedUser.ID.String()
-
-	// Create a new Redis connection.
-	connRedis, err := cache.RedisConnection()
-	if err != nil {
-		// Return status 500 and Redis connection error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
-	}
-
-	// Save refresh token to Redis.
-	errSaveToRedis := connRedis.Set(context.Background(), userID, tokens.Refresh, 0).Err()
-	if errSaveToRedis != nil {
-		// Return status 500 and Redis connection error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   errSaveToRedis.Error(),
-		})
-	}
-
-	// Return status 200 OK.
-	return c.JSON(fiber.Map{
-		"error": false,
-		"msg":   nil,
-		"tokens": fiber.Map{
-			"access":  tokens.Access,
-			"refresh": tokens.Refresh,
-		},
-	})
+	user.PasswordHash = ""
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user)})
 }
 
-// UserSignOut method to de-authorize user and delete refresh token from Redis.
-// @Description De-authorize user and delete refresh token from Redis.
-// @Summary de-authorize user and delete refresh token from Redis
-// @Tags User
+// Logout ends the session.
+// @Description De-authorize user and delete session.
+// @Summary de-authorize user and delete session
+// @Tags Auth
 // @Accept json
 // @Produce json
 // @Success 204 {string} status "ok"
 // @Security ApiKeyAuth
-// @Router /v1/user/sign/out [post]
-func UserSignOut(c fiber.Ctx) error {
-	// Get claims from JWT.
-	claims, err := utils.ExtractTokenMetadata(c)
+// @Router /auth/logout [post]
+func Logout(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
 	if err != nil {
-		// Return status 500 and JWT parse error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
-	// Define user ID.
-	userID := claims.UserID.String()
-
-	// Create a new Redis connection.
-	connRedis, err := cache.RedisConnection()
-	if err != nil {
-		// Return status 500 and Redis connection error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+	if err := deleteRefreshToken(userID); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete session", nil)
 	}
+	utils.ClearSession(c)
 
-	// Save refresh token to Redis.
-	errDelFromRedis := connRedis.Del(context.Background(), userID).Err()
-	if errDelFromRedis != nil {
-		// Return status 500 and Redis deletion error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   errDelFromRedis.Error(),
-		})
-	}
-
-	// Return status 204 no content.
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// Me returns the current session user.
+// @Description Get current session user.
+// @Summary get current session user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /auth/me [get]
+func Me(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
+	}
+
+	user.PasswordHash = ""
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user)})
+}
+
+// UpdateProfile updates the current user display name.
+// @Description Update current user profile.
+// @Summary update current user profile
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body models.UpdateProfile true "Update profile payload"
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /auth/profile [patch]
+func UpdateProfile(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+
+	payload := &models.UpdateProfile{}
+	if err := c.Bind().Body(payload); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(payload); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+
+	if err := db.UpdateUserProfile(userID, payload.Name); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update profile", nil)
+	}
+
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
+	}
+
+	user.PasswordHash = ""
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user)})
+}
+
+// ChangePassword changes the current user password.
+// @Description Change current user password.
+// @Summary change current user password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body models.ChangePassword true "Change password payload"
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /auth/password [patch]
+func ChangePassword(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+
+	payload := &models.ChangePassword{}
+	if err := c.Bind().Body(payload); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(payload); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
+	}
+	if !utils.ComparePasswords(user.PasswordHash, payload.CurrentPassword) {
+		return utils.Fail(c, fiber.StatusBadRequest, "current password is wrong", nil)
+	}
+
+	if err := db.UpdateUserPassword(userID, utils.GeneratePassword(payload.NewPassword)); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update password", nil)
+	}
+
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "password updated"})
+}
+
+// ForgotPassword creates a password reset token for the given email.
+// @Description Request password reset token.
+// @Summary request password reset token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body models.ForgotPassword true "Forgot password payload"
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/forgot-password [post]
+func ForgotPassword(c fiber.Ctx) error {
+	payload := &models.ForgotPassword{}
+
+	if err := c.Bind().Body(payload); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(payload); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+
+	// Always respond generically to avoid email enumeration.
+	// NOTE: email delivery is not wired yet; the token is only stored.
+	if user, err := db.GetUserByEmail(payload.Email); err == nil {
+		raw := make([]byte, 32)
+		if _, err := rand.Read(raw); err == nil {
+			token := hex.EncodeToString(raw)
+			_ = db.DeletePasswordResetsByUser(user.ID)
+			_ = db.CreatePasswordReset(user.ID, token, time.Now().Add(time.Hour))
+		}
+	}
+
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "if the email exists, a reset link was sent"})
+}
+
+// ResetPassword resets the password using a reset token.
+// @Description Reset password with token.
+// @Summary reset password with token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body models.ResetPassword true "Reset password payload"
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/reset-password [post]
+func ResetPassword(c fiber.Ctx) error {
+	payload := &models.ResetPassword{}
+
+	if err := c.Bind().Body(payload); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(payload); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+
+	reset, err := db.GetPasswordReset(payload.Token)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid or expired token", nil)
+	}
+	if time.Now().After(reset.ExpiresAt) {
+		_ = db.DeletePasswordResetsByUser(reset.UserID)
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid or expired token", nil)
+	}
+
+	if err := db.UpdateUserPassword(reset.UserID, utils.GeneratePassword(payload.NewPassword)); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update password", nil)
+	}
+	_ = db.DeletePasswordResetsByUser(reset.UserID)
+
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "password updated"})
 }

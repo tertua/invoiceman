@@ -46,6 +46,9 @@ func generateNewAccessToken(id string, credentials []string) (string, error) {
 
 	// Set expires minutes count for secret key from .env file.
 	minutesCount, _ := strconv.Atoi(os.Getenv("JWT_SECRET_KEY_EXPIRE_MINUTES_COUNT"))
+	if minutesCount <= 0 {
+		minutesCount = 15
+	}
 
 	// Create a new claims.
 	claims := jwt.MapClaims{}
@@ -91,6 +94,9 @@ func generateNewRefreshToken() (string, error) {
 
 	// Set expires hours count for refresh key from .env file.
 	hoursCount, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT"))
+	if hoursCount <= 0 {
+		hoursCount = 720
+	}
 
 	// Set expiration time.
 	expireTime := fmt.Sprint(time.Now().Add(time.Hour * time.Duration(hoursCount)).Unix())

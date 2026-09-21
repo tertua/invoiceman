@@ -1,14 +1,16 @@
 package queries
 
 import (
-	"github.com/tertua/invoiceman/app/models"
+	"time"
+
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
+	"github.com/tertua/invoiceman/app/models"
+	"gorm.io/gorm"
 )
 
 // UserQueries struct for queries from User model.
 type UserQueries struct {
-	*sqlx.DB
+	*gorm.DB
 }
 
 // GetUserByID query for getting one User by given ID.
@@ -16,14 +18,10 @@ func (q *UserQueries) GetUserByID(id uuid.UUID) (models.User, error) {
 	// Define User variable.
 	user := models.User{}
 
-	// Define query string.
-	query := `SELECT * FROM users WHERE id = $1`
-
 	// Send query to database.
-	err := q.Get(&user, query, id)
-	if err != nil {
+	if err := q.Where("id = ?", id).First(&user).Error; err != nil {
 		// Return empty object and error.
-		return user, err
+		return user, notFound(err)
 	}
 
 	// Return query result.
@@ -35,14 +33,10 @@ func (q *UserQueries) GetUserByEmail(email string) (models.User, error) {
 	// Define User variable.
 	user := models.User{}
 
-	// Define query string.
-	query := `SELECT * FROM users WHERE email = $1`
-
 	// Send query to database.
-	err := q.Get(&user, query, email)
-	if err != nil {
+	if err := q.Where("email = ?", email).First(&user).Error; err != nil {
 		// Return empty object and error.
-		return user, err
+		return user, notFound(err)
 	}
 
 	// Return query result.
@@ -51,15 +45,83 @@ func (q *UserQueries) GetUserByEmail(email string) (models.User, error) {
 
 // CreateUser query for creating a new user by given email and password hash.
 func (q *UserQueries) CreateUser(u *models.User) error {
-	// Define query string.
-	query := `INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	// Send query to database.
+	if err := q.Create(u).Error; err != nil {
+		// Return only error.
+		return err
+	}
+
+	// This query returns nothing.
+	return nil
+}
+
+// UpdateUserProfile query for updating user display name.
+func (q *UserQueries) UpdateUserProfile(id uuid.UUID, name string) error {
+	// Send query to database.
+	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"updated_at": time.Now(),
+		"name":       name,
+	}).Error; err != nil {
+		// Return only error.
+		return err
+	}
+
+	// This query returns nothing.
+	return nil
+}
+
+// UpdateUserPassword query for updating user password hash.
+func (q *UserQueries) UpdateUserPassword(id uuid.UUID, passwordHash string) error {
+	// Send query to database.
+	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"updated_at":    time.Now(),
+		"password_hash": passwordHash,
+	}).Error; err != nil {
+		// Return only error.
+		return err
+	}
+
+	// This query returns nothing.
+	return nil
+}
+
+// CreatePasswordReset query for storing a password reset token.
+func (q *UserQueries) CreatePasswordReset(userID uuid.UUID, token string, expiresAt time.Time) error {
+	// Send query to database.
+	reset := &models.PasswordReset{
+		Token:     token,
+		UserID:    userID,
+		CreatedAt: time.Now(),
+		ExpiresAt: expiresAt,
+	}
+	if err := q.Create(reset).Error; err != nil {
+		// Return only error.
+		return err
+	}
+
+	// This query returns nothing.
+	return nil
+}
+
+// GetPasswordReset query for getting a password reset token.
+func (q *UserQueries) GetPasswordReset(token string) (models.PasswordReset, error) {
+	// Define password reset variable.
+	reset := models.PasswordReset{}
 
 	// Send query to database.
-	_, err := q.Exec(
-		query,
-		u.ID, u.CreatedAt, u.UpdatedAt, u.Email, u.PasswordHash, u.UserStatus, u.UserRole,
-	)
-	if err != nil {
+	if err := q.Where("token = ?", token).First(&reset).Error; err != nil {
+		// Return empty object and error.
+		return reset, notFound(err)
+	}
+
+	// Return query result.
+	return reset, nil
+}
+
+// DeletePasswordResetsByUser query for deleting all reset tokens of a user.
+func (q *UserQueries) DeletePasswordResetsByUser(userID uuid.UUID) error {
+	// Send query to database.
+	if err := q.Where("user_id = ?", userID).Delete(&models.PasswordReset{}).Error; err != nil {
 		// Return only error.
 		return err
 	}
