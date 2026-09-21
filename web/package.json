@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "check:bundles": "node scripts/check-bundles.mjs",
+    "check:bundles:strict": "BUNDLE_BUDGET=strict node scripts/check-bundles.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

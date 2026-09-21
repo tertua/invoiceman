@@ -10,4 +10,12 @@ Project Go baru dari template [tertua/go-template](https://github.com/tertua/go-
 
 ## Perintah
 
-`make migrate.up` / `make migrate.down` / `make build` / `make test` / `make docker.stop`
+`make build` / `make test` / `make web.check` / `make docker.stop`
+
+## Frontend bundle boundaries
+
+The SPA lazy-loads routes and keeps heavy dependencies out of the initial bundle:
+
+- `@react-pdf/renderer` may only be imported by `web/src/components/invoice/InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`.
+- `recharts` is reserved for the full chart pages: Dashboard, ClientDetail, and Reports. Small dashboard sparklines use SVG.
+- Run `npm --prefix web run check:bundles` for an advisory report or `make web.check` for strict lint, build, and bundle-budget checks.

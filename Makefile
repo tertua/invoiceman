@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run
+.PHONY: clean critic security lint test build run web.check
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -24,6 +24,11 @@ build: test
 
 run: swag build
 	$(BUILD_DIR)/$(APP_NAME)
+
+web.check:
+	npm --prefix web run lint
+	npm --prefix web run build
+	npm --prefix web run check:bundles:strict
 
 docker.run: docker.network docker.postgres swag docker.fiber docker.redis
 
