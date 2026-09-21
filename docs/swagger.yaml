@@ -154,6 +154,27 @@ definitions:
     - email
     - password
     type: object
+  models.PaymentInput:
+    properties:
+      amount:
+        type: number
+      invoiceId:
+        type: string
+      method:
+        maxLength: 50
+        type: string
+      notes:
+        type: string
+      paid_on:
+        type: string
+      txn_id:
+        maxLength: 255
+        type: string
+    required:
+    - invoiceId
+    - method
+    - paid_on
+    type: object
   models.Register:
     properties:
       email:
@@ -893,6 +914,67 @@ paths:
       summary: update catalog item
       tags:
       - Items
+  /payments:
+    get:
+      description: Get payments of current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get payments
+      tags:
+      - Payments
+    post:
+      consumes:
+      - application/json
+      description: Record a payment.
+      parameters:
+      - description: Payment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PaymentInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: create payment
+      tags:
+      - Payments
+  /payments/{id}:
+    delete:
+      description: Delete a payment.
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ok
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: delete payment
+      tags:
+      - Payments
   /settings:
     get:
       description: Get settings of current user.

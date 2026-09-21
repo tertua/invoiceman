@@ -390,3 +390,61 @@ func TestExpenseFlow(t *testing.T) {
 	assert.Equal(t, 204, resp.StatusCode)
 	resp.Body.Close()
 }
+
+// TestPaymentFlow covers recording, listing, balance validation, and deleting payments.
+func TestPaymentFlow(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Payment User","email":"payment@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"status":"sent",
+		"issue_date":"2026-09-01",
+		"due_date":"2026-09-30",
+		"currency":"USD",
+		"items":[{"description":"Service","quantity":1,"rate":100}]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	invoice := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	invoiceID := invoice["id"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+invoiceID+`",
+		"amount":40,
+		"method":"Bank transfer",
+		"paid_on":"2026-09-21",
+		"notes":"Deposit"
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	payment := decodeBody(t, resp)["payment"].(map[string]interface{})
+	paymentID := payment["id"].(string)
+
+	resp = doRequest(t, app, "GET", "/api/payments", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	body := decodeBody(t, resp)
+	assert.Len(t, body["payments"].([]interface{}), 1)
+	assert.Equal(t, float64(40), body["totals"].(map[string]interface{})["total"])
+
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+invoiceID+`",
+		"amount":61,
+		"method":"Cash",
+		"paid_on":"2026-09-21"
+	}`, cookies)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "GET", "/api/invoices/"+invoiceID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	detail := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	assert.Equal(t, float64(40), detail["paid_amount"])
+	assert.Equal(t, "sent", detail["effective_status"])
+
+	resp = doRequest(t, app, "DELETE", "/api/payments/"+paymentID, "", cookies)
+	assert.Equal(t, 204, resp.StatusCode)
+	resp.Body.Close()
+}

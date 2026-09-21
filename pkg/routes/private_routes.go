@@ -47,6 +47,11 @@ func PrivateRoutes(a *fiber.App) {
 	route.Patch("/expenses/:id", controllers.UpdateExpense)
 	route.Delete("/expenses/:id", controllers.DeleteExpense)
 
+	// Payment routes:
+	route.Get("/payments", controllers.ListPayments)
+	route.Post("/payments", controllers.CreatePayment)
+	route.Delete("/payments/:id", controllers.DeletePayment)
+
 	// Settings routes:
 	route.Get("/settings", controllers.ListSettings)
 	route.Patch("/settings", controllers.UpdateSettings)

@@ -1059,6 +1059,104 @@
                 }
             }
         },
+        "/payments": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get payments of current user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "get payments",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Record a payment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "create payment",
+                "parameters": [
+                    {
+                        "description": "Payment payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PaymentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete a payment.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "delete payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/settings": {
             "get": {
                 "security": [
@@ -1339,6 +1437,36 @@
                     "maxLength": 255
                 },
                 "password": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "models.PaymentInput": {
+            "type": "object",
+            "required": [
+                "invoiceId",
+                "method",
+                "paid_on"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "invoiceId": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "paid_on": {
+                    "type": "string"
+                },
+                "txn_id": {
                     "type": "string",
                     "maxLength": 255
                 }
