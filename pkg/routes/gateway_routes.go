@@ -17,4 +17,14 @@ func GatewayRoutes(a *fiber.App) {
 	gateway.Get("/intents/:order_id", controllers.GetIntent)
 	gateway.Get("/transactions", controllers.ListMyTransactions)
 	gateway.Get("/deliveries", controllers.ListMyDeliveries)
+
+	admin := a.Group("/api/admin/gateway", middleware.AuthRequired(), middleware.RequireRoles("admin"))
+	admin.Post("/projects", controllers.CreateProject)
+	admin.Get("/projects", controllers.ListProjects)
+	admin.Patch("/projects/:slug", controllers.UpdateProject)
+	admin.Post("/projects/:slug/rotate-key", controllers.RotateProjectKey)
+	admin.Post("/projects/:slug/rotate-secret", controllers.RotateProjectSecret)
+	admin.Get("/transactions", controllers.ListAllTransactions)
+	admin.Get("/deliveries", controllers.ListDeliveries)
+	admin.Post("/deliveries/:id/retry", controllers.RetryDelivery)
 }
