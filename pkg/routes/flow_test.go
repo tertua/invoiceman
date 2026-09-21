@@ -19,6 +19,7 @@ import (
 func newTestApp() *fiber.App {
 	app := fiber.New()
 	PublicRoutes(app)
+	GatewayRoutes(app)
 	PrivateRoutes(app)
 	return app
 }

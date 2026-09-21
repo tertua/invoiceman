@@ -60,6 +60,18 @@ func TestPrivateRoutes(t *testing.T) {
 			route:        "/api/auth/logout",
 			expectedCode: 401,
 		},
+		{
+			description:  "create invoice intent without cookie",
+			method:       "POST",
+			route:        "/api/gateway/invoice-intents",
+			expectedCode: 401,
+		},
+		{
+			description:  "list gateway projects without cookie",
+			method:       "GET",
+			route:        "/api/admin/gateway/projects",
+			expectedCode: 401,
+		},
 	}
 
 	// Define a new Fiber app.

@@ -46,6 +46,7 @@ func main() {
 	// Routes.
 	routes.SwaggerRoute(app)  // Register a route for API Docs (Swagger).
 	routes.PublicRoutes(app)  // Register a public routes for app.
+	routes.GatewayRoutes(app) // Register service relay routes (API key, before sessions).
 	routes.PrivateRoutes(app) // Register a private routes for app.
 	routes.NotFoundRoute(app) // Register route for 404 Error.
 

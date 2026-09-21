@@ -67,7 +67,18 @@ func PrivateRoutes(a *fiber.App) {
 	route.Post("/ai/payment-reminder", controllers.PaymentReminder)
 	route.Post("/ai/write-note", controllers.WriteNote)
 
+	// Local invoice Snap intents (session user, no service key needed).
+	route.Post("/gateway/invoice-intents", controllers.CreateInvoiceIntent)
+
 	admin := a.Group("/api/admin", middleware.AuthRequired(), middleware.RequireRoles("admin"))
 	admin.Get("/users", controllers.ListUsers)
 	admin.Patch("/users/:id/role", controllers.UpdateUserRole)
+	admin.Post("/gateway/projects", controllers.CreateProject)
+	admin.Get("/gateway/projects", controllers.ListProjects)
+	admin.Patch("/gateway/projects/:slug", controllers.UpdateProject)
+	admin.Post("/gateway/projects/:slug/rotate-key", controllers.RotateProjectKey)
+	admin.Post("/gateway/projects/:slug/rotate-secret", controllers.RotateProjectSecret)
+	admin.Get("/gateway/transactions", controllers.ListAllTransactions)
+	admin.Get("/gateway/deliveries", controllers.ListDeliveries)
+	admin.Post("/gateway/deliveries/:id/retry", controllers.RetryDelivery)
 }

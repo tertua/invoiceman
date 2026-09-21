@@ -54,6 +54,13 @@ func TestPublicRoutes(t *testing.T) {
 			body:         `{}`,
 			expectedCode: 400,
 		},
+		{
+			description:  "midtrans webhook with invalid JSON",
+			method:       "POST",
+			route:        "/api/webhooks/midtrans",
+			body:         `not-json`,
+			expectedCode: 400,
+		},
 	}
 
 	// Define Fiber app.

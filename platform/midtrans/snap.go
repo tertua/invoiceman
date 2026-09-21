@@ -1,0 +1,131 @@
+package midtrans
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+)
+
+// ErrNotConfigured is returned when the Midtrans server key is missing.
+var ErrNotConfigured = errors.New("payment gateway is not configured")
+
+// Config holds Midtrans credentials. All values come from env;
+// no domain or key is hardcoded.
+type Config struct {
+	ServerKey string
+	ClientKey string
+	IsProd    bool
+	// BaseURL overrides the Snap endpoint (used by tests).
+	BaseURL string
+}
+
+// FromEnv reads Midtrans config from the environment.
+func FromEnv() Config {
+	return Config{
+		ServerKey: strings.TrimSpace(os.Getenv("MIDTRANS_SERVER_KEY")),
+		ClientKey: strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
+		IsProd:    strings.EqualFold(strings.TrimSpace(os.Getenv("MIDTRANS_IS_PROD")), "true"),
+		BaseURL:   strings.TrimSpace(os.Getenv("MIDTRANS_SNAP_BASE_URL")),
+	}
+}
+
+// SnapURL returns the Snap transaction endpoint.
+func (c Config) SnapURL() string {
+	if c.BaseURL != "" {
+		return strings.TrimRight(c.BaseURL, "/")
+	}
+	if c.IsProd {
+		return "https://app.midtrans.com/snap/v1/transactions"
+	}
+	return "https://app.sandbox.midtrans.com/snap/v1/transactions"
+}
+
+// SnapResponse is the subset of the Snap response used by the relay.
+type SnapResponse struct {
+	Token       string `json:"token"`
+	RedirectURL string `json:"redirect_url"`
+}
+
+// CreateSnapTransaction creates a Snap transaction for orderID/amountIDR.
+// Customer details are best-effort; empty email/phone are omitted.
+func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amountIDR int64, email, phone string) (*SnapResponse, error) {
+	if cfg.ServerKey == "" {
+		return nil, ErrNotConfigured
+	}
+	if orderID == "" || amountIDR <= 0 {
+		return nil, errors.New("invalid order or amount")
+	}
+
+	customer := map[string]string{}
+	if strings.TrimSpace(email) != "" {
+		customer["email"] = strings.TrimSpace(email)
+	}
+	if strings.TrimSpace(phone) != "" {
+		customer["phone"] = strings.TrimSpace(phone)
+	}
+
+	body, err := json.Marshal(map[string]interface{}{
+		"transaction_details": map[string]interface{}{
+			"order_id":     orderID,
+			"gross_amount": amountIDR,
+		},
+		"customer_details": customer,
+		"item_details": []map[string]interface{}{
+			{
+				"id":       orderID,
+				"price":    amountIDR,
+				"quantity": 1,
+				"name":     "Payment " + orderID,
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.SnapURL(), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(cfg.ServerKey, "")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("midtrans snap: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("midtrans snap: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("midtrans snap: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+	}
+	out := &SnapResponse{}
+	if err := json.Unmarshal(raw, out); err != nil {
+		return nil, fmt.Errorf("midtrans snap decode: %w", err)
+	}
+	if out.Token == "" && out.RedirectURL == "" {
+		return nil, errors.New("midtrans snap: empty response")
+	}
+	return out, nil
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}

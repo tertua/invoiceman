@@ -28,7 +28,7 @@
 - From `web/`, use `npm run dev`, `npm run build`, or `npm run lint`. There is no frontend test script.
 - Vite serves on `5173` and proxies `/api` to `http://localhost:5000`; run the Go API separately for API-backed development.
 - `@` aliases to `web/src`. TanStack Query is configured for one retry, no refetch on window focus, and a 30-second stale time. Axios normalizes API failures in `web/src/api/client.js`.
-- Backend routes are currently implemented for auth, clients, invoices, and dashboard. The SPA also calls APIs for items, expenses, payments, settings, reports, public payments, and AI; verify backend support before assuming those calls work.
+- Backend routes are currently implemented for auth, clients, invoices, dashboard, items, expenses, payments, reports, settings, AI, admin users, public payments, and the central payment-gateway relay (`/api/gateway/*` service intents + `POST /api/webhooks/midtrans` + `/api/admin/gateway/*`). The SPA also calls all of these; verify any new frontend call has backend support before assuming it works.
 
 ## Workflow
 
