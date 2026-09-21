@@ -136,16 +136,16 @@ export function Sidebar() {
           {NAV.map((item) => (
             <NavItem key={item.to} {...item} />
           ))}
-          {user?.role === "admin" && (
-            <>
-              <NavItem to="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
-              <NavItem to="/admin/gateway" icon={Waypoints} labelKey="sidebar.adminGateway" />
-            </>
-          )}
         </nav>
       </div>
 
       <div className="flex flex-col items-center gap-2 w-full">
+        {user?.role === "admin" && (
+          <>
+            <NavItem to="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
+            <NavItem to="/admin/gateway" icon={Waypoints} labelKey="sidebar.adminGateway" />
+          </>
+        )}
         <ActionRow icon={Settings} label={t("sidebar.settings")} to="/settings" />
         <ActionRow icon={LogOut} label={t("sidebar.logOut")} onClick={logout} />
 
