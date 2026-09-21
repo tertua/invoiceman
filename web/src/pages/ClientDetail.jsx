@@ -18,12 +18,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { useClient, useDeleteClient } from "@/hooks/useClients";
 import { useLang } from "@/context/LangContext";
-import { formatMoney, formatDate, formatMonthShort } from "@/lib/utils";
+import { formatMoney, formatDate, formatMonthShort, todayDateInput } from "@/lib/utils";
 
 const ClientCharts = lazy(() => import("@/components/clients/ClientCharts"));
 
 function isOverdue(inv) {
-  return inv.status === "sent" && inv.due_date && inv.due_date < new Date().toISOString().slice(0, 10);
+  return inv.status === "sent" && inv.due_date && inv.due_date < todayDateInput();
 }
 
 // Everything below is derived from the invoices already loaded — no extra API call.

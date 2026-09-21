@@ -27,7 +27,7 @@ import {
 import { useSettings } from "@/hooks/useSettings";
 import { usePaymentMutations } from "@/hooks/useFeatures";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
-import { aiApi } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate, cn } from "@/lib/utils";
 
@@ -385,16 +385,19 @@ function PaymentReminderCard({ invoiceId }) {
   const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [unavailable, setUnavailable] = useState(false);
   const [copied, setCopied] = useState(false);
 
   async function generate() {
     setLoading(true);
     setErr("");
+    setUnavailable(false);
     try {
       const res = await aiApi.paymentReminder(invoiceId, tone);
       setDraft(res.draft);
     } catch (e) {
-      setErr(e.message || t("invDetail.generateFailed"));
+      setUnavailable(isAiUnavailable(e));
+      setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("invDetail.generateFailed"));
     } finally {
       setLoading(false);
     }
@@ -434,12 +437,12 @@ function PaymentReminderCard({ invoiceId }) {
         ))}
       </div>
 
-      <Button variant="accent" size="sm" className="w-full" onClick={generate} disabled={loading}>
+      <Button variant="accent" size="sm" className="w-full" onClick={generate} disabled={loading || unavailable}>
         {loading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
         {draft ? t("invDetail.regenerate") : t("invDetail.generateDraft")}
       </Button>
 
-      {err && <p className="text-xs text-[var(--danger)] mt-3">{err}</p>}
+      {err && <p className={`text-xs mt-3 ${unavailable ? "text-[var(--ink-muted)]" : "text-[var(--danger)]"}`}>{err}</p>}
 
       {draft && (
         <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">

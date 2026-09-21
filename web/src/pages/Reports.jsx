@@ -13,6 +13,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useReports } from "@/hooks/useFeatures";
+import { todayDateInput } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
 import { formatMoney } from "@/lib/utils";
 
@@ -58,7 +59,7 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `invoicer-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `invoicer-report-${todayDateInput()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }

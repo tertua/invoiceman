@@ -22,20 +22,18 @@ import {
   useCreateInvoice,
   useUpdateInvoice,
 } from "@/hooks/useInvoices";
-import { aiApi } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
-import { CURRENCIES, formatMoney, toDateInput, cn } from "@/lib/utils";
+import { CURRENCIES, formatMoney, toDateInput, todayDateInput, addDaysDateInput, cn } from "@/lib/utils";
 
 const round = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const blankItem = () => ({ description: "", quantity: 1, rate: 0 });
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return todayDateInput();
 }
 function plusDays(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return addDaysDateInput(days);
 }
 
 export default function InvoiceEditor() {
@@ -453,8 +451,12 @@ function Row({ label, value }) {
 function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
   const { t } = useLang();
   const [loading, setLoading] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const [err, setErr] = useState("");
   async function writeWithAI() {
     setLoading(true);
+    setUnavailable(false);
+    setErr("");
     try {
       const text = await aiApi.writeNote({
         kind: aiKind,
@@ -463,8 +465,9 @@ function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
         client: aiContext?.client ? { name: aiContext.client.name } : undefined,
       });
       onChange(text);
-    } catch {
-      /* surfaced elsewhere; keep field intact */
+    } catch (error) {
+      setUnavailable(isAiUnavailable(error));
+      setErr(isAiUnavailable(error) ? t("ai.unavailable") : isAiFailure(error) ? t("ai.failed") : error.message || t("invEditor.writeFailed"));
     } finally {
       setLoading(false);
     }
@@ -475,13 +478,14 @@ function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
         <span className="text-xs font-medium text-[var(--ink-muted)]">{label}</span>
         <button
           onClick={writeWithAI}
-          disabled={loading}
+          disabled={loading || unavailable}
           className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)] hover:underline disabled:opacity-50"
         >
           {loading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-          {t("invEditor.writeWithAI")}
+          {unavailable ? t("ai.unavailableShort") : t("invEditor.writeWithAI")}
         </button>
       </div>
+      {err && <p className="text-[11px] text-[var(--ink-muted)] mb-1.5">{err}</p>}
       <textarea
         rows={3}
         value={value}
@@ -544,6 +548,7 @@ function ReceiptScanButton({ onParsed }) {
   const inputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [unavailable, setUnavailable] = useState(false);
 
   async function onFile(e) {
     const file = e.target.files?.[0];
@@ -555,7 +560,8 @@ function ReceiptScanButton({ onParsed }) {
       const res = await aiApi.receiptParse(file);
       onParsed(res);
     } catch (ex) {
-      setErr(ex.message || t("invEditor.scanFailed"));
+      setUnavailable(isAiUnavailable(ex));
+      setErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("invEditor.scanFailed"));
     } finally {
       setLoading(false);
     }
@@ -578,7 +584,7 @@ function ReceiptScanButton({ onParsed }) {
         className="hidden"
         onChange={onFile}
       />
-      <Button variant="soft" size="sm" onClick={() => inputRef.current?.click()} disabled={loading}>
+      <Button variant="soft" size="sm" onClick={() => inputRef.current?.click()} disabled={loading || unavailable}>
         {loading ? <Loader2 size={13} className="animate-spin" /> : <ScanLine size={13} />}
         {t("invEditor.scanReceipt")}
       </Button>

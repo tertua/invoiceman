@@ -19,9 +19,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useExpenses, useExpenseMutations } from "@/hooks/useFeatures";
-import { aiApi } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
-import { formatMoney, formatDate, toDateInput, cn } from "@/lib/utils";
+import { formatMoney, formatDate, toDateInput, todayDateInput, cn } from "@/lib/utils";
 
 export default function Expenses() {
   const { t } = useLang();
@@ -31,6 +31,7 @@ export default function Expenses() {
   const [modal, setModal] = useState(null); // null | expense-or-prefill
   const [scanning, setScanning] = useState(false);
   const [scanErr, setScanErr] = useState("");
+  const [aiUnavailable, setAiUnavailable] = useState(false);
   const fileRef = useRef(null);
 
   const expenses = data?.expenses || [];
@@ -41,6 +42,7 @@ export default function Expenses() {
     e.target.value = "";
     if (!file) return;
     setScanErr("");
+    setAiUnavailable(false);
     setScanning(true);
     try {
       const res = await aiApi.receiptParse(file);
@@ -52,7 +54,8 @@ export default function Expenses() {
         notes: res.notes || (res.lineItems?.[0]?.description ?? ""),
       });
     } catch (ex) {
-      setScanErr(ex.message || t("expenses.scanFailed"));
+      setAiUnavailable(isAiUnavailable(ex));
+      setScanErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("expenses.scanFailed"));
     } finally {
       setScanning(false);
     }
@@ -72,7 +75,7 @@ export default function Expenses() {
         actions={
           <div className="flex items-center gap-2">
             <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onScan} />
-            <Button variant="soft" onClick={() => fileRef.current?.click()} disabled={scanning}>
+            <Button variant="soft" onClick={() => fileRef.current?.click()} disabled={scanning || aiUnavailable}>
               {scanning ? <Loader2 size={15} className="animate-spin" /> : <ScanLine size={15} />}
               {t("expenses.scan")}
             </Button>
@@ -174,7 +177,7 @@ function ExpenseModal({ open, expense, onClose }) {
       setForm({
         vendor: expense?.vendor || "",
         category: expense?.category || "General",
-        expense_date: toDateInput(expense?.expense_date) || new Date().toISOString().slice(0, 10),
+        expense_date: toDateInput(expense?.expense_date) || todayDateInput(),
         amount: expense?.amount ?? 0,
         notes: expense?.notes || "",
       });

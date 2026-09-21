@@ -49,6 +49,26 @@ export default function PublicPay() {
     };
   }, [token, lang]);
 
+  useEffect(() => {
+    if (!data || data.invoice?.effective_status === "paid") return undefined;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await publicPayApi.status(token);
+        if (cancelled || status.status !== "paid") return;
+        const refreshed = await publicPayApi.get(token);
+        if (!cancelled) setData(refreshed);
+      } catch {
+        // Payment status is best-effort; the page remains usable if polling fails.
+      }
+    };
+    const interval = window.setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [data, token]);
+
   async function pay() {
     setPaying(true);
     setPayErr("");

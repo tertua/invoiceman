@@ -12,6 +12,10 @@ import { cn } from "@/lib/utils";
 
 const ROLES = ["user", "moderator"];
 
+function userStatus(status, t) {
+  return status === 1 ? t("admin.statusActive") : t("admin.statusBlocked");
+}
+
 function RoleBadge({ role }) {
   const { t } = useLang();
   return (
@@ -56,7 +60,7 @@ function UserRow({ account, currentUserId }) {
         <div className="mt-0.5 text-xs text-[var(--ink-muted)]">{account.email}</div>
       </td>
       <td className="px-4 py-4"><RoleBadge role={account.role} /></td>
-      <td className="px-4 py-4 text-sm text-[var(--ink-muted)]">{account.status || "-"}</td>
+      <td className="px-4 py-4 text-sm text-[var(--ink-muted)]">{userStatus(account.status, t)}</td>
       <td className="px-4 py-4 text-sm text-[var(--ink-muted)] tabular">{formatDate(account.created_at)}</td>
       <td className="px-4 py-4 text-right">
         {canEdit ? (

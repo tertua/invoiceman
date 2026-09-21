@@ -19,7 +19,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Ca
 import { StatusBadge } from "@/components/ui/Badge";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useReports } from "@/hooks/useFeatures";
-import { aiApi } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
 const DashboardCharts = lazy(() => import("@/components/dashboard/DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
@@ -106,15 +106,18 @@ function AISummaryCard({ stats }) {
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [unavailable, setUnavailable] = useState(false);
 
   async function generate() {
     setLoading(true);
     setErr("");
+    setUnavailable(false);
     try {
       const res = await aiApi.businessSummary();
       setSummary(res.summary);
     } catch (e) {
-      setErr(e.message || t("dash.generateFailed"));
+      setUnavailable(isAiUnavailable(e));
+      setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("dash.generateFailed"));
     } finally {
       setLoading(false);
     }
@@ -132,12 +135,12 @@ function AISummaryCard({ stats }) {
               <div className="font-display text-sm font-semibold tracking-tight">{t("dash.aiSummary")}</div>
               <div className="text-xs text-[var(--ink-muted)]">{t("dash.aiSummaryDesc")}</div>
             </div>
-            <Button variant="soft" size="sm" onClick={generate} disabled={loading}>
+            <Button variant="soft" size="sm" onClick={generate} disabled={loading || unavailable}>
               {loading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
               {summary ? t("dash.regenerate") : t("dash.generate")}
             </Button>
           </div>
-          {err && <p className="text-sm text-[var(--danger)] mt-3">{err}</p>}
+          {err && <p className={`text-sm mt-3 ${unavailable ? "text-[var(--ink-muted)]" : "text-[var(--danger)]"}`}>{err}</p>}
           {summary ? (
             <p className="text-[15px] leading-relaxed text-[var(--ink)] mt-3">{summary}</p>
           ) : (

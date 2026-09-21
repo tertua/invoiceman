@@ -7,7 +7,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { usePaymentMutations } from "@/hooks/useFeatures";
 import { paymentsApi } from "@/api/features";
 import { useLang } from "@/context/LangContext";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, todayDateInput } from "@/lib/utils";
 
 export const PAYMENT_METHODS = ["Cash", "Bank transfer", "Online"];
 
@@ -62,7 +62,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
         invoiceId: invoiceId || "",
         amount: amount != null ? String(amount) : "",
         method: "Cash",
-        paid_on: new Date().toISOString().slice(0, 10),
+        paid_on: todayDateInput(),
         notes: "",
       });
       setLink(null);
@@ -131,8 +131,8 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
       await paymentsApi.sendOnlineLink(form.invoiceId, sendEmail.trim());
       setEmailState("sent");
     } catch (ex) {
-      setEmailState("error");
-      setEmailErr(ex.message || t("payments.saveFailed"));
+      setEmailState(ex.status === 501 ? "unavailable" : "error");
+      setEmailErr(ex.status === 501 ? t("payments.emailUnavailable") : ex.message || t("payments.saveFailed"));
     }
   }
 

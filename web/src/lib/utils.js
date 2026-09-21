@@ -19,6 +19,13 @@ export function setDefaultCurrency(currency) {
   if (currency) currentCurrency = currency;
 }
 
+function parseDate(date) {
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return new Date(`${date}T00:00:00`);
+  }
+  return typeof date === "string" ? new Date(date) : date;
+}
+
 export function formatNumber(n, opts = {}) {
   return new Intl.NumberFormat(currentLocale, opts).format(n);
 }
@@ -53,14 +60,14 @@ export function formatMoney(amount, currency = currentCurrency) {
 
 export function formatDate(date, opts = { month: "short", day: "numeric", year: "numeric" }) {
   if (!date) return "—";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDate(date);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString(currentLocale, opts);
 }
 
 export function formatMonthShort(date) {
   if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDate(date);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString(currentLocale, { month: "short" });
 }
@@ -68,9 +75,20 @@ export function formatMonthShort(date) {
 // Convert any date to a YYYY-MM-DD string for <input type="date"> / API.
 export function toDateInput(date) {
   if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  const d = parseDate(date);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function todayDateInput() {
+  return toDateInput(new Date());
+}
+
+export function addDaysDateInput(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return toDateInput(date);
 }
 
 export function relativeTime(date) {

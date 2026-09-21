@@ -1,5 +1,13 @@
 import { apiClient } from "./client";
 
+export function isAiUnavailable(error) {
+  return error?.status === 501;
+}
+
+export function isAiFailure(error) {
+  return error?.status === 502;
+}
+
 export const aiApi = {
   receiptParse: (file) => {
     const form = new FormData();

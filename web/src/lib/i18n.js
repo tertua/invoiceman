@@ -54,6 +54,10 @@ export const translations = {
     "common.outstanding": "Outstanding",
     "common.totalBilled": "Total billed",
     "common.currency": "Currency",
+    "ai.unavailable": "AI is not configured. Add a Gemini API key to enable this feature.",
+    "ai.unavailableShort": "AI unavailable",
+    "ai.failed": "The AI provider could not complete the request. Please try again.",
+    "invEditor.writeFailed": "Couldn't write this note",
 
     /* ============================ status ============================ */
     "status.draft": "Draft",
@@ -86,6 +90,8 @@ export const translations = {
     "admin.user": "User",
     "admin.role": "Role",
     "admin.status": "Status",
+    "admin.statusActive": "Active",
+    "admin.statusBlocked": "Blocked",
     "admin.joined": "Joined",
     "admin.action": "Change role",
     "admin.empty": "No users found",
@@ -484,6 +490,8 @@ export const translations = {
     "payments.onlineSending": "Sending...",
     "payments.onlineEmailPlaceholder": "client@example.com",
     "payments.onlineOnlyIdr": "Online payment is only available for IDR invoices.",
+    "payments.emailUnavailable": "Email delivery is not configured. Copy the payment link instead.",
+    "payments.emailUnavailableShort": "Email unavailable",
 
     /* ============================ public pay page ============================ */
     "public.payNow": "Pay Now",
@@ -634,6 +642,10 @@ export const translations = {
     "common.outstanding": "Belum dibayar",
     "common.totalBilled": "Total ditagih",
     "common.currency": "Mata uang",
+    "ai.unavailable": "AI belum dikonfigurasi. Tambahkan API key Gemini untuk mengaktifkan fitur ini.",
+    "ai.unavailableShort": "AI tidak tersedia",
+    "ai.failed": "Provider AI gagal menyelesaikan permintaan. Silakan coba lagi.",
+    "invEditor.writeFailed": "Gagal menulis catatan ini",
 
     /* ============================ status ============================ */
     "status.draft": "Draf",
@@ -666,6 +678,8 @@ export const translations = {
     "admin.user": "Pengguna",
     "admin.role": "Peran",
     "admin.status": "Status",
+    "admin.statusActive": "Aktif",
+    "admin.statusBlocked": "Diblokir",
     "admin.joined": "Bergabung",
     "admin.action": "Ubah peran",
     "admin.empty": "Pengguna tidak ditemukan",
@@ -1064,6 +1078,8 @@ export const translations = {
     "payments.onlineSending": "Mengirim...",
     "payments.onlineEmailPlaceholder": "klien@contoh.com",
     "payments.onlineOnlyIdr": "Pembayaran online hanya tersedia untuk faktur IDR.",
+    "payments.emailUnavailable": "Pengiriman email belum dikonfigurasi. Salin tautan pembayaran sebagai gantinya.",
+    "payments.emailUnavailableShort": "Email tidak tersedia",
 
     /* ============================ halaman bayar publik ============================ */
     "public.payNow": "Bayar Sekarang",
