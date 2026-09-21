@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, Mail, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Mail, Lock } from "lucide-react";
 import {
   AuthShell,
   AuthField,
@@ -12,8 +12,6 @@ import AILogo from "@/components/layout/AILogo";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 
-const DEMO = { email: "admin@simata.id", password: "Test@1234" };
-
 export default function Login() {
   const { login } = useAuth();
   const { t } = useLang();
@@ -21,11 +19,6 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-
-  function fillDemo() {
-    setForm({ ...DEMO });
-    setErr("");
-  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -114,19 +107,6 @@ export default function Login() {
             </AuthPrimaryButton>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-[var(--border)]" />
-            <span className="text-[11px] uppercase tracking-wider text-[var(--ink-muted)] font-semibold">{t("auth.or")}</span>
-            <div className="h-px flex-1 bg-[var(--border)]" />
-          </div>
-
-          <button
-            type="button"
-            onClick={fillDemo}
-            className="w-full h-12 rounded-2xl border border-dashed border-[var(--accent)]/40 bg-[var(--accent-soft)]/40 text-sm font-semibold text-[var(--accent-strong)] hover:bg-[var(--accent-soft)] transition-colors inline-flex items-center justify-center gap-2"
-          >
-            <Sparkles size={14} /> {t("auth.useDemo")}
-          </button>
         </form>
 
         <div className="text-sm text-[var(--ink-muted)] text-center mt-8">

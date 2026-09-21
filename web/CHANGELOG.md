@@ -27,7 +27,6 @@ CRUD, dashboard, reports, and PDF export.
 - Route-level error pages via `errorElement`.
 
 ### Changed
-- Demo user email to `admin@simata.id` (password `Test@1234`).
 - Resource IDs use full UUIDs instead of short hashes.
 - Demo data rebranded to Simata Studio.
 - Frontend migrated from mock store to the real FastAPI backend.
