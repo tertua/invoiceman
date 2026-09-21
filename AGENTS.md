@@ -42,3 +42,12 @@
 
 - Use 2-space indentation in frontend/config files and tabs in Go, per `.editorconfig`.
 - `opencode.json` loads this file as the repository instruction source. Keep code, comments, and repository documentation in English.
+- Definition of done — every change must clear this bar before commit:
+  - Understand first: reproduce the problem or trace the full flow before editing; never fix by guessing.
+  - Minimal scope: change only what the task requires. No drive-by refactors, no speculative features, no behavior changes disguised as cleanups. Pre-existing quirks stay untouched; report them as separate proposals instead of folding them in.
+  - New code follows the layering and conventions above (`app/` never imports `platform/*`; responses via `utils.OK`/`utils.Fail`; axios only in `web/src/api/http.js`; shared helpers never throw).
+  - Public endpoints (`/public/*`, webhooks) and auth-adjacent code get a data-exposure review: no non-public data leaks, state guards hold (e.g. draft/paid). New guards require route coverage in `pkg/routes/*_test.go`.
+  - User-visible strings: backend sends stable English messages, frontend localizes via `api.*` keys in `web/src/lib/i18n.js` (en+id). Never hardcode display text outside the dictionary.
+  - Verify by execution, not by reading: `go test ./...` for backend changes; `npm run lint` plus `npm run build` from `web/` for frontend changes; add or extend a flow test when behavior changes. If a check cannot run, say so explicitly.
+  - Regenerate Swagger (`swag init`) when API annotations or controller signatures change.
+  - One commit per completed step with a conventional message; never commit secrets or local-only files.
