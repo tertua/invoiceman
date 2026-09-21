@@ -10,7 +10,7 @@ tmp/
 
 # Environment variables
 .env
-data/**
+data/
 
 # Misc.
 *opencode*
