@@ -77,6 +77,15 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
     }
   }, [open, invoiceId, amount, defaultEmail]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   function pickInvoice(id) {
     const inv = (invoices || []).find((i) => i.id === id);
     setForm((f) => ({ ...f, invoiceId: id, amount: inv ? inv.total : f.amount }));

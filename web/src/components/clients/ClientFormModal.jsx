@@ -35,6 +35,15 @@ export function ClientFormModal({ open, onClose, client }) {
     }
   }, [open, client]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   async function onSubmit(e) {

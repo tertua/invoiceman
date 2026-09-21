@@ -194,6 +194,15 @@ function ExpenseModal({ open, expense, onClose }) {
     }
   }, [open, expense]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!form) return null;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
