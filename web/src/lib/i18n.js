@@ -507,6 +507,8 @@ export const translations = {
     "public.notPayable": "This invoice cannot be paid online.",
     "public.secureBy": "Payments securely processed by Midtrans",
     "public.viewInvoice": "View invoice",
+    "public.pdfPreparing": "Preparing PDF...",
+    "public.pdfFailed": "PDF could not be generated",
 
     /* ============================ reports ============================ */
     "reports.title": "Reports & Analytics",
@@ -1095,6 +1097,8 @@ export const translations = {
     "public.notPayable": "Faktur ini tidak dapat dibayar online.",
     "public.secureBy": "Pembayaran diproses aman oleh Midtrans",
     "public.viewInvoice": "Lihat faktur",
+    "public.pdfPreparing": "Menyiapkan PDF...",
+    "public.pdfFailed": "PDF tidak dapat dibuat",
 
     /* ============================ reports ============================ */
     "reports.title": "Laporan & Analitik",
