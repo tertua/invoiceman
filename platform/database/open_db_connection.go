@@ -71,6 +71,7 @@ func Migrate() error {
 		&models.Item{},
 		&models.Expense{},
 		&models.Payment{},
+		&models.PaymentLink{},
 		&models.Settings{},
 		&models.PasswordReset{},
 	)

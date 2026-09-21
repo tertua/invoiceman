@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -11,6 +13,14 @@ import (
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 )
+
+func newPaymentToken() (string, error) {
+	raw := make([]byte, 24)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(raw), nil
+}
 
 func paymentResponse(row models.PaymentListRow) fiber.Map {
 	return fiber.Map{
@@ -174,4 +184,168 @@ func DeletePayment(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete payment", nil)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// CreateOnlineLink creates a public payment link without contacting a gateway.
+// @Description Create a public payment link.
+// @Summary create payment link
+// @Tags Payments
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Invoice ID"
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /payments/online [post]
+func CreateOnlineLink(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	var input struct {
+		InvoiceID string `json:"invoiceId"`
+	}
+	if err := c.Bind().Body(&input); err != nil || input.InvoiceID == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "invoiceId is required", nil)
+	}
+	invoiceID, err := uuid.Parse(input.InvoiceID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	if _, err := db.GetInvoice(userID, invoiceID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+	}
+	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment link", nil)
+		}
+		token, tokenErr := newPaymentToken()
+		if tokenErr != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
+		}
+		link = models.PaymentLink{Token: token, InvoiceID: invoiceID, UserID: userID, CreatedAt: time.Now()}
+		if err := db.CreatePaymentLink(&link); err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
+		}
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"url": "/pay/" + link.Token, "token": link.Token})
+}
+
+// SendOnlineLink is intentionally unavailable until an email provider is configured.
+// @Description Send a public payment link by email.
+// @Summary send payment link email
+// @Tags Payments
+// @Router /payments/online/send [post]
+func SendOnlineLink(c fiber.Ctx) error {
+	return utils.Fail(c, fiber.StatusNotImplemented, "email provider is not configured", nil)
+}
+
+func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map, error) {
+	detail, err := invoiceDetail(db, link.UserID, link.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	settings, err := db.GetSettings(link.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return fiber.Map{
+		"invoice": detail,
+		"branding": fiber.Map{
+			"company_name": settings.CompanyName,
+			"logo_url":     settings.LogoURL,
+		},
+		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
+	}, nil
+}
+
+// GetPublicPayment returns invoice data for a public payment token.
+// @Description Get a public payment invoice.
+// @Summary get public payment
+// @Tags Public Payments
+// @Produce json
+// @Param token path string true "Payment token"
+// @Success 200 {object} map[string]interface{}
+// @Router /public/pay/{token} [get]
+func GetPublicPayment(c fiber.Ctx) error {
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	link, err := db.GetPaymentLink(c.Params("token"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
+	}
+	data, err := publicPaymentData(*db, link)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, data)
+}
+
+// CreatePublicTransaction records a simulated online payment for the invoice balance.
+// @Description Complete a public payment without an external gateway.
+// @Summary create public payment transaction
+// @Tags Public Payments
+// @Produce json
+// @Param token path string true "Payment token"
+// @Success 200 {object} map[string]interface{}
+// @Router /public/pay/{token}/transaction [post]
+func CreatePublicTransaction(c fiber.Ctx) error {
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	link, err := db.GetPaymentLink(c.Params("token"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
+	}
+	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+	}
+	paid, err := db.PaidAmount(invoice.ID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
+	}
+	if invoice.Total <= paid {
+		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
+	}
+	now := time.Now()
+	payment := &models.Payment{ID: uuid.New(), CreatedAt: now, UserID: link.UserID, InvoiceID: invoice.ID, Amount: invoice.Total - paid, Method: "Online", PaidOn: &now}
+	if err := db.CreatePayment(payment); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"redirect_url": "/pay/" + link.Token + "?paid=1"})
+}
+
+// GetPublicPaymentStatus returns the current public payment status.
+// @Description Get public payment status.
+// @Summary get public payment status
+// @Tags Public Payments
+// @Produce json
+// @Param token path string true "Payment token"
+// @Success 200 {object} map[string]interface{}
+// @Router /public/pay/{token}/status [get]
+func GetPublicPaymentStatus(c fiber.Ctx) error {
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	link, err := db.GetPaymentLink(c.Params("token"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
+	}
+	detail, err := invoiceDetail(*db, link.UserID, link.InvoiceID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"status": detail["effective_status"], "paid": detail["paid_amount"], "balance": detail["balance"]})
 }

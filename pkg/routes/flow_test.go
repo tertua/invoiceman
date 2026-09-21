@@ -500,3 +500,54 @@ func TestReportsFlow(t *testing.T) {
 	assert.Len(t, report["topClients"].([]interface{}), 1)
 	assert.Len(t, report["statusBreakdown"].([]interface{}), 4)
 }
+
+// TestPublicPaymentFlow covers public payment links and simulated settlement.
+func TestPublicPaymentFlow(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Public User","email":"public@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"status":"sent",
+		"issue_date":"2026-09-01",
+		"due_date":"2026-09-30",
+		"currency":"USD",
+		"items":[{"description":"Public service","quantity":1,"rate":100}]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	link := decodeBody(t, resp)
+	token := link["token"].(string)
+	assert.Contains(t, link["url"], "/pay/")
+
+	resp = doRequest(t, app, "GET", "/api/public/pay/"+token, "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	publicData := decodeBody(t, resp)
+	assert.True(t, publicData["can_pay"].(bool))
+	assert.Equal(t, invoiceID, publicData["invoice"].(map[string]interface{})["id"].(string))
+
+	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Contains(t, decodeBody(t, resp)["redirect_url"], "?paid=1")
+
+	resp = doRequest(t, app, "GET", "/api/public/pay/"+token+"/status", "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	status := decodeBody(t, resp)
+	assert.Equal(t, "paid", status["status"])
+	assert.Equal(t, float64(0), status["balance"])
+
+	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/payments/online/send", `{"invoiceId":"`+invoiceID+`","email":"client@example.com"}`, cookies)
+	assert.Equal(t, 501, resp.StatusCode)
+	resp.Body.Close()
+}

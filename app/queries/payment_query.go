@@ -44,3 +44,26 @@ func (q *PaymentQueries) CreatePayment(payment *models.Payment) error {
 func (q *PaymentQueries) DeletePayment(userID, id uuid.UUID) error {
 	return q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Payment{}).Error
 }
+
+// CreatePaymentLink stores a public link for an invoice.
+func (q *PaymentQueries) CreatePaymentLink(link *models.PaymentLink) error {
+	return q.Create(link).Error
+}
+
+// GetPaymentLink returns a payment link by its public token.
+func (q *PaymentQueries) GetPaymentLink(token string) (models.PaymentLink, error) {
+	link := models.PaymentLink{}
+	if err := q.Where("token = ?", token).First(&link).Error; err != nil {
+		return link, notFound(err)
+	}
+	return link, nil
+}
+
+// GetPaymentLinkForInvoice returns the existing public link for an invoice.
+func (q *PaymentQueries) GetPaymentLinkForInvoice(invoiceID, userID uuid.UUID) (models.PaymentLink, error) {
+	link := models.PaymentLink{}
+	if err := q.Where("invoice_id = ? AND user_id = ?", invoiceID, userID).First(&link).Error; err != nil {
+		return link, notFound(err)
+	}
+	return link, nil
+}

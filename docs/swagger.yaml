@@ -975,6 +975,100 @@ paths:
       summary: delete payment
       tags:
       - Payments
+  /payments/online:
+    post:
+      consumes:
+      - application/json
+      description: Create a public payment link.
+      parameters:
+      - description: Invoice ID
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: create payment link
+      tags:
+      - Payments
+  /payments/online/send:
+    post:
+      description: Send a public payment link by email.
+      responses: {}
+      summary: send payment link email
+      tags:
+      - Payments
+  /public/pay/{token}:
+    get:
+      description: Get a public payment invoice.
+      parameters:
+      - description: Payment token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: get public payment
+      tags:
+      - Public Payments
+  /public/pay/{token}/status:
+    get:
+      description: Get public payment status.
+      parameters:
+      - description: Payment token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: get public payment status
+      tags:
+      - Public Payments
+  /public/pay/{token}/transaction:
+    post:
+      description: Complete a public payment without an external gateway.
+      parameters:
+      - description: Payment token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: create public payment transaction
+      tags:
+      - Public Payments
   /reports:
     get:
       description: Get financial reports.

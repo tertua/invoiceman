@@ -51,6 +51,8 @@ func PrivateRoutes(a *fiber.App) {
 	route.Get("/payments", controllers.ListPayments)
 	route.Post("/payments", controllers.CreatePayment)
 	route.Delete("/payments/:id", controllers.DeletePayment)
+	route.Post("/payments/online", controllers.CreateOnlineLink)
+	route.Post("/payments/online/send", controllers.SendOnlineLink)
 
 	// Reports routes:
 	route.Get("/reports", controllers.GetReports)

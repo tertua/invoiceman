@@ -1130,6 +1130,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/payments/online": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a public payment link.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "create payment link",
+                "parameters": [
+                    {
+                        "description": "Invoice ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/online/send": {
+            "post": {
+                "description": "Send a public payment link by email.",
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "send payment link email",
+                "responses": {}
+            }
+        },
         "/payments/{id}": {
             "delete": {
                 "security": [
@@ -1159,6 +1212,96 @@ const docTemplate = `{
                         "description": "ok",
                         "schema": {
                             "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/pay/{token}": {
+            "get": {
+                "description": "Get a public payment invoice.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Payments"
+                ],
+                "summary": "get public payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/pay/{token}/status": {
+            "get": {
+                "description": "Get public payment status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Payments"
+                ],
+                "summary": "get public payment status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/pay/{token}/transaction": {
+            "post": {
+                "description": "Complete a public payment without an external gateway.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Payments"
+                ],
+                "summary": "create public payment transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }

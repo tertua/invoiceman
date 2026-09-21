@@ -15,4 +15,7 @@ func PublicRoutes(a *fiber.App) {
 	route.Post("/auth/login", controllers.Login)                    // auth, start session
 	route.Post("/auth/forgot-password", controllers.ForgotPassword) // request password reset
 	route.Post("/auth/reset-password", controllers.ResetPassword)   // reset password with token
+	route.Get("/public/pay/:token", controllers.GetPublicPayment)
+	route.Post("/public/pay/:token/transaction", controllers.CreatePublicTransaction)
+	route.Get("/public/pay/:token/status", controllers.GetPublicPaymentStatus)
 }
