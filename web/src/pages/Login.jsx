@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, Mail, Lock } from "lucide-react";
 import {
@@ -16,6 +16,7 @@ export default function Login() {
   const { login } = useAuth();
   const { t } = useLang();
   const nav = useNavigate();
+  const location = useLocation();
 
   return (
     <AuthShell
@@ -28,12 +29,12 @@ export default function Login() {
       }
       subhead={t("auth.login.subhead")}
     >
-      <LoginForm login={login} nav={nav} t={t} />
+      <LoginForm login={login} nav={nav} location={location} t={t} />
     </AuthShell>
   );
 }
 
-function LoginForm({ login, nav, t }) {
+function LoginForm({ login, nav, location, t }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,8 @@ function LoginForm({ login, nav, t }) {
     setLoading(true);
     try {
       await login(form);
-      nav("/dashboard");
+      const destination = location.state?.from;
+      nav(destination ? `${destination.pathname}${destination.search}${destination.hash}` : "/dashboard", { replace: true });
     } catch (e) {
       setErr(e.message || t("auth.loginFailed"));
     } finally {

@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter, useLocation } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import RouteError from "@/components/ui/RouteError";
 import { useAuth } from "@/context/AuthContext";
@@ -27,6 +27,7 @@ const AdminUsers = lazy(() => import("@/pages/AdminUsers"));
 function ProtectedShell() {
   const { user, loading } = useAuth();
   const { t } = useLang();
+  const location = useLocation();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--ink-muted)] text-sm">
@@ -34,7 +35,7 @@ function ProtectedShell() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   return <AppShell />;
 }
 
