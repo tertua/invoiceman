@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,15 +22,23 @@ var UsingPostgreSQL = false
 const DefaultSQLitePath = "./data/invoiceman.db"
 
 // chooseDB opens a database handle based on SQL_DSN:
-//   - "postgres://..." prefix -> PostgreSQL (production)
-//   - empty or anything else -> SQLite file (dev, auto-created)
+//   - empty -> SQLite file (dev, auto-created; path from SQLITE_PATH)
+//   - "postgres://..." or "postgresql://..." prefix -> PostgreSQL (production)
+//   - anything else -> error (fail fast instead of silently using SQLite,
+//     e.g. a MySQL DSN which this app does not support)
 func chooseDB(envName string) (*gorm.DB, error) {
 	dsn := strings.TrimSpace(os.Getenv(envName))
 
+	if dsn == "" {
+		return openSQLite()
+	}
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
 		return openPostgreSQL(dsn)
 	}
-	return openSQLite()
+	return nil, fmt.Errorf(
+		"unsupported SQL_DSN %q: leave it empty for SQLite (set SQLITE_PATH for the file) or use a postgres://... DSN for PostgreSQL",
+		dsn,
+	)
 }
 
 // openPostgreSQL opens a PostgreSQL connection with pool settings from env.

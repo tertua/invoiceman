@@ -12,7 +12,7 @@
 - Regenerate committed Swagger output in `docs/` with `swag init` after changing API annotations or controllers. `make run` and `make docker.run` also invoke it.
 - `POST /api/auth/register` and `/login` establish HttpOnly JWT session cookies. Private routes use `AuthRequired`; Redis is used when `REDIS_HOST` is set, otherwise sessions are in memory. Bearer authentication is also accepted.
 - API successes expose their data keys directly; errors use `{"error":{"message","details"}}`. Dates are exchanged as `YYYY-MM-DD` strings. Keep frontend parsing aligned with `pkg/utils/response.go` and `web/src/api/http.js`.
-- With an empty `SQL_DSN`, the app uses auto-created SQLite at `SQLITE_PATH` (default `./data/invoiceman.db`); a `postgres://` DSN selects PostgreSQL. Schema setup is GORM `AutoMigrate` at startup and in test setup; do not add or expect migration files or a migration CLI.
+- With an empty `SQL_DSN`, the app uses auto-created SQLite at `SQLITE_PATH` (default `./data/invoiceman.db`); a `postgres://` DSN selects PostgreSQL, and any other `SQL_DSN` value is a startup error (fail fast — MySQL is not supported). Schema setup is GORM `AutoMigrate` at startup and in test setup; do not add or expect migration files or a migration CLI.
 - `.env` is auto-loaded by `main.go`. Local development needs no database or Redis service: SQLite and in-memory sessions are the defaults. Docker builds require a root `.env` because the `Dockerfile` copies it into the scratch image. Start from `.env.example` when needed.
 
 ## Verification
