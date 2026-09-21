@@ -288,6 +288,9 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
+	if invoice.Status == models.InvoiceStatusDraft {
+		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
+	}
 	paid, err := db.PaidAmount(invoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)

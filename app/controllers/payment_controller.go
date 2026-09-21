@@ -220,16 +220,30 @@ func CreateOnlineLink(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	if _, err := db.GetInvoice(userID, invoiceID); err != nil {
+	invoice, err := db.GetInvoice(userID, invoiceID)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
+	if invoice.Status == models.InvoiceStatusDraft {
+		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
+	}
 	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment link", nil)
+		}
+		if invoice.Status != models.InvoiceStatusSent {
+			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
+		}
+		paid, err := db.PaidAmount(invoiceID)
+		if err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
+		}
+		if invoice.Total <= paid {
+			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 		}
 		token, tokenErr := newPaymentToken()
 		if tokenErr != nil {
@@ -288,10 +302,23 @@ func SendOnlineLink(c fiber.Ctx) error {
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
+	if invoice.Status == models.InvoiceStatusDraft {
+		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
+	}
 	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment link", nil)
+		}
+		if invoice.Status != models.InvoiceStatusSent {
+			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
+		}
+		paid, err := db.PaidAmount(invoiceID)
+		if err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
+		}
+		if invoice.Total <= paid {
+			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 		}
 		token, tokenErr := newPaymentToken()
 		if tokenErr != nil {
@@ -358,6 +385,13 @@ func GetPublicPayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
 	}
+	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+	}
+	if invoice.Status == models.InvoiceStatusDraft {
+		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
+	}
 	data, err := publicPaymentData(*db, link)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
@@ -385,6 +419,9 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+	}
+	if invoice.Status == models.InvoiceStatusDraft {
+		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
 	paid, err := db.PaidAmount(invoice.ID)
 	if err != nil {

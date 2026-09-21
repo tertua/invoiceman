@@ -680,3 +680,92 @@ func TestAppConfig(t *testing.T) {
 	assert.Equal(t, "Acme Billing", decodeBody(t, resp)["appName"])
 	resp.Body.Close()
 }
+
+// TestDraftOnlinePaymentBlocked covers the draft/paid guards on public links:
+// drafts can never get a link or be opened/paid publicly, and paid invoices
+// cannot get new links (existing links stay open as receipts).
+func TestDraftOnlinePaymentBlocked(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Draft Guard User","email":"draftguard@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	newInvoice := func(status string) string {
+		resp := doRequest(t, app, "POST", "/api/invoices", `{
+			"status":"`+status+`",
+			"issue_date":"2026-09-01",
+			"due_date":"2026-09-30",
+			"currency":"IDR",
+			"items":[{"description":"Guarded service","quantity":1,"rate":50000}]
+		}`, cookies)
+		require.Equal(t, 201, resp.StatusCode)
+		return decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	}
+	onlineErr := func(method, path, body string, cookies []*http.Cookie) (int, string) {
+		resp := doRequest(t, app, method, path, body, cookies)
+		defer resp.Body.Close()
+		if resp.StatusCode < 400 {
+			return resp.StatusCode, ""
+		}
+		return resp.StatusCode, decodeBody(t, resp)["error"].(map[string]interface{})["message"].(string)
+	}
+
+	// Draft invoices cannot get a public link at all.
+	draftID := newInvoice("draft")
+	code, msg := onlineErr("POST", "/api/payments/online", `{"invoiceId":"`+draftID+`"}`, cookies)
+	assert.Equal(t, 422, code)
+	assert.Equal(t, "invoice is still a draft", msg)
+
+	code, _ = onlineErr("POST", "/api/payments/online/send", `{"invoiceId":"`+draftID+`","email":"client@example.com"}`, cookies)
+	assert.Equal(t, 422, code)
+
+	// A link created while sent stops working once the invoice goes back to draft.
+	sentID := newInvoice("sent")
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+sentID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	token := decodeBody(t, resp)["token"].(string)
+
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+sentID+"/status", `{"status":"draft"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	code, _ = onlineErr("GET", "/api/public/pay/"+token, "", nil)
+	assert.Equal(t, 422, code)
+	code, _ = onlineErr("POST", "/api/public/pay/"+token+"/transaction", "", nil)
+	assert.Equal(t, 422, code)
+
+	// Paid invoices cannot get new links...
+	paidID := newInvoice("sent")
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+paidID+`","amount":50000,"method":"Cash","paid_on":"2026-09-21"
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+
+	code, msg = onlineErr("POST", "/api/payments/online", `{"invoiceId":"`+paidID+`"}`, cookies)
+	assert.Equal(t, 400, code)
+	assert.Equal(t, "invoice is already paid", msg)
+
+	// ...but an existing link stays open as a receipt.
+	receiptID := newInvoice("sent")
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+receiptID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	receiptToken := decodeBody(t, resp)["token"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+receiptID+`","amount":50000,"method":"Cash","paid_on":"2026-09-21"
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+receiptID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, receiptToken, decodeBody(t, resp)["token"])
+
+	resp = doRequest(t, app, "GET", "/api/public/pay/"+receiptToken, "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.False(t, decodeBody(t, resp)["can_pay"].(bool))
+}

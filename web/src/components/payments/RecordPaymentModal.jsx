@@ -59,6 +59,12 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
     [invoices, form.invoiceId]
   );
 
+  // Draft invoices cannot be paid online — hide the Online method.
+  const methodOptions = useMemo(() => {
+    if (selectedInvoice?.effective_status === "draft") return PAYMENT_METHODS.filter((m) => m !== "Online");
+    return PAYMENT_METHODS;
+  }, [selectedInvoice]);
+
   useEffect(() => {
     if (open) {
       setForm({
@@ -89,6 +95,9 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
   function pickInvoice(id) {
     const inv = (invoices || []).find((i) => i.id === id);
     setForm((f) => ({ ...f, invoiceId: id, amount: inv ? inv.total : f.amount }));
+    if (inv?.effective_status === "draft") {
+      setForm((f) => (f.method === "Online" ? { ...f, method: "Cash" } : f));
+    }
   }
 
   async function onSubmit(e) {
@@ -252,7 +261,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
                   )}
                   <Field label={t("common.method")}>
                     <select className={selectClass} value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}>
-                      {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      {methodOptions.map((m) => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </Field>
                   {form.method !== "Online" && (
