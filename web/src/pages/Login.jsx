@@ -16,6 +16,24 @@ export default function Login() {
   const { login } = useAuth();
   const { t } = useLang();
   const nav = useNavigate();
+
+  return (
+    <AuthShell
+      headline={
+        <>
+          {t("auth.headline.login1")}
+          <br />
+          <em style={{ fontStyle: "italic" }}>{t("auth.headline.login2")}</em>
+        </>
+      }
+      subhead={t("auth.login.subhead")}
+    >
+      <LoginForm login={login} nav={nav} t={t} />
+    </AuthShell>
+  );
+}
+
+function LoginForm({ login, nav, t }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,21 +53,11 @@ export default function Login() {
   }
 
   return (
-    <AuthShell
-      headline={
-        <>
-          {t("auth.headline.login1")}
-          <br />
-          <em style={{ fontStyle: "italic" }}>{t("auth.headline.login2")}</em>
-        </>
-      }
-      subhead={t("auth.login.subhead")}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
     >
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-      >
         <div className="mb-12">
           <AILogo size={48} />
         </div>
@@ -67,7 +75,7 @@ export default function Login() {
             type="email"
             autoComplete="email"
             value={form.email}
-            onChange={(v) => setForm({ ...form, email: v })}
+            onChange={(v) => setForm((current) => ({ ...current, email: v }))}
             placeholder="you@example.com"
             icon={Mail}
           />
@@ -77,7 +85,7 @@ export default function Login() {
             type="password"
             autoComplete="current-password"
             value={form.password}
-            onChange={(v) => setForm({ ...form, password: v })}
+            onChange={(v) => setForm((current) => ({ ...current, password: v }))}
             placeholder="••••••••"
             icon={Lock}
             extra={
@@ -106,7 +114,6 @@ export default function Login() {
               )}
             </AuthPrimaryButton>
           </div>
-
         </form>
 
         <div className="text-sm text-[var(--ink-muted)] text-center mt-8">
@@ -118,7 +125,6 @@ export default function Login() {
             {t("auth.createOne")}
           </Link>
         </div>
-      </motion.div>
-    </AuthShell>
+    </motion.div>
   );
 }
