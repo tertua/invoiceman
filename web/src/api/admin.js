@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "./http";
 
 export const adminApi = {
   listUsers: () => apiClient.get("/admin/users").then((r) => r.data.users),

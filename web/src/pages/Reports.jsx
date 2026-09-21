@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useReports } from "@/hooks/useFeatures";
+import { useReports } from "@/hooks/useReports";
 import { useSettings } from "@/hooks/useSettings";
 import { todayDateInput } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";

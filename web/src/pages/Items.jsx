@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useItems, useItemMutations } from "@/hooks/useFeatures";
+import { useItems, useItemMutations } from "@/hooks/useItems";
 import { formatMoney } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
 

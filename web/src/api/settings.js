@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "./http";
 
 export const settingsApi = {
   get: () => apiClient.get("/settings").then((r) => r.data.settings),

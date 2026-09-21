@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "./http";
 
 export const authApi = {
   register: (payload) => apiClient.post("/auth/register", payload).then((r) => r.data),

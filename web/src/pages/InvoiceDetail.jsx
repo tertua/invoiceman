@@ -25,7 +25,7 @@ import {
   useDeleteInvoice,
 } from "@/hooks/useInvoices";
 import { useSettings } from "@/hooks/useSettings";
-import { usePaymentMutations } from "@/hooks/useFeatures";
+import { usePaymentMutations } from "@/hooks/usePayments";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";

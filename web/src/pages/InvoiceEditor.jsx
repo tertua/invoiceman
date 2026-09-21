@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useClients } from "@/hooks/useClients";
 import { useSettings } from "@/hooks/useSettings";
-import { useItems } from "@/hooks/useFeatures";
+import { useItems } from "@/hooks/useItems";
 import {
   useInvoice,
   useCreateInvoice,

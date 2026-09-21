@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { useExpenses, useExpenseMutations } from "@/hooks/useFeatures";
+import { useExpenses, useExpenseMutations } from "@/hooks/useExpenses";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate, toDateInput, todayDateInput, cn } from "@/lib/utils";

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { useDashboard } from "@/hooks/useDashboard";
-import { useReports } from "@/hooks/useFeatures";
+import { useReports } from "@/hooks/useReports";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { useSettings } from "@/hooks/useSettings";

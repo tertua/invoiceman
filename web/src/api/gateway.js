@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "./http";
 
 export const gatewayApi = {
   config: () => apiClient.get("/public/gateway/config").then((r) => r.data),

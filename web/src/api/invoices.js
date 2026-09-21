@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "./http";
 
 export const invoicesApi = {
   list: (params = {}) => apiClient.get("/invoices", { params }).then((r) => r.data.invoices),

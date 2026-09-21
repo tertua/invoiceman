@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
-import { usePayments, usePaymentMutations } from "@/hooks/useFeatures";
+import { usePayments, usePaymentMutations } from "@/hooks/usePayments";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
 

@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "./http";
 
 export const publicPayApi = {
   get: (token) => apiClient.get(`/public/pay/${token}`).then((r) => r.data),

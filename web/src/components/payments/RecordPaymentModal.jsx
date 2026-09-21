@@ -4,8 +4,8 @@ import { X, Loader2, Copy, Check, ExternalLink, Send, Link2 } from "lucide-react
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useInvoices } from "@/hooks/useInvoices";
-import { usePaymentMutations } from "@/hooks/useFeatures";
-import { paymentsApi } from "@/api/features";
+import { usePaymentMutations } from "@/hooks/usePayments";
+import { paymentsApi } from "@/api/payments";
 import { gatewayApi } from "@/api/gateway";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, todayDateInput } from "@/lib/utils";
