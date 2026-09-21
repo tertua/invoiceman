@@ -56,6 +56,9 @@ export function usePaymentMutations() {
 
 /* ── Reports ───────────────────────────────────────────────────── */
 export const reportsKey = ["reports"];
-export function useReports() {
-  return useQuery({ queryKey: reportsKey, queryFn: () => reportsApi.get() });
+export function useReports(currency) {
+  return useQuery({
+    queryKey: [...reportsKey, currency || ""],
+    queryFn: () => reportsApi.get(currency ? { currency } : {}),
+  });
 }

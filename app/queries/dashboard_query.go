@@ -14,12 +14,15 @@ type DashboardQueries struct {
 }
 
 // GetStats returns dashboard aggregate numbers for a user.
-func (q *DashboardQueries) GetStats(userID uuid.UUID) (models.DashboardStats, error) {
+func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.DashboardStats, error) {
 	stats := models.DashboardStats{}
 
 	var invoices []models.Invoice
-	if err := q.Select("id, status, due_date, total").
-		Where("user_id = ?", userID).Find(&invoices).Error; err != nil {
+	invoiceQuery := q.Select("id, status, due_date, total").Where("user_id = ?", userID)
+	if currency != "" {
+		invoiceQuery = invoiceQuery.Where("currency = ?", currency)
+	}
+	if err := invoiceQuery.Find(&invoices).Error; err != nil {
 		return stats, err
 	}
 	stats.InvoiceCount = len(invoices)
@@ -35,12 +38,14 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID) (models.DashboardStats, er
 		Paid      float64
 	}
 	var paidRows []paidRow
-	if err := q.Model(&models.Payment{}).
+	paidInvoiceQuery := q.Model(&models.Payment{}).
 		Select("invoice_id, SUM(amount) AS paid").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ?", userID).
-		Group("invoice_id").
-		Scan(&paidRows).Error; err != nil {
+		Where("invoices.user_id = ?", userID)
+	if currency != "" {
+		paidInvoiceQuery = paidInvoiceQuery.Where("invoices.currency = ?", currency)
+	}
+	if err := paidInvoiceQuery.Group("invoice_id").Scan(&paidRows).Error; err != nil {
 		return stats, err
 	}
 	paidByInvoice := make(map[uuid.UUID]float64, len(paidRows))
@@ -57,11 +62,13 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID) (models.DashboardStats, er
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	var paidThisMonth float64
-	if err := q.Model(&models.Payment{}).
+	paidQuery := q.Model(&models.Payment{}).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.created_at >= ?", userID, monthStart).
-		Select("COALESCE(SUM(payments.amount), 0)").
-		Scan(&paidThisMonth).Error; err != nil {
+		Where("invoices.user_id = ? AND payments.created_at >= ?", userID, monthStart)
+	if currency != "" {
+		paidQuery = paidQuery.Where("invoices.currency = ?", currency)
+	}
+	if err := paidQuery.Select("COALESCE(SUM(payments.amount), 0)").Scan(&paidThisMonth).Error; err != nil {
 		return stats, err
 	}
 	stats.PaidThisMonth = paidThisMonth
@@ -83,7 +90,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID) (models.DashboardStats, er
 }
 
 // GetRevenueSeries returns revenue per month for the last 6 months.
-func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID) ([]models.RevenuePoint, error) {
+func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) ([]models.RevenuePoint, error) {
 	now := time.Now()
 	oldest := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -5, 0)
 
@@ -92,11 +99,14 @@ func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID) ([]models.RevenueP
 		Amount    float64
 	}
 	var rows []monthlyRow
-	if err := q.Model(&models.Payment{}).
+	revenueQuery := q.Model(&models.Payment{}).
 		Select("payments.created_at AS created_at, payments.amount AS amount").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.created_at >= ?", userID, oldest).
-		Scan(&rows).Error; err != nil {
+		Where("invoices.user_id = ? AND payments.created_at >= ?", userID, oldest)
+	if currency != "" {
+		revenueQuery = revenueQuery.Where("invoices.currency = ?", currency)
+	}
+	if err := revenueQuery.Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 
@@ -132,7 +142,7 @@ type recentInvoiceRow struct {
 }
 
 // GetRecentInvoices returns the 5 most recent invoices of a user.
-func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID) ([]models.RecentInvoice, error) {
+func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) ([]models.RecentInvoice, error) {
 	invoices := []models.RecentInvoice{}
 
 	paidSubquery := q.Model(&models.Payment{}).
@@ -140,7 +150,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID) ([]models.RecentI
 		Group("invoice_id")
 
 	var rows []recentInvoiceRow
-	if err := q.Table("invoices").
+	recentQuery := q.Table("invoices").
 		Select(`invoices.id, invoices.invoice_number,
 			COALESCE(clients.name, '') AS client_name,
 			invoices.issue_date, invoices.total, invoices.currency,
@@ -148,7 +158,11 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID) ([]models.RecentI
 			COALESCE(pay.paid, 0) AS paid_amount`).
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
 		Joins("LEFT JOIN (?) AS pay ON pay.invoice_id = invoices.id", paidSubquery).
-		Where("invoices.user_id = ?", userID).
+		Where("invoices.user_id = ?", userID)
+	if currency != "" {
+		recentQuery = recentQuery.Where("invoices.currency = ?", currency)
+	}
+	if err := recentQuery.
 		Order("invoices.created_at DESC").
 		Limit(5).
 		Scan(&rows).Error; err != nil {

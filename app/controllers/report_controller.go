@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
@@ -23,7 +25,7 @@ func GetReports(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	report, err := db.GetReports(userID)
+	report, err := db.GetReports(userID, strings.TrimSpace(c.Query("currency")))
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load reports", nil)
 	}

@@ -15,7 +15,7 @@ type ReportQueries struct {
 }
 
 // GetReports aggregates invoices, payments, expenses, and clients for a user.
-func (q *ReportQueries) GetReports(userID uuid.UUID) (models.Reports, error) {
+func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Reports, error) {
 	report := models.Reports{
 		Monthly:         make([]models.ReportMonthlyPoint, 0),
 		Aging:           make([]models.ReportValuePoint, 0),
@@ -33,6 +33,33 @@ func (q *ReportQueries) GetReports(userID uuid.UUID) (models.Reports, error) {
 	var expenses []models.Expense
 	if err := q.Where("user_id = ?", userID).Find(&expenses).Error; err != nil {
 		return report, err
+	}
+	if currency != "" {
+		filteredInvoices := make([]models.Invoice, 0, len(invoices))
+		for _, invoice := range invoices {
+			if invoice.Currency == currency {
+				filteredInvoices = append(filteredInvoices, invoice)
+			}
+		}
+		invoices = filteredInvoices
+		filteredExpenses := make([]models.Expense, 0, len(expenses))
+		for _, expense := range expenses {
+			if expense.Currency == currency {
+				filteredExpenses = append(filteredExpenses, expense)
+			}
+		}
+		expenses = filteredExpenses
+		invoiceIDs := make(map[uuid.UUID]struct{}, len(invoices))
+		for _, invoice := range invoices {
+			invoiceIDs[invoice.ID] = struct{}{}
+		}
+		filteredPayments := make([]models.Payment, 0, len(payments))
+		for _, payment := range payments {
+			if _, ok := invoiceIDs[payment.InvoiceID]; ok {
+				filteredPayments = append(filteredPayments, payment)
+			}
+		}
+		payments = filteredPayments
 	}
 	var clients []models.Client
 	if err := q.Where("user_id = ?", userID).Find(&clients).Error; err != nil {

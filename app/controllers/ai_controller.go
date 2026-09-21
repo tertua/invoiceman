@@ -91,11 +91,11 @@ func BusinessSummary(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	stats, err := db.GetStats(userID)
+	stats, err := db.GetStats(userID, "")
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load business data", nil)
 	}
-	report, err := db.GetReports(userID)
+	report, err := db.GetReports(userID, "")
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load business data", nil)
 	}

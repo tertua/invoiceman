@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
 
 export const dashboardApi = {
-  get: () => apiClient.get("/dashboard").then((r) => r.data),
+  get: (params = {}) => apiClient.get("/dashboard", { params }).then((r) => r.data),
 };

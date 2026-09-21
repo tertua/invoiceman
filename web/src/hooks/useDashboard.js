@@ -3,9 +3,9 @@ import { dashboardApi } from "@/api/dashboard";
 
 export const dashboardKey = ["dashboard"];
 
-export function useDashboard() {
+export function useDashboard(currency) {
   return useQuery({
-    queryKey: dashboardKey,
-    queryFn: () => dashboardApi.get(),
+    queryKey: [...dashboardKey, currency || ""],
+    queryFn: () => dashboardApi.get(currency ? { currency } : {}),
   });
 }

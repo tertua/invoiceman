@@ -23,5 +23,5 @@ export const paymentsApi = {
 };
 
 export const reportsApi = {
-  get: () => apiClient.get("/reports").then((r) => r.data),
+  get: (params = {}) => apiClient.get("/reports", { params }).then((r) => r.data),
 };

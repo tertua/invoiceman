@@ -285,6 +285,17 @@ func TestClientInvoiceFlow(t *testing.T) {
 	assert.Len(t, dashboard["revenueSeries"].([]interface{}), 6)
 	assert.Len(t, dashboard["recentInvoices"].([]interface{}), 1)
 
+	// Currency filtering keeps dashboard totals from mixing currencies.
+	resp = doRequest(t, app, "GET", "/api/dashboard?currency=IDR", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	idrDashboard := decodeBody(t, resp)["stats"].(map[string]interface{})
+	assert.Equal(t, float64(0), idrDashboard["invoiceCount"])
+
+	resp = doRequest(t, app, "GET", "/api/dashboard?currency=USD", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	usdDashboard := decodeBody(t, resp)["stats"].(map[string]interface{})
+	assert.Equal(t, float64(1), usdDashboard["invoiceCount"])
+
 	// Cleanup.
 	resp = doRequest(t, app, "DELETE", "/api/invoices/"+invoiceID, "", cookies)
 	assert.Equal(t, 204, resp.StatusCode)

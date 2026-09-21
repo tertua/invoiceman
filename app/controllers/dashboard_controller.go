@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"strings"
+
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 
@@ -27,17 +29,18 @@ func GetDashboard(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	stats, err := db.GetStats(userID)
+	currency := strings.TrimSpace(c.Query("currency"))
+	stats, err := db.GetStats(userID, currency)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load dashboard stats", nil)
 	}
 
-	series, err := db.GetRevenueSeries(userID)
+	series, err := db.GetRevenueSeries(userID, currency)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load revenue series", nil)
 	}
 
-	recent, err := db.GetRecentInvoices(userID)
+	recent, err := db.GetRecentInvoices(userID, currency)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load recent invoices", nil)
 	}

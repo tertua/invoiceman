@@ -21,6 +21,7 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { useReports } from "@/hooks/useFeatures";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
+import { useSettings } from "@/hooks/useSettings";
 import { formatMoney, formatDate } from "@/lib/utils";
 const DashboardCharts = lazy(() => import("@/components/dashboard/DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
 
@@ -33,8 +34,10 @@ const T3 = "#0f766e"; // teal-700
 export default function Dashboard() {
   const nav = useNavigate();
   const { t } = useLang();
-  const { data, isLoading, error } = useDashboard();
-  const { data: reports } = useReports();
+  const { data: settings } = useSettings();
+  const currency = settings?.currency || "IDR";
+  const { data, isLoading, error } = useDashboard(currency);
+  const { data: reports } = useReports(currency);
 
   if (isLoading) return <DashboardSkeleton />;
   if (error) {
