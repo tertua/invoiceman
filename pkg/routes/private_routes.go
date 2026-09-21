@@ -40,4 +40,8 @@ func PrivateRoutes(a *fiber.App) {
 	route.Post("/items", controllers.CreateItem)
 	route.Patch("/items/:id", controllers.UpdateItem)
 	route.Delete("/items/:id", controllers.DeleteItem)
+
+	// Settings routes:
+	route.Get("/settings", controllers.ListSettings)
+	route.Patch("/settings", controllers.UpdateSettings)
 }

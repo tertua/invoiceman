@@ -914,6 +914,70 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/settings": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get settings of current user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "get current user settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update settings of current user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "update current user settings",
+                "parameters": [
+                    {
+                        "description": "Settings payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SettingsInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1143,6 +1207,45 @@ const docTemplate = `{
                 "token": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "models.SettingsInput": {
+            "type": "object",
+            "required": [
+                "currency",
+                "invoice_prefix"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "currency": {
+                    "type": "string",
+                    "maxLength": 3
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "invoice_prefix": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "tax_rate": {
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },

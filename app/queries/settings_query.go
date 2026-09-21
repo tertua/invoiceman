@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,11 +18,17 @@ type SettingsQueries struct {
 func (q *SettingsQueries) GetSettings(userID uuid.UUID) (models.Settings, error) {
 	settings := models.Settings{UserID: userID}
 
-	defaults := models.DefaultSettings(userID)
-	if err := q.Where("user_id = ?", userID).FirstOrCreate(&settings, defaults).Error; err != nil {
+	if err := q.Where("user_id = ?", userID).First(&settings).Error; err == nil {
+		return settings, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return settings, err
 	}
 
+	defaults := models.DefaultSettings(userID)
+	if err := q.Create(defaults).Error; err != nil {
+		return settings, err
+	}
+	settings = *defaults
 	return settings, nil
 }
 

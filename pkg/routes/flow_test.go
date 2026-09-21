@@ -295,3 +295,41 @@ func TestItemFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Empty(t, decodeBody(t, resp)["items"])
 }
+
+// TestSettingsFlow covers settings defaults and updates.
+func TestSettingsFlow(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Settings User","email":"settings@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "GET", "/api/settings", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	settings := decodeBody(t, resp)["settings"].(map[string]interface{})
+	assert.Equal(t, "USD", settings["currency"])
+	assert.Equal(t, "INV-", settings["invoice_prefix"])
+
+	resp = doRequest(t, app, "PATCH", "/api/settings", `{
+		"company_name":"Acme Studio",
+		"email":"billing@acme.test",
+		"phone":"+62123456789",
+		"address":"Main Street",
+		"logo_url":"data:image/png;base64,abc",
+		"currency":"IDR",
+		"tax_rate":11,
+		"invoice_prefix":"ACME-"
+	}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	updated := decodeBody(t, resp)["settings"].(map[string]interface{})
+	assert.Equal(t, "Acme Studio", updated["company_name"])
+	assert.Equal(t, "IDR", updated["currency"])
+	assert.Equal(t, float64(11), updated["tax_rate"])
+	assert.Equal(t, "ACME-", updated["invoice_prefix"])
+
+	resp = doRequest(t, app, "PATCH", "/api/settings", `{"currency":"INVALID"}`, cookies)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+}

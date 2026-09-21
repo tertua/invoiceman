@@ -162,6 +162,34 @@ definitions:
     - new_password
     - token
     type: object
+  models.SettingsInput:
+    properties:
+      address:
+        type: string
+      company_name:
+        maxLength: 255
+        type: string
+      currency:
+        maxLength: 3
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      invoice_prefix:
+        maxLength: 20
+        type: string
+      logo_url:
+        type: string
+      phone:
+        maxLength: 100
+        type: string
+      tax_rate:
+        minimum: 0
+        type: number
+    required:
+    - currency
+    - invoice_prefix
+    type: object
   models.UpdateProfile:
     properties:
       name:
@@ -748,6 +776,46 @@ paths:
       summary: update catalog item
       tags:
       - Items
+  /settings:
+    get:
+      description: Get settings of current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get current user settings
+      tags:
+      - Settings
+    patch:
+      consumes:
+      - application/json
+      description: Update settings of current user.
+      parameters:
+      - description: Settings payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SettingsInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update current user settings
+      tags:
+      - Settings
 securityDefinitions:
   ApiKeyAuth:
     in: header
