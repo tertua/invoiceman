@@ -2,8 +2,6 @@
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
-MIGRATIONS_FOLDER = $(PWD)/platform/migrations
-DATABASE_URL = postgres://postgres:password@template-postgres/postgres?sslmode=disable
 
 clean:
 	rm -rf ./build
@@ -27,16 +25,7 @@ build: test
 run: swag build
 	$(BUILD_DIR)/$(APP_NAME)
 
-migrate.up:
-	migrate -path $(MIGRATIONS_FOLDER) -database "$(DATABASE_URL)" up
-
-migrate.down:
-	migrate -path $(MIGRATIONS_FOLDER) -database "$(DATABASE_URL)" down
-
-migrate.force:
-	migrate -path $(MIGRATIONS_FOLDER) -database "$(DATABASE_URL)" force $(version)
-
-docker.run: docker.network docker.postgres swag docker.fiber docker.redis migrate.up
+docker.run: docker.network docker.postgres swag docker.fiber docker.redis
 
 docker.network:
 	docker network inspect template-network >/dev/null 2>&1 || \

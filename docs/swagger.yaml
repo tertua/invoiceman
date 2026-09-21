@@ -1,62 +1,157 @@
 basePath: /api
 definitions:
-  models.Book:
+  models.ChangePassword:
     properties:
-      author:
+      currentPassword:
+        maxLength: 255
         type: string
-      book_attrs:
-        $ref: '#/definitions/models.BookAttrs'
-      book_status:
-        type: integer
-      created_at:
-        type: string
-      id:
-        type: string
-      title:
-        type: string
-      updated_at:
-        type: string
-      user_id:
+      newPassword:
+        maxLength: 255
+        minLength: 8
         type: string
     required:
-    - author
-    - book_attrs
-    - book_status
-    - id
-    - title
-    - user_id
+    - currentPassword
+    - newPassword
     type: object
-  models.BookAttrs:
+  models.ClientInput:
+    properties:
+      address:
+        type: string
+      company:
+        maxLength: 255
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      notes:
+        type: string
+      phone:
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  models.ForgotPassword:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+    required:
+    - email
+    type: object
+  models.InvoiceInput:
+    properties:
+      client_id:
+        type: string
+      currency:
+        maxLength: 3
+        type: string
+      discount:
+        minimum: 0
+        type: number
+      due_date:
+        type: string
+      issue_date:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/models.InvoiceItemInput'
+        minItems: 1
+        type: array
+      notes:
+        type: string
+      status:
+        enum:
+        - draft
+        - sent
+        - paid
+        type: string
+      tax_rate:
+        minimum: 0
+        type: number
+      terms:
+        type: string
+    required:
+    - currency
+    - items
+    - status
+    type: object
+  models.InvoiceItemInput:
     properties:
       description:
         type: string
-      picture:
-        type: string
-      rating:
-        type: integer
+      quantity:
+        minimum: 0
+        type: number
+      rate:
+        minimum: 0
+        type: number
+    required:
+    - description
     type: object
-  models.User:
+  models.InvoiceStatusInput:
     properties:
-      created_at:
+      status:
+        enum:
+        - draft
+        - sent
+        - paid
         type: string
+    required:
+    - status
+    type: object
+  models.Login:
+    properties:
       email:
+        maxLength: 255
         type: string
-      id:
+      password:
+        maxLength: 255
         type: string
-      password_hash:
-        type: string
-      updated_at:
-        type: string
-      user_role:
-        type: string
-      user_status:
-        type: integer
     required:
     - email
-    - id
-    - password_hash
-    - user_role
-    - user_status
+    - password
+    type: object
+  models.Register:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      password:
+        maxLength: 255
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  models.ResetPassword:
+    properties:
+      new_password:
+        maxLength: 255
+        minLength: 8
+        type: string
+      token:
+        maxLength: 255
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  models.UpdateProfile:
+    properties:
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
     type: object
 info:
   contact:
@@ -70,18 +165,57 @@ info:
   title: API
   version: "1.0"
 paths:
-  /v1/book:
-    delete:
+  /auth/forgot-password:
+    post:
       consumes:
       - application/json
-      description: Delete book by given ID.
+      description: Request password reset token.
       parameters:
-      - description: Book ID
+      - description: Forgot password payload
         in: body
-        name: id
+        name: request
         required: true
         schema:
-          type: string
+          $ref: '#/definitions/models.ForgotPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: request password reset token
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Auth user and start session.
+      parameters:
+      - description: Login payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: auth user and start session
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: De-authorize user and delete session.
       produces:
       - application/json
       responses:
@@ -91,110 +225,194 @@ paths:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: delete book by given ID
+      summary: de-authorize user and delete session
       tags:
-      - Book
-    post:
+      - Auth
+  /auth/me:
+    get:
       consumes:
       - application/json
-      description: Create a new book.
-      parameters:
-      - description: Title
-        in: body
-        name: title
-        required: true
-        schema:
-          type: string
-      - description: Author
-        in: body
-        name: author
-        required: true
-        schema:
-          type: string
-      - description: User ID
-        in: body
-        name: user_id
-        required: true
-        schema:
-          type: string
-      - description: Book attributes
-        in: body
-        name: book_attrs
-        required: true
-        schema:
-          $ref: '#/definitions/models.BookAttrs'
+      description: Get current session user.
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Book'
+            additionalProperties: true
+            type: object
       security:
       - ApiKeyAuth: []
-      summary: create a new book
+      summary: get current session user
       tags:
-      - Book
-    put:
+      - Auth
+  /auth/password:
+    patch:
       consumes:
       - application/json
-      description: Update book.
+      description: Change current user password.
       parameters:
-      - description: Book ID
+      - description: Change password payload
         in: body
-        name: id
+        name: request
         required: true
         schema:
-          type: string
-      - description: Title
-        in: body
-        name: title
-        required: true
-        schema:
-          type: string
-      - description: Author
-        in: body
-        name: author
-        required: true
-        schema:
-          type: string
-      - description: User ID
-        in: body
-        name: user_id
-        required: true
-        schema:
-          type: string
-      - description: Book status
-        in: body
-        name: book_status
-        required: true
-        schema:
-          type: integer
-      - description: Book attributes
-        in: body
-        name: book_attrs
-        required: true
-        schema:
-          $ref: '#/definitions/models.BookAttrs'
+          $ref: '#/definitions/models.ChangePassword'
       produces:
       - application/json
       responses:
-        "202":
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: change current user password
+      tags:
+      - Auth
+  /auth/profile:
+    patch:
+      consumes:
+      - application/json
+      description: Update current user profile.
+      parameters:
+      - description: Update profile payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateProfile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update current user profile
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user.
+      parameters:
+      - description: Register payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Register'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: register a new user
+      tags:
+      - Auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password with token.
+      parameters:
+      - description: Reset password payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ResetPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: reset password with token
+      tags:
+      - Auth
+  /clients:
+    get:
+      consumes:
+      - application/json
+      description: Get all clients of current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get all clients of current user
+      tags:
+      - Clients
+    post:
+      consumes:
+      - application/json
+      description: Create a new client.
+      parameters:
+      - description: Create client payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ClientInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: create a new client
+      tags:
+      - Clients
+  /clients/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a client.
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
           description: ok
           schema:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: update book
+      summary: delete a client
       tags:
-      - Book
-  /v1/book/{id}:
+      - Clients
     get:
       consumes:
       - application/json
-      description: Get book by given ID.
+      description: Get client by ID with invoices and stats.
       parameters:
-      - description: Book ID
+      - description: Client ID
         in: path
         name: id
         required: true
@@ -205,84 +423,130 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Book'
-      summary: get book by given ID
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get client by ID with invoices and stats
       tags:
-      - Book
-  /v1/books:
-    get:
+      - Clients
+    patch:
       consumes:
       - application/json
-      description: Get all exists books.
+      description: Update a client.
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update client payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ClientInput'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.Book'
-            type: array
-      summary: get all exists books
-      tags:
-      - Books
-  /v1/token/renew:
-    post:
-      consumes:
-      - application/json
-      description: Renew access and refresh tokens.
-      parameters:
-      - description: Refresh token
-        in: body
-        name: refresh_token
-        required: true
-        schema:
-          type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: ok
-          schema:
-            type: string
+            additionalProperties: true
+            type: object
       security:
       - ApiKeyAuth: []
-      summary: renew access and refresh tokens
+      summary: update a client
       tags:
-      - Token
-  /v1/user/sign/in:
-    post:
+      - Clients
+  /dashboard:
+    get:
       consumes:
       - application/json
-      description: Auth user and return access and refresh token.
-      parameters:
-      - description: User Email
-        in: body
-        name: email
-        required: true
-        schema:
-          type: string
-      - description: User Password
-        in: body
-        name: password
-        required: true
-        schema:
-          type: string
+      description: Get dashboard aggregates.
       produces:
       - application/json
       responses:
         "200":
-          description: ok
+          description: OK
           schema:
-            type: string
-      summary: auth user and return access and refresh token
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get dashboard aggregates
       tags:
-      - User
-  /v1/user/sign/out:
+      - Dashboard
+  /invoices:
+    get:
+      consumes:
+      - application/json
+      description: Get invoices of current user.
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Search by number or client
+        in: query
+        name: search
+        type: string
+      - description: Sort column
+        in: query
+        name: sort
+        type: string
+      - description: Sort order
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get invoices of current user
+      tags:
+      - Invoices
     post:
       consumes:
       - application/json
-      description: De-authorize user and delete refresh token from Redis.
+      description: Create a new invoice.
+      parameters:
+      - description: Create invoice payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.InvoiceInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: create a new invoice
+      tags:
+      - Invoices
+  /invoices/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an invoice.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -292,43 +556,91 @@ paths:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: de-authorize user and delete refresh token from Redis
+      summary: delete an invoice
       tags:
-      - User
-  /v1/user/sign/up:
-    post:
+      - Invoices
+    get:
       consumes:
       - application/json
-      description: Create a new user.
+      description: Get invoice by ID.
       parameters:
-      - description: Email
-        in: body
-        name: email
+      - description: Invoice ID
+        in: path
+        name: id
         required: true
-        schema:
-          type: string
-      - description: Password
-        in: body
-        name: password
-        required: true
-        schema:
-          type: string
-      - description: User role
-        in: body
-        name: user_role
-        required: true
-        schema:
-          type: string
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
-      summary: create a new user
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get invoice by ID
       tags:
-      - User
+      - Invoices
+    patch:
+      consumes:
+      - application/json
+      description: Update an invoice.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update invoice payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.InvoiceInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update an invoice
+      tags:
+      - Invoices
+  /invoices/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update invoice status.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update status payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.InvoiceStatusInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: update invoice status
+      tags:
+      - Invoices
 securityDefinitions:
   ApiKeyAuth:
     in: header
