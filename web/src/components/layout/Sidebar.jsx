@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
+import { useAppName } from "@/hooks/useConfig";
 import AILogo from "./AILogo";
 
 const NAV = [
@@ -97,6 +98,7 @@ function ActionRow({ icon: Icon, label, onClick, to }) {
 export function Sidebar() {
   const { user, logout } = useAuth();
   const { t } = useLang();
+  const appName = useAppName();
   const displayName = user?.name || t("sidebar.account");
   const displayEmail = user?.email || "";
 
@@ -118,7 +120,7 @@ export function Sidebar() {
           )}
         >
           <div className="h-12 w-12 flex items-center justify-center shrink-0">
-            <AILogo />
+            <AILogo label={appName} />
           </div>
           <span
             className={cn(
@@ -128,7 +130,7 @@ export function Sidebar() {
               "group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 group-hover/sidebar:delay-100",
             )}
           >
-            Invoicer
+            {appName}
           </span>
         </div>
 

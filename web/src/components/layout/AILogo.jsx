@@ -1,10 +1,10 @@
 /**
- * Brand mark for Invoicer — a teal invoice document with billing rows and a
+ * Brand mark for Invoiceman — a teal invoice document with billing rows and a
  * "$" seal. Renders at 48px, no frame.
  */
-const AILogo = () => {
+const AILogo = ({ label = "Invoiceman" }) => {
   return (
-    <div className="relative h-12 w-12 flex items-center justify-center" aria-label="Invoicer">
+    <div className="relative h-12 w-12 flex items-center justify-center" aria-label={label}>
       <svg
         width="42"
         height="42"

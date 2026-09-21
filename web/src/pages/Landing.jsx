@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
+import { useAppName } from "@/hooks/useConfig";
 import AILogo from "@/components/layout/AILogo";
 
 const TEAL = "#0d9488";
@@ -50,12 +51,13 @@ export default function Landing() {
 /* ─────────────────────────── Nav ─────────────────────────── */
 function Nav() {
   const { t } = useLang();
+  const appName = useAppName();
   return (
     <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/70 border-b border-black/[0.05]">
       <div className="max-w-[1400px] mx-auto px-5 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <AILogo />
-          <span className="font-display font-semibold text-lg">Invoicer</span>
+          <AILogo label={appName} />
+          <span className="font-display font-semibold text-lg">{appName}</span>
         </div>
         <div className="flex items-center gap-2">
           <Link to="/login" className="h-10 px-4 rounded-full text-sm font-semibold hover:bg-black/[0.04] flex items-center transition-colors">
@@ -519,15 +521,16 @@ function CtaRevenue() {
 /* ───────────────── Footer ───────────────── */
 function Footer() {
   const { t } = useLang();
+  const appName = useAppName();
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-black/[0.05]">
       <div className="max-w-[1400px] mx-auto px-5 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <AILogo />
-          <span className="font-display font-semibold">Invoicer</span>
+          <AILogo label={appName} />
+          <span className="font-display font-semibold">{appName}</span>
         </div>
-        <span className="text-sm text-[#5a6f6a]">{t("landing.footer.copyright", { year })}</span>
+        <span className="text-sm text-[#5a6f6a]">{t("landing.footer.copyright", { year, app: appName })}</span>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm font-semibold text-[#0f766e] hover:underline">{t("landing.footer.signIn")}</Link>
           <Link to="/register" className="text-sm font-semibold text-[#0f766e] hover:underline">{t("landing.footer.getStarted")}</Link>

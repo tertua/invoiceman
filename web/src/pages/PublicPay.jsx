@@ -8,6 +8,7 @@ import { publicPayApi } from "@/api/publicPay";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
+import { useAppName } from "@/hooks/useConfig";
 
 function detectLang() {
   if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("id")) return "id";
@@ -200,6 +201,7 @@ export default function PublicPay() {
 }
 
 function PublicShell({ children, branding }) {
+  const appName = useAppName();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-[var(--bg)]">
       {branding?.logo_url ? (
@@ -212,7 +214,7 @@ function PublicShell({ children, branding }) {
       <p className="text-[11px] text-[var(--ink-muted)]">
         Powered by{" "}
         <Link to="/" className="font-semibold text-[var(--ink)] hover:underline">
-          Invoicer
+          {appName}
         </Link>
       </p>
     </div>

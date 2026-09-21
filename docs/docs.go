@@ -22,6 +22,234 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/gateway/deliveries": {
+            "get": {
+                "description": "List relay deliveries.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "list relay deliveries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gateway/deliveries/{id}/retry": {
+            "post": {
+                "description": "Retry a relay delivery.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "retry relay delivery",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Delivery ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gateway/projects": {
+            "get": {
+                "description": "List gateway projects.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "list gateway projects",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Register a downstream project.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "create gateway project",
+                "parameters": [
+                    {
+                        "description": "Project payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateProjectInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gateway/projects/{slug}": {
+            "patch": {
+                "description": "Update a gateway project.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "update gateway project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateProjectInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gateway/projects/{slug}/rotate-key": {
+            "post": {
+                "description": "Rotate a project API key.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "rotate project key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gateway/projects/{slug}/rotate-secret": {
+            "post": {
+                "description": "Rotate a project webhook secret.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "rotate project secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gateway/transactions": {
+            "get": {
+                "description": "List relay transactions.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "list relay transactions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "security": [
@@ -701,6 +929,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/config": {
+            "get": {
+                "description": "Get public application configuration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Config"
+                ],
+                "summary": "get app config",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard": {
             "get": {
                 "security": [
@@ -870,6 +1119,186 @@ const docTemplate = `{
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/gateway/config": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get public payment gateway browser configuration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "get gateway browser config",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/gateway/deliveries": {
+            "get": {
+                "description": "List own relay deliveries.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "list own deliveries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Global order ID",
+                        "name": "order_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/gateway/intents": {
+            "post": {
+                "description": "Create a relayed payment intent.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "create payment intent",
+                "parameters": [
+                    {
+                        "description": "Intent payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.IntentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/gateway/intents/{order_id}": {
+            "get": {
+                "description": "Get a payment intent status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "get payment intent",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Global order ID",
+                        "name": "order_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/gateway/invoice-intents": {
+            "post": {
+                "description": "Create a Snap transaction for a local invoice.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "create invoice intent",
+                "parameters": [
+                    {
+                        "description": "Invoice ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/gateway/transactions": {
+            "get": {
+                "description": "List own payment intents.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "list own intents",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1525,7 +1954,7 @@ const docTemplate = `{
         },
         "/public/pay/{token}/transaction": {
             "post": {
-                "description": "Complete a public payment without an external gateway.",
+                "description": "Create a public payment gateway transaction.",
                 "produces": [
                     "application/json"
                 ],
@@ -1642,6 +2071,83 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/webhooks/midtrans": {
+            "post": {
+                "description": "Handle Midtrans payment notification.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "midtrans webhook",
+                "parameters": [
+                    {
+                        "description": "Midtrans notification",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/{gateway}": {
+            "post": {
+                "description": "Handle a payment gateway notification.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "gateway webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Gateway name",
+                        "name": "gateway",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Provider notification",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1693,6 +2199,32 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateProjectInput": {
+            "type": "object",
+            "required": [
+                "name",
+                "slug",
+                "webhook_url"
+            ],
+            "properties": {
+                "default_gateway": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "webhook_url": {
+                    "type": "string",
+                    "maxLength": 1024
+                }
+            }
+        },
         "models.ExpenseInput": {
             "type": "object",
             "required": [
@@ -1733,6 +2265,42 @@ const docTemplate = `{
                 "email": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "models.IntentInput": {
+            "type": "object",
+            "required": [
+                "external_order_id"
+            ],
+            "properties": {
+                "amount_decimal": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "amount_idr": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "currency": {
+                    "type": "string",
+                    "maxLength": 8
+                },
+                "customer_email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "external_order_id": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "gateway": {
+                    "type": "string",
+                    "maxLength": 32
                 }
             }
         },
@@ -2034,6 +2602,26 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "models.UpdateProjectInput": {
+            "type": "object",
+            "properties": {
+                "default_gateway": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "webhook_url": {
+                    "type": "string",
+                    "maxLength": 1024
                 }
             }
         },

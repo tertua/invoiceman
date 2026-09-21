@@ -10,6 +10,7 @@ export const LOCALES = { en: "en-US", id: "id-ID" };
 export const translations = {
   en: {
     /* ============================ common ============================ */
+    "app.tagline": "AI Invoice & Billing Manager",
     "common.loading": "Loading...",
     "common.balance": "Balance",
     "common.thankYou": "Thank you for your business",
@@ -263,7 +264,7 @@ export const translations = {
     "landing.ctaCard.aiParsed": "AI parsed",
     "landing.ctaCard.paid": "Paid",
     "landing.ctaCard.revenue": "Revenue · +12%",
-    "landing.footer.copyright": "© {year} Invoicer · Built with Neon + Gemini",
+    "landing.footer.copyright": "© {year} {app} · Built with Neon + Gemini",
     "landing.footer.signIn": "Sign in",
     "landing.footer.getStarted": "Get started",
 
@@ -643,6 +644,7 @@ export const translations = {
 
   id: {
     /* ============================ common ============================ */
+    "app.tagline": "Manajer Faktur & Penagihan AI",
     "common.loading": "Memuat...",
     "common.balance": "Saldo",
     "common.thankYou": "Terima kasih atas bisnis Anda",
@@ -896,7 +898,7 @@ export const translations = {
     "landing.ctaCard.aiParsed": "Terbaca AI",
     "landing.ctaCard.paid": "Lunas",
     "landing.ctaCard.revenue": "Pendapatan · +12%",
-    "landing.footer.copyright": "© {year} Invoicer · Dibangun dengan Neon + Gemini",
+    "landing.footer.copyright": "© {year} {app} · Dibangun dengan Neon + Gemini",
     "landing.footer.signIn": "Masuk",
     "landing.footer.getStarted": "Mulai",
 

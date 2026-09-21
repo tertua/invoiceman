@@ -664,3 +664,19 @@ func TestAIContractFlow(t *testing.T) {
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 }
+
+// TestAppConfig covers the public branding endpoint and APP_NAME override.
+func TestAppConfig(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "GET", "/api/config", "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "Invoiceman", decodeBody(t, resp)["appName"])
+	resp.Body.Close()
+
+	t.Setenv("APP_NAME", "  Acme Billing  ")
+	resp = doRequest(t, app, "GET", "/api/config", "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "Acme Billing", decodeBody(t, resp)["appName"])
+	resp.Body.Close()
+}

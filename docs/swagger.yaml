@@ -34,6 +34,25 @@ definitions:
     required:
     - name
     type: object
+  models.CreateProjectInput:
+    properties:
+      default_gateway:
+        maxLength: 32
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      slug:
+        maxLength: 64
+        type: string
+      webhook_url:
+        maxLength: 1024
+        type: string
+    required:
+    - name
+    - slug
+    - webhook_url
+    type: object
   models.ExpenseInput:
     properties:
       amount:
@@ -63,6 +82,32 @@ definitions:
         type: string
     required:
     - email
+    type: object
+  models.IntentInput:
+    properties:
+      amount_decimal:
+        maxLength: 64
+        type: string
+      amount_idr:
+        minimum: 0
+        type: integer
+      currency:
+        maxLength: 8
+        type: string
+      customer_email:
+        maxLength: 255
+        type: string
+      customer_phone:
+        maxLength: 64
+        type: string
+      external_order_id:
+        maxLength: 128
+        type: string
+      gateway:
+        maxLength: 32
+        type: string
+    required:
+    - external_order_id
     type: object
   models.InvoiceInput:
     properties:
@@ -276,6 +321,20 @@ definitions:
     required:
     - name
     type: object
+  models.UpdateProjectInput:
+    properties:
+      default_gateway:
+        maxLength: 32
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        type: string
+      webhook_url:
+        maxLength: 1024
+        type: string
+    type: object
   models.WriteNoteInput:
     properties:
       client:
@@ -308,6 +367,158 @@ info:
   title: API
   version: "1.0"
 paths:
+  /admin/gateway/deliveries:
+    get:
+      description: List relay deliveries.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: list relay deliveries
+      tags:
+      - Admin
+  /admin/gateway/deliveries/{id}/retry:
+    post:
+      description: Retry a relay delivery.
+      parameters:
+      - description: Delivery ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: retry relay delivery
+      tags:
+      - Admin
+  /admin/gateway/projects:
+    get:
+      description: List gateway projects.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: list gateway projects
+      tags:
+      - Admin
+    post:
+      consumes:
+      - application/json
+      description: Register a downstream project.
+      parameters:
+      - description: Project payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateProjectInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: create gateway project
+      tags:
+      - Admin
+  /admin/gateway/projects/{slug}:
+    patch:
+      consumes:
+      - application/json
+      description: Update a gateway project.
+      parameters:
+      - description: Project slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Project payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateProjectInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: update gateway project
+      tags:
+      - Admin
+  /admin/gateway/projects/{slug}/rotate-key:
+    post:
+      description: Rotate a project API key.
+      parameters:
+      - description: Project slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: rotate project key
+      tags:
+      - Admin
+  /admin/gateway/projects/{slug}/rotate-secret:
+    post:
+      description: Rotate a project webhook secret.
+      parameters:
+      - description: Project slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: rotate project secret
+      tags:
+      - Admin
+  /admin/gateway/transactions:
+    get:
+      description: List relay transactions.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: list relay transactions
+      tags:
+      - Admin
   /admin/users:
     get:
       description: List registered users.
@@ -738,6 +949,20 @@ paths:
       summary: update a client
       tags:
       - Clients
+  /config:
+    get:
+      description: Get public application configuration.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: get app config
+      tags:
+      - Config
   /dashboard:
     get:
       consumes:
@@ -851,6 +1076,124 @@ paths:
       summary: update expense
       tags:
       - Expenses
+  /gateway/config:
+    get:
+      description: Get public payment gateway browser configuration.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: get gateway browser config
+      tags:
+      - Gateway
+  /gateway/deliveries:
+    get:
+      description: List own relay deliveries.
+      parameters:
+      - description: Global order ID
+        in: query
+        name: order_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: list own deliveries
+      tags:
+      - Gateway
+  /gateway/intents:
+    post:
+      consumes:
+      - application/json
+      description: Create a relayed payment intent.
+      parameters:
+      - description: Intent payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.IntentInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: create payment intent
+      tags:
+      - Gateway
+  /gateway/intents/{order_id}:
+    get:
+      description: Get a payment intent status.
+      parameters:
+      - description: Global order ID
+        in: path
+        name: order_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: get payment intent
+      tags:
+      - Gateway
+  /gateway/invoice-intents:
+    post:
+      consumes:
+      - application/json
+      description: Create a Snap transaction for a local invoice.
+      parameters:
+      - description: Invoice ID
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: create invoice intent
+      tags:
+      - Gateway
+  /gateway/transactions:
+    get:
+      description: List own payment intents.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: list own intents
+      tags:
+      - Gateway
   /invoices:
     get:
       consumes:
@@ -1260,7 +1603,7 @@ paths:
       - Public Payments
   /public/pay/{token}/transaction:
     post:
-      description: Complete a public payment without an external gateway.
+      description: Create a public payment gateway transaction.
       parameters:
       - description: Payment token
         in: path
@@ -1334,6 +1677,57 @@ paths:
       summary: update current user settings
       tags:
       - Settings
+  /webhooks/{gateway}:
+    post:
+      consumes:
+      - application/json
+      description: Handle a payment gateway notification.
+      parameters:
+      - description: Gateway name
+        in: path
+        name: gateway
+        required: true
+        type: string
+      - description: Provider notification
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: gateway webhook
+      tags:
+      - Webhooks
+  /webhooks/midtrans:
+    post:
+      consumes:
+      - application/json
+      description: Handle Midtrans payment notification.
+      parameters:
+      - description: Midtrans notification
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: midtrans webhook
+      tags:
+      - Webhooks
 securityDefinitions:
   ApiKeyAuth:
     in: header

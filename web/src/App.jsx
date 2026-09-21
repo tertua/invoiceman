@@ -1,10 +1,11 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { LangProvider } from "@/context/LangContext";
+import { LangProvider, useLang } from "@/context/LangContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { UIProvider } from "@/context/UIContext";
+import { useAppName } from "@/hooks/useConfig";
 import { router } from "@/routes";
 
 const queryClient = new QueryClient({
@@ -25,11 +26,21 @@ function PageLoading() {
   );
 }
 
+function DocumentTitle() {
+  const { t } = useLang();
+  const appName = useAppName();
+  useEffect(() => {
+    document.title = `${appName} — ${t("app.tagline")}`;
+  }, [appName, t]);
+  return null;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LangProvider>
+          <DocumentTitle />
           <UIProvider>
             <AuthProvider>
               <Suspense fallback={<PageLoading />}>

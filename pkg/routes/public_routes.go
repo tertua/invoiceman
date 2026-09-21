@@ -18,6 +18,7 @@ func PublicRoutes(a *fiber.App) {
 	route.Get("/public/pay/:token", controllers.GetPublicPayment)
 	route.Post("/public/pay/:token/transaction", controllers.CreatePublicTransaction)
 	route.Get("/public/pay/:token/status", controllers.GetPublicPaymentStatus)
+	route.Get("/config", controllers.AppConfig) // public branding for the SPA
 	// Single Midtrans notification URL for the whole account (central relay).
 	route.Post("/webhooks/midtrans", controllers.HandleMidtransWebhook)
 	// Generic provider webhooks for current and future gateways (e.g. crypto).

@@ -17,11 +17,13 @@ import { useSettings } from "@/hooks/useSettings";
 import { todayDateInput } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, localizeAgingBuckets, localizeMonthLabels } from "@/lib/utils";
+import { useAppName } from "@/hooks/useConfig";
 
 const ReportsCharts = lazy(() => import("@/components/reports/ReportsCharts"));
 
 export default function Reports() {
   const { t } = useLang();
+  const appName = useAppName();
   const { data: settings } = useSettings();
   const { data, isLoading } = useReports(settings?.currency || "IDR");
 
@@ -61,7 +63,8 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `invoicer-report-${todayDateInput()}.csv`;
+    const slug = appName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "invoiceman";
+    a.download = `${slug}-report-${todayDateInput()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
