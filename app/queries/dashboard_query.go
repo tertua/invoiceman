@@ -121,6 +121,7 @@ func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) (
 	for i := 5; i >= 0; i-- {
 		month := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -i, 0)
 		points = append(points, models.RevenuePoint{
+			Key:     month.Format("2006-01"),
 			Label:   month.Format("Jan"),
 			Revenue: revenueByMonth[month.Format("2006-01")],
 		})

@@ -10,6 +10,7 @@ type ReportTotals struct {
 
 // ReportMonthlyPoint contains one month of revenue and expenses.
 type ReportMonthlyPoint struct {
+	Key      string  `json:"key,omitempty"`
 	Label    string  `json:"label"`
 	Revenue  float64 `json:"revenue"`
 	Expenses float64 `json:"expenses"`

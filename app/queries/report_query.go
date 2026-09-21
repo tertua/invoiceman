@@ -114,7 +114,7 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	monthly := make([]models.ReportMonthlyPoint, 0, 6)
 	for i := 0; i < 6; i++ {
 		month := start.AddDate(0, i, 0)
-		monthly = append(monthly, models.ReportMonthlyPoint{Label: month.Format("Jan")})
+		monthly = append(monthly, models.ReportMonthlyPoint{Key: month.Format("2006-01"), Label: month.Format("Jan")})
 	}
 	monthIndex := func(value time.Time) int {
 		return (value.Year()-start.Year())*12 + int(value.Month()-start.Month())

@@ -15,6 +15,7 @@ type DashboardStats struct {
 
 // RevenuePoint struct to describe one dashboard revenue series entry.
 type RevenuePoint struct {
+	Key     string  `db:"key" json:"key,omitempty"`
 	Label   string  `db:"label" json:"label"`
 	Revenue float64 `db:"revenue" json:"revenue"`
 }

@@ -16,7 +16,7 @@ import { useReports } from "@/hooks/useReports";
 import { useSettings } from "@/hooks/useSettings";
 import { todayDateInput } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
-import { formatMoney, localizeAgingBuckets } from "@/lib/utils";
+import { formatMoney, localizeAgingBuckets, localizeMonthLabels } from "@/lib/utils";
 
 const ReportsCharts = lazy(() => import("@/components/reports/ReportsCharts"));
 
@@ -48,7 +48,7 @@ export default function Reports() {
       [t("reports.csv.outstanding"), totals.outstanding],
       [],
       [t("reports.csv.month"), t("reports.csv.revenue"), t("reports.csv.expenses")],
-      ...monthly.map((m) => [m.label, m.revenue, m.expenses]),
+      ...localizeMonthLabels(monthly).map((m) => [m.label, m.revenue, m.expenses]),
       [],
       [t("reports.csv.agingBucket"), t("reports.csv.amount")],
       ...localizeAgingBuckets(aging, t).map((a) => [a.bucket, a.value]),

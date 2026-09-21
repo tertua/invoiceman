@@ -139,3 +139,28 @@ export function localizeAgingBuckets(aging, translate) {
     return { ...a, key, bucket: label || a.bucket };
   });
 }
+
+// Monthly points carry a stable "YYYY-MM" key; render the short month name
+// in the active locale. Must never throw — fall back to the raw label.
+export function monthKeyToLabel(key, fallback) {
+  if (typeof key !== "string" || !/^\d{4}-\d{2}$/.test(key)) return fallback ?? "";
+  const year = Number(key.slice(0, 4));
+  const month = Number(key.slice(5, 7));
+  if (month < 1 || month > 12) return fallback ?? "";
+  const d = new Date(year, month - 1, 1);
+  if (Number.isNaN(d.getTime())) return fallback ?? "";
+  try {
+    return d.toLocaleDateString(currentLocale, { month: "short" });
+  } catch {
+    return fallback ?? "";
+  }
+}
+
+export function localizeMonthLabels(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r) => {
+    if (!r || typeof r !== "object") return r;
+    if (!r.key) return r;
+    return { ...r, label: monthKeyToLabel(r.key, r.label) };
+  });
+}

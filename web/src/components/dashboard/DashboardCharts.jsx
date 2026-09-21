@@ -2,7 +2,7 @@ import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tool
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useLang } from "@/context/LangContext";
-import { formatMoney, localizeAgingBuckets } from "@/lib/utils";
+import { formatMoney, localizeAgingBuckets, localizeMonthLabels } from "@/lib/utils";
 
 const T1 = "#2dd4bf";
 const T2 = "#14b8a6";
@@ -20,7 +20,7 @@ export function DashboardChartsFallback() {
 
 function RevenueChart({ series }) {
   const { t } = useLang();
-  const data = series || [];
+  const data = localizeMonthLabels(series);
   const hasRevenue = data.some((item) => item.revenue > 0);
   return <Card padding="lg" className="h-full"><CardHeader><div><CardTitle>{t("dash.revenue")}</CardTitle><CardDescription>{t("dash.revenueDesc")}</CardDescription></div></CardHeader>{hasRevenue ? <ResponsiveContainer width="100%" height={280}><AreaChart data={data} margin={{ top: 10, right: 8, bottom: 0, left: -10 }}><defs><linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={T1} stopOpacity={0.35} /><stop offset="100%" stopColor={T2} stopOpacity={0} /></linearGradient><linearGradient id="revStroke" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor={T1} /><stop offset="100%" stopColor={T3} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} /><XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} /><Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatMoney(v), t("dash.revenue")]} /><Area type="monotone" dataKey="revenue" stroke="url(#revStroke)" strokeWidth={3} fill="url(#revArea)" dot={{ r: 3, fill: T2, strokeWidth: 0 }} activeDot={{ r: 5, fill: T2 }} /></AreaChart></ResponsiveContainer> : <div className="h-[280px] flex flex-col items-center justify-center text-center"><div className="font-display text-sm font-semibold mb-1">{t("dash.noPaid")}</div><div className="text-xs text-[var(--ink-muted)]">{t("dash.markPaid")}</div></div>}</Card>;
 }

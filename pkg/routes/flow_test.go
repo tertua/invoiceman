@@ -284,6 +284,12 @@ func TestClientInvoiceFlow(t *testing.T) {
 	assert.Equal(t, float64(1), stats["clientCount"])
 	assert.Equal(t, float64(264), stats["outstanding"])
 	assert.Len(t, dashboard["revenueSeries"].([]interface{}), 6)
+	// Revenue points expose a stable YYYY-MM key for frontend localization.
+	for _, item := range dashboard["revenueSeries"].([]interface{}) {
+		point := item.(map[string]interface{})
+		assert.Regexp(t, `^\d{4}-\d{2}$`, point["key"].(string))
+		assert.NotEmpty(t, point["label"])
+	}
 	assert.Len(t, dashboard["recentInvoices"].([]interface{}), 1)
 
 	// Currency filtering keeps dashboard totals from mixing currencies.
@@ -554,6 +560,11 @@ func TestReportsFlow(t *testing.T) {
 	assert.Equal(t, float64(25), totals["netProfit"])
 	assert.Equal(t, float64(60), totals["outstanding"])
 	assert.Len(t, report["monthly"].([]interface{}), 6)
+	for _, item := range report["monthly"].([]interface{}) {
+		point := item.(map[string]interface{})
+		assert.Regexp(t, `^\d{4}-\d{2}$`, point["key"].(string))
+		assert.NotEmpty(t, point["label"])
+	}
 	assert.Len(t, report["aging"].([]interface{}), 5)
 	// Aging buckets expose stable keys for frontend localization.
 	agingKeys := make([]string, 0, 5)
