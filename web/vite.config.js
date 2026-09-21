@@ -20,6 +20,8 @@ export default defineConfig({
     },
   },
   build: {
+    // PDF is intentionally large but loaded only after the user requests a PDF.
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         manualChunks(id) {

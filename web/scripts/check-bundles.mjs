@@ -5,18 +5,17 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const sourceRoot = path.join(root, "src");
 const distRoot = path.join(root, "dist", "assets");
+const baselinePath = path.join(root, "bundle-baseline.json");
 const strict = process.env.BUNDLE_BUDGET === "strict";
-const entryBudget = 150 * 1024;
-const entryGzipBudget = 45 * 1024;
 
 const pdfImportAllowlist = new Set([
   "components/invoice/InvoiceDocument.jsx",
   "components/invoice/InvoicePdfDownloadContent.jsx",
 ]);
 const chartImportAllowlist = new Set([
-  "pages/Dashboard.jsx",
-  "pages/ClientDetail.jsx",
-  "pages/Reports.jsx",
+  "components/dashboard/DashboardCharts.jsx",
+  "components/clients/ClientCharts.jsx",
+  "components/reports/ReportsCharts.jsx",
 ]);
 
 async function filesIn(directory) {
@@ -68,6 +67,7 @@ function formatBytes(bytes) {
 }
 
 async function main() {
+  const baseline = JSON.parse(await readFile(baselinePath, "utf8"));
   const violations = await checkImports();
   let bundles;
   try {
@@ -81,16 +81,16 @@ async function main() {
   if (!entry) violations.push("entry JavaScript chunk (index-*.js) is missing");
 
   const namedChunks = new Set(bundles.map(({ file }) => file.split("-")[0]));
-  for (const required of ["pdf", "charts", "framework"]) {
+  for (const required of baseline.requiredChunks) {
     if (!namedChunks.has(required)) violations.push(`${required} vendor chunk is missing`);
   }
 
   const budgetViolations = [];
-  if (entry && entry.bytes > entryBudget) {
-    budgetViolations.push(`entry raw size ${formatBytes(entry.bytes)} exceeds ${formatBytes(entryBudget)}`);
+  if (entry && entry.bytes > baseline.entryRawBytes) {
+    budgetViolations.push(`entry raw size ${formatBytes(entry.bytes)} exceeds ${formatBytes(baseline.entryRawBytes)}`);
   }
-  if (entry && entry.gzipBytes > entryGzipBudget) {
-    budgetViolations.push(`entry gzip size ${formatBytes(entry.gzipBytes)} exceeds ${formatBytes(entryGzipBudget)}`);
+  if (entry && entry.gzipBytes > baseline.entryGzipBytes) {
+    budgetViolations.push(`entry gzip size ${formatBytes(entry.gzipBytes)} exceeds ${formatBytes(baseline.entryGzipBytes)}`);
   }
 
   console.log(`Bundle check (${strict ? "strict" : "advisory"})`);

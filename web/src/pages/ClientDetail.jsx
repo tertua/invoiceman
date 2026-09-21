@@ -1,17 +1,5 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import {
   ArrowLeft,
   Pencil,
@@ -22,8 +10,6 @@ import {
   Phone,
   MapPin,
   Building2,
-  Receipt,
-  TrendingUp,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -33,6 +19,8 @@ import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { useClient, useDeleteClient } from "@/hooks/useClients";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate, formatMonthShort } from "@/lib/utils";
+
+const ClientCharts = lazy(() => import("@/components/clients/ClientCharts"));
 
 function isOverdue(inv) {
   return inv.status === "sent" && inv.due_date && inv.due_date < new Date().toISOString().slice(0, 10);
@@ -221,12 +209,9 @@ export default function ClientDetail() {
 
       {/* Insights row — aligns with the columns above (1 / 2 split) */}
       {invoiceList.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5 items-start">
-          <PaymentStatusCard insights={insights} />
-          <div className="lg:col-span-2">
-            <BillingChartCard insights={insights} />
-          </div>
-        </div>
+        <Suspense fallback={<ChartFallback />}>
+          <ClientCharts insights={insights} />
+        </Suspense>
       )}
 
       <ClientFormModal open={editOpen} onClose={() => setEditOpen(false)} client={client} />
@@ -234,127 +219,8 @@ export default function ClientDetail() {
   );
 }
 
-function PaymentStatusCard({ insights }) {
-  const { t } = useLang();
-  const { breakdown, avgInvoice, largest, paidRate } = insights;
-  const hasData = breakdown.length > 0;
-  return (
-    <Card padding="lg">
-      <CardTitle className="mb-4">{t("clientDetail.paymentStatus")}</CardTitle>
-      {hasData ? (
-        <div className="flex items-center gap-4">
-          <div className="relative h-[120px] w-[120px] shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={breakdown}
-                  dataKey="value"
-                  innerRadius={38}
-                  outerRadius={56}
-                  paddingAngle={2}
-                  stroke="none"
-                >
-                  {breakdown.map((s, i) => (
-                    <Cell key={i} fill={s.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                    color: "var(--ink)",
-                  }}
-                  formatter={(v, n) => [formatMoney(v), n]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-lg font-display font-semibold tabular text-[var(--ink)]">{paidRate}%</span>
-              <span className="text-[10px] text-[var(--ink-muted)]">{t("clientDetail.paid")}</span>
-            </div>
-          </div>
-          <div className="flex-1 min-w-0 space-y-2">
-            {breakdown.map((s) => (
-              <div key={s.name} className="flex items-center gap-2 text-sm">
-                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                <span className="text-[var(--ink-muted)] flex-1">{s.name}</span>
-                <span className="tabular font-medium text-[var(--ink)]">{formatMoney(s.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="py-6 text-center text-sm text-[var(--ink-muted)]">{t("clientDetail.nothingBilled")}</div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-[var(--border)]">
-        <Metric icon={Receipt} label={t("clientDetail.avgInvoice")} value={formatMoney(avgInvoice)} />
-        <Metric icon={TrendingUp} label={t("clientDetail.largest")} value={formatMoney(largest)} />
-      </div>
-    </Card>
-  );
-}
-
-function Metric({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="h-8 w-8 rounded-xl bg-[var(--accent-soft)] text-[var(--accent-strong)] flex items-center justify-center shrink-0">
-        <Icon size={14} />
-      </div>
-      <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] font-semibold">{label}</div>
-        <div className="text-sm font-semibold text-[var(--ink)] tabular truncate">{value}</div>
-      </div>
-    </div>
-  );
-}
-
-function BillingChartCard({ insights }) {
-  const { t } = useLang();
-  const { monthly, hasMonthly } = insights;
-  return (
-    <Card padding="lg" className="h-full">
-      <CardTitle className="mb-4">{t("clientDetail.billingOverTime")}</CardTitle>
-      {hasMonthly ? (
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={monthly} margin={{ top: 6, right: 4, bottom: 0, left: -12 }}>
-            <defs>
-              <linearGradient id="clientBillGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent-hero-2)" />
-                <stop offset="100%" stopColor="var(--accent)" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "var(--ink-muted)", fontSize: 12 }}
-              tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)}
-            />
-            <Tooltip
-              cursor={{ fill: "var(--surface-2)" }}
-              contentStyle={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                fontSize: 12,
-                color: "var(--ink)",
-              }}
-              formatter={(v) => [formatMoney(v), t("common.billed")]}
-            />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40} fill="url(#clientBillGrad)" />
-          </BarChart>
-        </ResponsiveContainer>
-      ) : (
-        <div className="h-[200px] flex items-center justify-center text-sm text-[var(--ink-muted)]">
-          {t("clientDetail.noBillingActivity")}
-        </div>
-      )}
-    </Card>
-  );
+function ChartFallback() {
+  return <div className="h-[320px] rounded-3xl bg-[var(--surface-2)] animate-pulse" />;
 }
 
 function ContactRow({ icon: Icon, value, href }) {

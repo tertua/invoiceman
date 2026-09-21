@@ -1,19 +1,5 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
-  PieChart,
-  Pie,
-} from "recharts";
 import {
   Wallet,
   Clock,
@@ -36,22 +22,13 @@ import { useReports } from "@/hooks/useFeatures";
 import { aiApi } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
+const DashboardCharts = lazy(() => import("@/components/dashboard/DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
 
 // Logo palette
 const T1 = "#2dd4bf"; // teal-400
 const T2 = "#14b8a6"; // teal-500
 const T3 = "#0f766e"; // teal-700
 
-const STATUS_COLORS = { draft: "#94a3b8", sent: "#5eead4", overdue: "var(--danger)", paid: T2 };
-
-const tooltipStyle = {
-  background: "var(--surface)",
-  border: "1px solid var(--border)",
-  borderRadius: 14,
-  fontSize: 12,
-  color: "var(--ink)",
-  boxShadow: "var(--shadow-hover)",
-};
 
 export default function Dashboard() {
   const nav = useNavigate();
@@ -108,22 +85,15 @@ export default function Dashboard() {
 
       <AISummaryCard stats={stats} />
 
-      {/* Revenue + Collections gauge */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-8">
-          <RevenueChart series={revenueSeries} />
-        </div>
-        <div className="lg:col-span-4">
-          <CollectionsCard rate={collectionRate} collected={stats.totalRevenue} outstanding={stats.outstanding} />
-        </div>
-      </div>
-
-      {/* Status donut + Aging + Top clients */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-4"><StatusDonutCard reports={reports} total={stats.invoiceCount} /></div>
-        <div className="lg:col-span-4"><AgingCard reports={reports} /></div>
-        <div className="lg:col-span-4"><TopClientsCard reports={reports} /></div>
-      </div>
+      <Suspense fallback={<ChartFallback />}>
+        <DashboardCharts
+          series={revenueSeries}
+          reports={reports}
+          total={stats.invoiceCount}
+          collections={<CollectionsCard rate={collectionRate} collected={stats.totalRevenue} outstanding={stats.outstanding} />}
+        />
+      </Suspense>
+      <TopClientsCard reports={reports} />
 
       <RecentInvoices invoices={recentInvoices} onOpen={(id) => nav(`/invoices/${id}`)} />
     </div>
@@ -184,49 +154,6 @@ function AISummaryCard({ stats }) {
           )}
         </div>
       </div>
-    </Card>
-  );
-}
-
-/* ─────────────────── Revenue area chart ─────────────────── */
-function RevenueChart({ series }) {
-  const { t } = useLang();
-  const dataArr = series || [];
-  const hasRevenue = dataArr.some((d) => d.revenue > 0);
-  return (
-    <Card padding="lg" className="h-full">
-      <CardHeader>
-        <div>
-          <CardTitle>{t("dash.revenue")}</CardTitle>
-          <CardDescription>{t("dash.revenueDesc")}</CardDescription>
-        </div>
-      </CardHeader>
-      {hasRevenue ? (
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={dataArr} margin={{ top: 10, right: 8, bottom: 0, left: -10 }}>
-            <defs>
-              <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={T1} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={T2} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="revStroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={T1} />
-                <stop offset="100%" stopColor={T3} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatMoney(v), t("dash.revenue")]} />
-            <Area type="monotone" dataKey="revenue" stroke="url(#revStroke)" strokeWidth={3} fill="url(#revArea)" dot={{ r: 3, fill: T2, strokeWidth: 0 }} activeDot={{ r: 5, fill: T2 }} />
-          </AreaChart>
-        </ResponsiveContainer>
-      ) : (
-        <div className="h-[280px] flex flex-col items-center justify-center text-center">
-          <div className="font-display text-sm font-semibold mb-1">{t("dash.noPaid")}</div>
-          <div className="text-xs text-[var(--ink-muted)]">{t("dash.markPaid")}</div>
-        </div>
-      )}
     </Card>
   );
 }
@@ -297,100 +224,6 @@ function GaugeStat({ dot, label, value }) {
       </div>
       <div className="text-sm font-semibold text-[var(--ink)] tabular mt-1 truncate">{value}</div>
     </div>
-  );
-}
-
-/* ─────────────────── Status donut ─────────────────── */
-function StatusDonutCard({ reports, total }) {
-  const { t } = useLang();
-  const data = (reports?.statusBreakdown || []).filter((s) => s.value > 0);
-  return (
-    <Card padding="lg" className="h-full flex flex-col">
-      <CardHeader>
-        <div>
-          <CardTitle>{t("dash.invoiceStatus")}</CardTitle>
-          <CardDescription>{t("dash.byAmount")}</CardDescription>
-        </div>
-      </CardHeader>
-      {!reports ? (
-        <ChartSkeleton />
-      ) : data.length ? (
-        <div className="flex-1 flex items-center gap-5">
-          <div className="relative h-[172px] w-[172px] shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  <linearGradient id="gPaid" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={T1} /><stop offset="100%" stopColor={T3} /></linearGradient>
-                  <linearGradient id="gSent" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#99f6e4" /><stop offset="100%" stopColor="#2dd4bf" /></linearGradient>
-                  <linearGradient id="gOverdue" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#fb7185" /><stop offset="100%" stopColor="#e11d48" /></linearGradient>
-                  <linearGradient id="gDraft" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#cbd5e1" /><stop offset="100%" stopColor="#94a3b8" /></linearGradient>
-                </defs>
-                <Pie data={data} dataKey="value" innerRadius={54} outerRadius={80} paddingAngle={2} stroke="none">
-                  {data.map((s) => <Cell key={s.key} fill={`url(#g${s.name})`} />)}
-                </Pie>
-                <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [formatMoney(v), t("status." + (n || "draft").toLowerCase())]} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="font-display text-2xl font-semibold text-[var(--ink)]">{total}</span>
-              <span className="text-[10px] text-[var(--ink-muted)]">{t("dash.invoices")}</span>
-            </div>
-          </div>
-          <div className="flex-1 min-w-0 space-y-3">
-            {data.map((s) => (
-              <div key={s.key} className="flex items-center gap-2 text-sm">
-                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: STATUS_COLORS[s.key] }} />
-                <span className="text-[var(--ink-muted)] flex-1">{t("status." + (s.key || "draft"))}</span>
-                <span className="tabular font-semibold text-[var(--ink)]">{formatMoney(s.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-sm text-[var(--ink-muted)]">{t("dash.noInvoices")}</div>
-      )}
-    </Card>
-  );
-}
-
-/* ─────────────────── AR aging ─────────────────── */
-function AgingCard({ reports }) {
-  const { t } = useLang();
-  const aging = reports?.aging || [];
-  const hasData = aging.some((a) => a.value > 0);
-  return (
-    <Card padding="lg" className="h-full flex flex-col">
-      <CardHeader>
-        <div>
-          <CardTitle>{t("dash.aging")}</CardTitle>
-          <CardDescription>{t("dash.agingDesc")}</CardDescription>
-        </div>
-      </CardHeader>
-      {!reports ? (
-        <ChartSkeleton />
-      ) : hasData ? (
-        <div className="flex-1 min-h-[180px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={aging} margin={{ top: 8, right: 4, bottom: 0, left: -14 }}>
-              <defs>
-                <linearGradient id="gCurrent" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={T1} /><stop offset="100%" stopColor={T3} /></linearGradient>
-                <linearGradient id="gWarn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fcd34d" /><stop offset="100%" stopColor="#d97706" /></linearGradient>
-                <linearGradient id="gDanger" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fb7185" /><stop offset="100%" stopColor="#e11d48" /></linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="bucket" axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 11 }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} />
-              <Tooltip cursor={{ fill: "var(--surface-2)" }} contentStyle={tooltipStyle} formatter={(v) => [formatMoney(v), t("dash.amount")]} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                {aging.map((_, i) => <Cell key={i} fill={i === 0 ? "url(#gCurrent)" : i >= 3 ? "url(#gDanger)" : "url(#gWarn)"} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-center text-sm text-[var(--ink-muted)]">{t("dash.allCaughtUp")}</div>
-      )}
-    </Card>
   );
 }
 
@@ -470,6 +303,18 @@ function RecentInvoices({ invoices, onOpen }) {
 
 function ChartSkeleton() {
   return <Skeleton className="h-[150px] rounded-2xl" />;
+}
+
+function ChartFallback() {
+  return (
+    <>
+      <Skeleton className="h-[360px] rounded-3xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+        <Skeleton className="h-[240px] rounded-3xl" />
+        <Skeleton className="h-[240px] rounded-3xl" />
+      </div>
+    </>
+  );
 }
 
 function DashboardSkeleton() {
