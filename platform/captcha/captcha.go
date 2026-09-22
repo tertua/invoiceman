@@ -3,9 +3,9 @@ package captcha
 // Package captcha verifies Cloudflare Turnstile tokens (stdlib only).
 //
 // Verification is required on abuse-prone public endpoints (register,
-// login, forgot-password) whenever TURNSTILE_SECRET is configured. Empty
-// secret disables verification (dev/test default) so local flows and the
-// test suite keep working without network access.
+// login, forgot-password, reset-password) whenever TURNSTILE_SECRET is
+// configured. Empty secret disables verification (dev/test default) so
+// local flows and the test suite keep working without network access.
 
 import (
 	"context"

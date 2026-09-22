@@ -13,5 +13,6 @@ export const authApi = {
   changePassword: (payload) => apiClient.patch("/auth/password", payload).then((r) => r.data),
   forgotPassword: (payload, captchaToken) =>
     apiClient.post("/auth/forgot-password", payload, { headers: captchaHeaders(captchaToken) }).then((r) => r.data),
-  resetPassword: (payload) => apiClient.post("/auth/reset-password", payload).then((r) => r.data),
+  resetPassword: (payload, captchaToken) =>
+    apiClient.post("/auth/reset-password", payload, { headers: captchaHeaders(captchaToken) }).then((r) => r.data),
 };

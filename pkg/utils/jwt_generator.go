@@ -102,5 +102,9 @@ func generateNewRefreshToken() (string, error) {
 
 // ParseRefreshToken func for parse second argument from refresh token.
 func ParseRefreshToken(refreshToken string) (int64, error) {
-	return strconv.ParseInt(strings.Split(refreshToken, ".")[1], 0, 64)
+	parts := strings.Split(refreshToken, ".")
+	if len(parts) != 2 || strings.TrimSpace(parts[1]) == "" {
+		return 0, fmt.Errorf("invalid refresh token format")
+	}
+	return strconv.ParseInt(parts[1], 0, 64)
 }

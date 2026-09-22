@@ -73,6 +73,11 @@ func TestCaptchaEnforcement(t *testing.T) {
 		`{"email":"bot@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 403, resp.StatusCode)
 	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/auth/reset-password",
+		`{"token":"nope","new_password":"anothersecret123"}`, nil)
+	require.Equal(t, 403, resp.StatusCode)
+	resp.Body.Close()
 }
 func TestAuditTrail(t *testing.T) {
 	app := newTestApp()

@@ -27,13 +27,18 @@ func CurrentUserID(c fiber.Ctx) (uuid.UUID, error) {
 }
 
 // IssueSession generates a new token pair and stores it in HttpOnly cookies.
+// The access cookie deliberately outlives the JWT inside it (crypto expiry
+// stays short via JWT.AccessMinutes; the cookie lives as long as the
+// refresh cookie). Browsers drop expired cookies, so without this the
+// expired token hint would vanish after 15 minutes of idle and the
+// transparent refresh in AuthRequired could never fire — forcing a
+// re-login despite the long refresh TTL.
 func IssueSession(c fiber.Ctx, userID uuid.UUID) (*Tokens, error) {
 	tokens, err := GenerateNewTokens(userID.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	accessMinutes := configs.Get().JWT.AccessMinutes
 	refreshHours := configs.Get().JWT.RefreshHours
 
 	secure := !configs.Get().IsDev()
@@ -45,7 +50,7 @@ func IssueSession(c fiber.Ctx, userID uuid.UUID) (*Tokens, error) {
 		HTTPOnly: true,
 		Secure:   secure,
 		SameSite: "Lax",
-		Expires:  time.Now().Add(time.Minute * time.Duration(accessMinutes)),
+		Expires:  time.Now().Add(time.Hour * time.Duration(refreshHours)),
 	})
 	c.Cookie(&fiber.Cookie{
 		Name:     RefreshCookieName,
@@ -60,15 +65,19 @@ func IssueSession(c fiber.Ctx, userID uuid.UUID) (*Tokens, error) {
 	return tokens, nil
 }
 
-// ClearSession removes session cookies.
+// ClearSession removes session cookies. Flags mirror IssueSession:
+// browsers treat a Secure cookie and its non-Secure twin as distinct, so
+// omitting Secure here would leave the prod cookie behind after logout.
 func ClearSession(c fiber.Ctx) {
 	expired := time.Now().Add(-time.Hour)
+	secure := !configs.Get().IsDev()
 	for _, name := range []string{AccessCookieName, RefreshCookieName} {
 		c.Cookie(&fiber.Cookie{
 			Name:     name,
 			Value:    "",
 			Path:     "/",
 			HTTPOnly: true,
+			Secure:   secure,
 			SameSite: "Lax",
 			Expires:  expired,
 		})

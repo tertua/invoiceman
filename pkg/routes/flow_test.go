@@ -214,6 +214,15 @@ func TestAuthFlow(t *testing.T) {
 	assert.True(t, renewed, "expected a fresh access_token cookie")
 	cookies = mergeCookies(cookies, resp.Cookies())
 
+	// The renewed access cookie outlives the JWT inside it: its Expires
+	// must reach the refresh horizon, otherwise browsers drop the expired
+	// hint after 15 minutes of idle and transparent refresh can never fire.
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "access_token" && cookie.Value != "" {
+			assert.WithinDuration(t, time.Now().Add(720*time.Hour), cookie.Expires, 30*time.Minute)
+		}
+	}
+
 	// Change password.
 	resp = doRequest(t, app, "PATCH", "/api/auth/password",
 		`{"currentPassword":"secret123","newPassword":"newsecret123"}`, cookies)

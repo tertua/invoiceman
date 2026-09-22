@@ -9,6 +9,7 @@ import {
   AuthErrorBanner,
 } from "@/components/auth/AuthShell";
 import AILogo from "@/components/layout/AILogo";
+import Turnstile from "@/components/auth/Turnstile";
 import { authApi } from "@/api/auth";
 import { useLang } from "@/context/LangContext";
 
@@ -18,6 +19,7 @@ export default function ResetPassword() {
   const nav = useNavigate();
   const token = params.get("token") || "";
   const [form, setForm] = useState({ password: "", confirm: "" });
+  const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -29,7 +31,7 @@ export default function ResetPassword() {
     if (!token) return setErr(t("auth.linkInvalid"));
     setLoading(true);
     try {
-      await authApi.resetPassword({ token, new_password: form.password });
+      await authApi.resetPassword({ token, new_password: form.password }, captchaToken);
       setDone(true);
       setTimeout(() => nav("/login"), 1500);
     } catch (ex) {
@@ -99,6 +101,8 @@ export default function ResetPassword() {
             />
 
             <AuthErrorBanner>{err}</AuthErrorBanner>
+
+            <Turnstile onVerify={setCaptchaToken} />
 
             <div className="pt-1">
               <AuthPrimaryButton type="submit" disabled={loading}>

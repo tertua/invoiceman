@@ -422,9 +422,13 @@ func ForgotPassword(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param request body models.ResetPassword true "Reset password payload"
+// @Param X-Captcha-Token header string false "Turnstile token (required when CAPTCHA is enabled)"
 // @Success 200 {object} map[string]interface{}
 // @Router /auth/reset-password [post]
 func ResetPassword(c fiber.Ctx) error {
+	if !checkCaptcha(c) {
+		return nil
+	}
 	payload := &models.ResetPassword{}
 
 	if err := c.Bind().Body(payload); err != nil {

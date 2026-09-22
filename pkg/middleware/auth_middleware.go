@@ -62,7 +62,11 @@ func validAccessToken(tokenString string) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 
-	userID, err := uuid.Parse(claims["id"].(string))
+	rawID, ok := claims["id"].(string)
+	if !ok {
+		return uuid.Nil, false
+	}
+	userID, err := uuid.Parse(rawID)
 	if err != nil {
 		return uuid.Nil, false
 	}
@@ -71,37 +75,19 @@ func validAccessToken(tokenString string) (uuid.UUID, bool) {
 }
 
 // refreshSession issues a new token pair using the refresh cookie.
-// It returns false when the session cannot be refreshed.
+// The access cookie outlives the JWT inside it (see IssueSession), so the
+// browser keeps sending the expired token as an identity hint long after
+// its 15-minute cryptographic expiry — the refresh token then renews the
+// session transparently without forcing a re-login.
 func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 	accessString := accessTokenString(c)
 	refreshString := c.Cookies(utils.RefreshCookieName)
-	if accessString == "" || refreshString == "" {
+	if refreshString == "" {
 		return uuid.Nil, false
 	}
 
-	// Reject tokens with an invalid signature; only expiry is recoverable.
-	if _, err := jwt.Parse(accessString, jwtKeyFunc); err != nil {
-		if !errors.Is(err, jwt.ErrTokenExpired) {
-			return uuid.Nil, false
-		}
-	}
-
-	// Extract user ID without expiry validation.
-	parser := jwt.NewParser()
-	unverified, _, err := parser.ParseUnverified(accessString, jwt.MapClaims{})
-	if err != nil {
-		return uuid.Nil, false
-	}
-	claims, ok := unverified.Claims.(jwt.MapClaims)
+	userID, ok := userIDFromAccess(accessString)
 	if !ok {
-		return uuid.Nil, false
-	}
-	id, ok := claims["id"].(string)
-	if !ok {
-		return uuid.Nil, false
-	}
-	userID, err := uuid.Parse(id)
-	if err != nil {
 		return uuid.Nil, false
 	}
 
@@ -142,6 +128,39 @@ func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 	return userID, true
 }
 
+// userIDFromAccess recovers the user ID from an access token without
+// expiry validation. Only expiry is recoverable: malformed or badly-signed
+// tokens always fail, and an empty input (no cookie/header at all) fails —
+// the refresh token carries no identity, so there is nothing to look up.
+func userIDFromAccess(accessString string) (uuid.UUID, bool) {
+	if accessString == "" {
+		return uuid.Nil, false
+	}
+	if _, err := jwt.Parse(accessString, jwtKeyFunc); err != nil {
+		if !errors.Is(err, jwt.ErrTokenExpired) {
+			return uuid.Nil, false
+		}
+	}
+	parser := jwt.NewParser()
+	unverified, _, err := parser.ParseUnverified(accessString, jwt.MapClaims{})
+	if err != nil {
+		return uuid.Nil, false
+	}
+	claims, ok := unverified.Claims.(jwt.MapClaims)
+	if !ok {
+		return uuid.Nil, false
+	}
+	id, ok := claims["id"].(string)
+	if !ok {
+		return uuid.Nil, false
+	}
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return userID, true
+}
+
 // splitBearer extracts the token from a "Bearer <token>" header value.
 func splitBearer(header string) string {
 	const prefix = "Bearer "
@@ -151,7 +170,12 @@ func splitBearer(header string) string {
 	return ""
 }
 
-// jwtKeyFunc returns the JWT signing key.
+// jwtKeyFunc returns the JWT signing key, accepting only HS256.
+// Without the alg pin a token signed with another algorithm (e.g. "none"
+// on a permissive parser) could slip through key confusion.
 func jwtKeyFunc(token *jwt.Token) (interface{}, error) {
+	if token.Method != jwt.SigningMethodHS256 {
+		return nil, errors.New("unexpected signing method")
+	}
 	return []byte(configs.Get().JWT.Secret), nil
 }

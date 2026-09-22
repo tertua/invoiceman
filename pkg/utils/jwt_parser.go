@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -27,19 +28,30 @@ func ExtractTokenMetadata(c fiber.Ctx) (*TokenMetadata, error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if ok && token.Valid {
 		// User ID.
-		userID, err := uuid.Parse(claims["id"].(string))
+		rawID, ok := claims["id"].(string)
+		if !ok {
+			return nil, err
+		}
+		userID, err := uuid.Parse(rawID)
 		if err != nil {
 			return nil, err
 		}
 
 		// Expires time.
-		expires := int64(claims["exp"].(float64))
+		expFloat, ok := claims["exp"].(float64)
+		if !ok {
+			return nil, err
+		}
+		expires := int64(expFloat)
 
 		// User credentials.
+		bookCreate, _ := claims["book:create"].(bool)
+		bookUpdate, _ := claims["book:update"].(bool)
+		bookDelete, _ := claims["book:delete"].(bool)
 		credentials := map[string]bool{
-			"book:create": claims["book:create"].(bool),
-			"book:update": claims["book:update"].(bool),
-			"book:delete": claims["book:delete"].(bool),
+			"book:create": bookCreate,
+			"book:update": bookUpdate,
+			"book:delete": bookDelete,
 		}
 
 		return &TokenMetadata{
@@ -81,5 +93,8 @@ func verifyToken(c fiber.Ctx) (*jwt.Token, error) {
 }
 
 func jwtKeyFunc(token *jwt.Token) (interface{}, error) {
+	if token.Method != jwt.SigningMethodHS256 {
+		return nil, errors.New("unexpected signing method")
+	}
 	return []byte(configs.Get().JWT.Secret), nil
 }

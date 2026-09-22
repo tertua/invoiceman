@@ -961,6 +961,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.ResetPassword'
+      - description: Turnstile token (required when CAPTCHA is enabled)
+        in: header
+        name: X-Captcha-Token
+        type: string
       produces:
       - application/json
       responses:

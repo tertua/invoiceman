@@ -885,6 +885,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.ResetPassword"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Turnstile token (required when CAPTCHA is enabled)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
                     }
                 ],
                 "responses": {

@@ -44,9 +44,10 @@ func SetCSRFCookie(c fiber.Ctx, token string) {
 	})
 }
 
-// ClearCSRFCookie removes the CSRF cookie on logout.
+// ClearCSRFCookie removes the CSRF cookie on logout. Flags mirror
+// SetCSRFCookie (Secure included) so the prod cookie is actually cleared.
 func ClearCSRFCookie(c fiber.Ctx) {
-	c.Cookie(&fiber.Cookie{Name: CSRFCookieName, Value: "", Path: "/", SameSite: "Lax"})
+	c.Cookie(&fiber.Cookie{Name: CSRFCookieName, Value: "", Path: "/", Secure: !configs.Get().IsDev(), SameSite: "Lax"})
 }
 
 // RequireCSRF rejects session-cookie mutations without a matching header.
