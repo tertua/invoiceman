@@ -1,10 +1,13 @@
 package controllers
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
 )
 
@@ -25,7 +28,10 @@ func GetReports(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	report, err := db.GetReports(userID, strings.TrimSpace(c.Query("currency")))
+	report, err := cache.FetchJSON(c.Context(), cache.AggKey(userID.String(), "reports", strings.TrimSpace(c.Query("currency"))),
+		func(ctx context.Context) (models.Reports, error) {
+			return db.GetReports(userID, strings.TrimSpace(c.Query("currency")))
+		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load reports", nil)
 	}

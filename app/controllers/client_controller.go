@@ -165,6 +165,7 @@ func CreateClient(c fiber.Ctx) error {
 	if err := db.CreateClient(client); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create client", nil)
 	}
+	invalidateAggregates(c, userID)
 
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"client": client})
 }
@@ -224,6 +225,7 @@ func UpdateClient(c fiber.Ctx) error {
 	if err := db.UpdateClient(&client); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update client", nil)
 	}
+	invalidateAggregates(c, userID)
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"client": client})
 }
@@ -265,6 +267,7 @@ func DeleteClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete client", nil)
 	}
 	recordAudit(c, db, userID, "client.delete", "client", id.String(), "")
+	invalidateAggregates(c, userID)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

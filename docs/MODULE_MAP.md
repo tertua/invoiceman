@@ -34,7 +34,8 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 - **Mail**: `platform/mail` (`mailer.go`, `templates.go`, `templates/*.html`) → queued into `mail_outbox_model.go` → sent by `platform/outbox` worker. Render HTML at enqueue time; envelope stays `multipart/alternative`.
 - **Audit**: `app/controllers/audit_helper.go` + `audit_log_model.go`; CSRF middleware writes the audit trail (see P3).
 - **Request guards** (all in `pkg/middleware` + `pkg/routes/versioning.go`): `AuthRequired`, `GatewayAuth`, CSRF double-submit, version-guard, `RequireRoles`, idempotency keys (`idempotency_model.go`, `app/queries/idempotency_query.go`), pagination (`?page/?per_page` + `meta`).
-- **DB/schema**: `platform/database` (GORM `AutoMigrate`, backend health) with a forward-only version guard via `schema_migration_model.go` — a newer DB than the binary refuses to start.
+- **Cache** (dual-backend: Redis when `REDIS_HOST` set, memory otherwise): `platform/cache` (`session_store.go` sessions, `aggregates.go` dashboard/reports with singleflight), invalidated from controllers via `cache_helper.go` (`invalidateAggregates`).
+- **DB/schema**: `platform/database` (GORM `AutoMigrate`, backend health, `migrations.go` reversible registry + `POST /admin/migrate/down` rollback) with a forward-only version guard via `schema_migration_model.go` — a newer DB than the binary refuses to start.
 - **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `not_found_route.go` (JSON 404 for unknown `/api/*`), `swagger_route.go` (`/swagger`), `VERSION` file (read once at startup).
 - **Captcha**: `platform/captcha` (Turnstile) — enforced on login/register.
 - **Docs**: Swagger annotations → `swag init` → committed `docs/` (`swagger.json/yaml`, `docs/docs.go`); `docs/API_DOCS.md` is a stub.

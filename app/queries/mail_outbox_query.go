@@ -39,19 +39,23 @@ func (q *MailOutboxQueries) DueMail(now time.Time, limit int) ([]models.MailOutb
 // ClaimMail atomically marks one due email as processing. Only one worker
 // wins the claim; losers get claimed=false and skip the row.
 func (q *MailOutboxQueries) ClaimMail(id uuid.UUID, now time.Time) (bool, error) {
-	res := q.Model(&models.MailOutbox{}).
-		Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
-			id, []string{models.MailStatusPending, models.MailStatusFailed}, now).
-		Updates(map[string]interface{}{"status": models.MailStatusProcessing, "updated_at": now})
-	return res.RowsAffected > 0, res.Error
+	return DoRetryValue(func() (bool, error) {
+		res := q.Model(&models.MailOutbox{}).
+			Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
+				id, []string{models.MailStatusPending, models.MailStatusFailed}, now).
+			Updates(map[string]interface{}{"status": models.MailStatusProcessing, "updated_at": now})
+		return res.RowsAffected > 0, res.Error
+	})
 }
 
 // MarkMailSent records a successful delivery.
 func (q *MailOutboxQueries) MarkMailSent(id uuid.UUID, now time.Time) error {
-	return q.Model(&models.MailOutbox{}).Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"status": models.MailStatusSent, "updated_at": now, "next_retry_at": nil,
-		}).Error
+	return DoRetry(func() error {
+		return q.Model(&models.MailOutbox{}).Where("id = ?", id).
+			Updates(map[string]interface{}{
+				"status": models.MailStatusSent, "updated_at": now, "next_retry_at": nil,
+			}).Error
+	})
 }
 
 // MarkMailFailed records a failed attempt with the next retry time,
@@ -61,8 +65,10 @@ func (q *MailOutboxQueries) MarkMailFailed(id uuid.UUID, attempt int, retryAt *t
 	if retryAt == nil {
 		status = models.MailStatusDead
 	}
-	return q.Model(&models.MailOutbox{}).Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"status": status, "attempt": attempt, "next_retry_at": retryAt, "updated_at": now,
-		}).Error
+	return DoRetry(func() error {
+		return q.Model(&models.MailOutbox{}).Where("id = ?", id).
+			Updates(map[string]interface{}{
+				"status": status, "attempt": attempt, "next_retry_at": retryAt, "updated_at": now,
+			}).Error
+	})
 }

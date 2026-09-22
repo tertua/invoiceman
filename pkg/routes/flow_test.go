@@ -11,9 +11,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/invoiceman/pkg/middleware"
+	"github.com/tertua/invoiceman/platform/database"
 )
 
 // newTestApp builds the full API app for flow tests.
@@ -89,6 +91,18 @@ func TestAuthFlow(t *testing.T) {
 	assert.Equal(t, 201, resp.StatusCode)
 	body := decodeBody(t, resp)
 	assert.Equal(t, "flow@example.com", body["user"].(map[string]interface{})["email"])
+	// Order-proof: only the first-ever account is admin by default, so
+	// promote explicitly when an earlier test already claimed it.
+	if body["user"].(map[string]interface{})["role"] != "admin" {
+		flowID := body["user"].(map[string]interface{})["id"].(string)
+		db, err := database.OpenDBConnection()
+		require.NoError(t, err)
+		require.NoError(t, db.UpdateUserRole(uuid.MustParse(flowID), "admin"))
+		resp = doRequest(t, app, "POST", "/api/auth/login",
+			`{"email":"flow@example.com","password":"secret123"}`, nil)
+		require.Equal(t, 200, resp.StatusCode)
+		body = decodeBody(t, resp)
+	}
 	assert.Equal(t, "admin", body["user"].(map[string]interface{})["role"])
 	cookies := resp.Cookies()
 	require.NotEmpty(t, cookies)
@@ -102,9 +116,17 @@ func TestAuthFlow(t *testing.T) {
 	assert.Equal(t, "user", moderator["role"])
 	moderatorID := moderator["id"].(string)
 
-	resp = doRequest(t, app, "GET", "/api/admin/users", "", cookies)
+	resp = doRequest(t, app, "GET", "/api/admin/users?per_page=100", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Len(t, decodeBody(t, resp)["users"].([]interface{}), 2)
+	// Order-proof: the suite shares one database, so assert presence of
+	// our two accounts rather than an exact total.
+	users := decodeBody(t, resp)["users"].([]interface{})
+	emails := map[string]bool{}
+	for _, u := range users {
+		emails[u.(map[string]interface{})["email"].(string)] = true
+	}
+	assert.True(t, emails["flow@example.com"], "expected flow user listed")
+	assert.True(t, emails["moderator@example.com"], "expected moderator user listed")
 
 	resp = doRequest(t, app, "PATCH", "/api/admin/users/"+moderatorID+"/role", `{"role":"moderator"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)

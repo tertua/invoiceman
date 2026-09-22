@@ -332,6 +332,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/migrate/down": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Roll the database schema back to a previous version.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "rollback schema version",
+                "parameters": [
+                    {
+                        "description": "Target version plus explicit confirmation",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.MigrateDownInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "security": [
@@ -2844,6 +2884,21 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "models.MigrateDownInput": {
+            "type": "object",
+            "required": [
+                "target_version"
+            ],
+            "properties": {
+                "confirm": {
+                    "type": "boolean"
+                },
+                "target_version": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },

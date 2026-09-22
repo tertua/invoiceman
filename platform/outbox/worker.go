@@ -162,16 +162,16 @@ func (w *Worker) sendOneMail(db *database.Queries, m models.MailOutbox, now time
 			// No SMTP configured (dev): leave pending without burning
 			// attempts; reset the claim so the next tick retries.
 			_ = db.MarkMailFailed(m.ID, m.Attempt, &[]time.Time{now.Add(w.poll)}[0], now)
-			logger.L().Debug("outbox mail skipped, provider not configured", "to", m.To)
+			logger.L().Debug("outbox mail skipped, provider not configured", "mail_id", m.ID.String(), "to", m.To)
 			return
 		}
 		retry := nextRetryAt(m.Attempt+1, now)
 		_ = db.MarkMailFailed(m.ID, m.Attempt+1, retry, now)
-		logger.L().Warn("outbox mail failed", "to", m.To, "attempt", m.Attempt+1, "err", err)
+		logger.L().Warn("outbox mail failed", "mail_id", m.ID.String(), "to", m.To, "attempt", m.Attempt+1, "err", err)
 		return
 	}
 	_ = db.MarkMailSent(m.ID, now)
-	logger.L().Info("outbox mail sent", "to", m.To)
+	logger.L().Info("outbox mail sent", "mail_id", m.ID.String(), "to", m.To)
 }
 
 func (w *Worker) processDeliveries(ctx context.Context) {
@@ -215,7 +215,7 @@ func (w *Worker) forwardOne(db *database.Queries, d models.WebhookDelivery, now 
 	if ferr != nil {
 		retry := nextRetryAt(d.Attempt, now)
 		failDelivery(db, d.ID, d.Attempt, retry, truncateErr(ferr.Error()), now)
-		logger.L().Warn("outbox delivery failed", "order_id", d.OrderID, "attempt", d.Attempt, "err", ferr)
+		logger.L().Warn("outbox delivery failed", "delivery_id", d.ID.String(), "order_id", d.OrderID, "attempt", d.Attempt, "err", ferr)
 		return
 	}
 	d.RespCode = result.StatusCode
@@ -232,7 +232,7 @@ func (w *Worker) forwardOne(db *database.Queries, d models.WebhookDelivery, now 
 	}
 	_ = db.SaveDelivery(&d)
 	if d.Status == "delivered" {
-		logger.L().Info("outbox delivery sent", "order_id", d.OrderID, "attempt", d.Attempt)
+		logger.L().Info("outbox delivery sent", "delivery_id", d.ID.String(), "order_id", d.OrderID, "attempt", d.Attempt)
 	}
 }
 

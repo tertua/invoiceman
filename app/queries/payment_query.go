@@ -81,12 +81,16 @@ func (q *PaymentQueries) GetPayment(userID, id uuid.UUID) (models.Payment, error
 
 // CreatePayment persists a payment.
 func (q *PaymentQueries) CreatePayment(payment *models.Payment) error {
-	return q.Create(payment).Error
+	return DoRetry(func() error {
+		return q.Create(payment).Error
+	})
 }
 
 // DeletePayment deletes a payment owned by a user.
 func (q *PaymentQueries) DeletePayment(userID, id uuid.UUID) error {
-	return q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Payment{}).Error
+	return DoRetry(func() error {
+		return q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Payment{}).Error
+	})
 }
 
 // CreatePaymentLink stores a public link for an invoice.

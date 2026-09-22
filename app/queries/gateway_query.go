@@ -179,17 +179,21 @@ func (q *GatewayQueries) CountDeliveries() (int64, error) {
 
 // SaveDelivery persists delivery updates.
 func (q *GatewayQueries) SaveDelivery(d *models.WebhookDelivery) error {
-	return q.Save(d).Error
+	return DoRetry(func() error {
+		return q.Save(d).Error
+	})
 }
 
 // FailDelivery records a failed forward attempt without touching payload
 // or signature. Used by the background worker.
 func (q *GatewayQueries) FailDelivery(id uuid.UUID, status string, attempt int, retry *time.Time, respBody string, now time.Time) error {
-	return q.Model(&models.WebhookDelivery{}).Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"status": status, "attempt": attempt, "next_retry_at": retry,
-			"resp_body": respBody, "updated_at": now,
-		}).Error
+	return DoRetry(func() error {
+		return q.Model(&models.WebhookDelivery{}).Where("id = ?", id).
+			Updates(map[string]interface{}{
+				"status": status, "attempt": attempt, "next_retry_at": retry,
+				"resp_body": respBody, "updated_at": now,
+			}).Error
+	})
 }
 
 // PendingDeliveries returns failed/pending deliveries due for retry.
@@ -205,9 +209,11 @@ func (q *GatewayQueries) PendingDeliveries(now time.Time, limit int) ([]models.W
 // ClaimDelivery atomically marks one due delivery as claimed for sending.
 // Only one worker wins the claim; losers get claimed=false and skip it.
 func (q *GatewayQueries) ClaimDelivery(id uuid.UUID, now time.Time) (bool, error) {
-	res := q.Model(&models.WebhookDelivery{}).
-		Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
-			id, []string{"pending", "failed"}, now).
-		Updates(map[string]interface{}{"updated_at": now})
-	return res.RowsAffected > 0, res.Error
+	return DoRetryValue(func() (bool, error) {
+		res := q.Model(&models.WebhookDelivery{}).
+			Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
+				id, []string{"pending", "failed"}, now).
+			Updates(map[string]interface{}{"updated_at": now})
+		return res.RowsAffected > 0, res.Error
+	})
 }

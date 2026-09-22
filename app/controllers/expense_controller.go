@@ -149,6 +149,7 @@ func CreateExpense(c fiber.Ctx) error {
 	if err := db.CreateExpense(expense); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create expense", nil)
 	}
+	invalidateAggregates(c, userID)
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"expense": expenseResponse(*expense)})
 }
 
@@ -210,6 +211,7 @@ func UpdateExpense(c fiber.Ctx) error {
 	if err := db.UpdateExpense(&expense); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update expense", nil)
 	}
+	invalidateAggregates(c, userID)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"expense": expenseResponse(expense)})
 }
 
@@ -244,6 +246,7 @@ func DeleteExpense(c fiber.Ctx) error {
 	if err := db.DeleteExpense(userID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete expense", nil)
 	}
+	invalidateAggregates(c, userID)
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

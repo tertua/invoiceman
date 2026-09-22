@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"context"
 	"strings"
 
+	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
 
 	"github.com/gofiber/fiber/v3"
@@ -30,17 +33,27 @@ func GetDashboard(c fiber.Ctx) error {
 	}
 
 	currency := strings.TrimSpace(c.Query("currency"))
-	stats, err := db.GetStats(userID, currency)
+	ctx := c.Context()
+	stats, err := cache.FetchJSON(ctx, cache.AggKey(userID.String(), "dashboard:stats", currency),
+		func(ctx context.Context) (models.DashboardStats, error) {
+			return db.GetStats(userID, currency)
+		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load dashboard stats", nil)
 	}
 
-	series, err := db.GetRevenueSeries(userID, currency)
+	series, err := cache.FetchJSON(ctx, cache.AggKey(userID.String(), "dashboard:series", currency),
+		func(ctx context.Context) ([]models.RevenuePoint, error) {
+			return db.GetRevenueSeries(userID, currency)
+		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load revenue series", nil)
 	}
 
-	recent, err := db.GetRecentInvoices(userID, currency)
+	recent, err := cache.FetchJSON(ctx, cache.AggKey(userID.String(), "dashboard:recent", currency),
+		func(ctx context.Context) ([]models.RecentInvoice, error) {
+			return db.GetRecentInvoices(userID, currency)
+		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load recent invoices", nil)
 	}

@@ -199,6 +199,16 @@ definitions:
     - email
     - password
     type: object
+  models.MigrateDownInput:
+    properties:
+      confirm:
+        type: boolean
+      target_version:
+        minimum: 1
+        type: integer
+    required:
+    - target_version
+    type: object
   models.OnlineLinkEmailInput:
     properties:
       email:
@@ -601,6 +611,31 @@ paths:
             additionalProperties: true
             type: object
       summary: list relay transactions
+      tags:
+      - Admin
+  /admin/migrate/down:
+    post:
+      consumes:
+      - application/json
+      description: Roll the database schema back to a previous version.
+      parameters:
+      - description: Target version plus explicit confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.MigrateDownInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: rollback schema version
       tags:
       - Admin
   /admin/users:

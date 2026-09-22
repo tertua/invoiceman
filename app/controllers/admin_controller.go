@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -139,4 +140,41 @@ func ListAuditLogs(c fiber.Ctx) error {
 		})
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"audit_logs": out, "meta": paging.Meta(total)})
+}
+
+// MigrateDown rolls the schema back to a previous version (admin only).
+// Emergency use: run this, then deploy the older binary. Dropped columns
+// lose their values; forward upgrades re-apply automatically on the next
+// startup with a newer binary.
+// @Description Roll the database schema back to a previous version.
+// @Summary rollback schema version
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param request body models.MigrateDownInput true "Target version plus explicit confirmation"
+// @Success 200 {object} map[string]interface{}
+// @Security SessionCookie
+// @Router /admin/migrate/down [post]
+func MigrateDown(c fiber.Ctx) error {
+	adminID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	input := &models.MigrateDownInput{}
+	if err := c.Bind().Body(input); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(input); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	version, err := database.MigrateDownTo(input.TargetVersion)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, err.Error(), nil)
+	}
+	recordAudit(c, db, adminID, "schema.rollback", "schema", "v1", `{"version":`+strconv.Itoa(version)+`}`)
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"version": version})
 }

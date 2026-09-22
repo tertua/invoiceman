@@ -12,7 +12,6 @@ import (
 
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/pkg/repository"
 	"github.com/tertua/invoiceman/pkg/utils"
@@ -397,7 +396,7 @@ func ForgotPassword(c fiber.Ctx) error {
 				AppName: configs.Get().AppName, Name: user.Name, URL: resetURL,
 			})
 			if terr != nil {
-				logger.L().Warn("password reset email template failed", "err", terr)
+				utils.RequestLogger(c).Warn("password reset email template failed", "err", terr)
 			}
 			if err := db.EnqueueMail(&models.MailOutbox{
 				To:       user.Email,
@@ -405,7 +404,7 @@ func ForgotPassword(c fiber.Ctx) error {
 				Body:     body,
 				HtmlBody: htmlBody,
 			}); err != nil {
-				logger.L().Warn("password reset email queue failed", "email", user.Email, "err", err)
+				utils.RequestLogger(c).Warn("password reset email queue failed", "email", user.Email, "err", err)
 			}
 		}
 	}

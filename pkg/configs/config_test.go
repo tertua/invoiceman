@@ -23,6 +23,7 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, 24, cfg.Idempotency.TTLHours)
 	assert.Equal(t, 10, cfg.Outbox.PollSeconds)
 	assert.Equal(t, 20, cfg.Outbox.Batch)
+	assert.Equal(t, 60, cfg.Cache.AggTTLSeconds)
 	assert.Equal(t, "local", cfg.Storage.Backend)
 }
 

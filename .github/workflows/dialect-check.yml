@@ -1,0 +1,33 @@
+name: Dialect Check
+
+# Dual-backend contract (see AGENTS.md): raw SQL is allowed only inside
+# platform/database (backend branches + the migration registry). Everything
+# else goes through GORM in app/queries so SQLite and PostgreSQL both work.
+on:
+  push:
+    paths:
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "main.go"
+      - ".github/workflows/dialect-check.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "main.go"
+      - ".github/workflows/dialect-check.yml"
+
+jobs:
+  dialect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          hits=$(grep -rn --include='*.go' -E '\.Raw\(|[^a-zA-Z_]Exec\(' app pkg platform main.go | grep -v '_test.go' | grep -v '^platform/database/' || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "Raw SQL outside platform/database is forbidden by the dual-backend contract."
+            exit 1
+          fi

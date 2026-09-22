@@ -155,6 +155,7 @@ func CreatePayment(c fiber.Ctx) error {
 	}
 	recordAudit(c, db, userID, "payment.create", "payment", payment.ID.String(),
 		`{"invoice_id":"`+invoiceID.String()+`","amount":`+strconv.FormatFloat(input.Amount, 'f', -1, 64)+`}`)
+	invalidateAggregates(c, userID)
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": fiber.Map{
 		"id":         payment.ID,
 		"invoice_id": payment.InvoiceID,
@@ -198,6 +199,7 @@ func DeletePayment(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete payment", nil)
 	}
 	recordAudit(c, db, userID, "payment.delete", "payment", id.String(), "")
+	invalidateAggregates(c, userID)
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

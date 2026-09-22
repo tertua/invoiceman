@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/relay"
@@ -242,6 +244,8 @@ func settleLocalInvoice(db database.Queries, txn models.GatewayTransaction, gros
 		TxnID:     txn.MidtransTxnID,
 		Notes:     gatewayDisplayName(txn.Gateway) + " " + txn.OrderID,
 	})
+	// Webhook context has no request id; invalidation stays best-effort.
+	_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
 }
 
 // ListDeliveries returns one page of recent relay deliveries for admins.

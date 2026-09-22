@@ -41,6 +41,12 @@ type Config struct {
 
 	Outbox OutboxConfig
 
+	// Cache holds aggregate-cache settings. The cache is dual-backend by
+	// design: Redis when REDIS_HOST is set, process-local memory otherwise.
+	// Behaviour (keys, TTL, invalidation) is identical either way; only
+	// sharing across replicas differs.
+	Cache CacheConfig
+
 	Captcha CaptchaConfig
 
 	Debug DebugConfig
@@ -133,6 +139,14 @@ type IdempotencyConfig struct {
 type OutboxConfig struct {
 	PollSeconds int // OUTBOX_POLL_SECONDS
 	Batch       int // OUTBOX_BATCH
+}
+
+// CacheConfig holds the dashboard/report aggregate cache settings.
+type CacheConfig struct {
+	// AggTTLSeconds bounds staleness of cached aggregates
+	// (CACHE_AGG_TTL_SECONDS). Writes invalidate explicitly, so this only
+	// matters for multi-replica deployments without Redis.
+	AggTTLSeconds int
 }
 
 // CaptchaConfig holds bot protection settings.
@@ -262,6 +276,9 @@ func Load() (Config, error) {
 			PollSeconds: envInt("OUTBOX_POLL_SECONDS", 10),
 			Batch:       envInt("OUTBOX_BATCH", 20),
 		},
+		Cache: CacheConfig{
+			AggTTLSeconds: envInt("CACHE_AGG_TTL_SECONDS", 60),
+		},
 		Captcha: CaptchaConfig{
 			TurnstileSecret: strings.TrimSpace(os.Getenv("TURNSTILE_SECRET")),
 		},
@@ -332,6 +349,7 @@ func (c Config) Validate() error {
 		"RATE_LIMIT_GATEWAY": c.RateLimit.Gateway, "AI_TIMEOUT_SECONDS": c.AI.TimeoutSec,
 		"IDEMPOTENCY_TTL_HOURS": c.Idempotency.TTLHours,
 		"OUTBOX_POLL_SECONDS":   c.Outbox.PollSeconds, "OUTBOX_BATCH": c.Outbox.Batch,
+		"CACHE_AGG_TTL_SECONDS": c.Cache.AggTTLSeconds,
 	} {
 		if v <= 0 {
 			return fmt.Errorf("invalid %s: must be > 0", name)

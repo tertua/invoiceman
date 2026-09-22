@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/logger"
+	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 )
 
@@ -18,6 +18,6 @@ func recordAudit(c fiber.Ctx, db *database.Queries, userID uuid.UUID, action, en
 		EntityID: entityID, Meta: meta, IP: c.IP(), CreatedAt: time.Now(),
 	}
 	if err := db.RecordAudit(entry); err != nil {
-		logger.L().Warn("audit write failed", "action", action, "err", err)
+		utils.RequestLogger(c).Warn("audit write failed", "action", action, "err", err)
 	}
 }

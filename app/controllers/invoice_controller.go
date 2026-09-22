@@ -300,6 +300,7 @@ func CreateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
+	invalidateAggregates(c, userID)
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"invoice": detail})
 }
 
@@ -374,6 +375,7 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
+	invalidateAggregates(c, userID)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
 }
 
@@ -428,6 +430,7 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
+	invalidateAggregates(c, userID)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
 }
 
@@ -468,6 +471,7 @@ func DeleteInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete invoice", nil)
 	}
 	recordAudit(c, db, userID, "invoice.delete", "invoice", id.String(), "")
+	invalidateAggregates(c, userID)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

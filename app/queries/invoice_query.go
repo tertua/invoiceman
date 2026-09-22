@@ -171,75 +171,79 @@ func (q *InvoiceQueries) PaidAmount(invoiceID uuid.UUID) (float64, error) {
 // CreateInvoice creates an invoice with items, reserving the invoice number.
 // The sequence increment is atomic, so concurrent calls never produce duplicates.
 func (q *InvoiceQueries) CreateInvoice(userID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
-	return q.Transaction(func(tx *gorm.DB) error {
-		settings := models.Settings{UserID: userID}
-		if err := tx.Where("user_id = ?", userID).FirstOrCreate(
-			&settings, models.Settings{UserID: userID},
-		).Error; err != nil {
-			return err
-		}
-		// Fill defaults on first creation.
-		if settings.InvoicePrefix == "" {
-			defaults := models.DefaultSettings(userID)
-			settings.Currency = defaults.Currency
-			settings.TaxRate = defaults.TaxRate
-			settings.InvoicePrefix = defaults.InvoicePrefix
-		}
-
-		if err := tx.Model(&models.Settings{}).Where("user_id = ?", userID).
-			UpdateColumn("invoice_seq", gorm.Expr("invoice_seq + 1")).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("user_id = ?", userID).First(&settings).Error; err != nil {
-			return err
-		}
-		invoice.InvoiceNumber = fmt.Sprintf("%s%06d", settings.InvoicePrefix, settings.InvoiceSeq)
-
-		if err := tx.Create(invoice).Error; err != nil {
-			return err
-		}
-		if len(items) > 0 {
-			if err := tx.Create(&items).Error; err != nil {
+	return DoRetry(func() error {
+		return q.Transaction(func(tx *gorm.DB) error {
+			settings := models.Settings{UserID: userID}
+			if err := tx.Where("user_id = ?", userID).FirstOrCreate(
+				&settings, models.Settings{UserID: userID},
+			).Error; err != nil {
 				return err
 			}
-		}
+			// Fill defaults on first creation.
+			if settings.InvoicePrefix == "" {
+				defaults := models.DefaultSettings(userID)
+				settings.Currency = defaults.Currency
+				settings.TaxRate = defaults.TaxRate
+				settings.InvoicePrefix = defaults.InvoicePrefix
+			}
 
-		return nil
+			if err := tx.Model(&models.Settings{}).Where("user_id = ?", userID).
+				UpdateColumn("invoice_seq", gorm.Expr("invoice_seq + 1")).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("user_id = ?", userID).First(&settings).Error; err != nil {
+				return err
+			}
+			invoice.InvoiceNumber = fmt.Sprintf("%s%06d", settings.InvoicePrefix, settings.InvoiceSeq)
+
+			if err := tx.Create(invoice).Error; err != nil {
+				return err
+			}
+			if len(items) > 0 {
+				if err := tx.Create(&items).Error; err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
 	})
 }
 
 // UpdateInvoice replaces an invoice and its items.
 func (q *InvoiceQueries) UpdateInvoice(userID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
-	return q.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", invoice.ID, userID).
-			Updates(map[string]interface{}{
-				"updated_at": time.Now(),
-				"client_id":  invoice.ClientID,
-				"status":     invoice.Status,
-				"issue_date": invoice.IssueDate,
-				"due_date":   invoice.DueDate,
-				"currency":   invoice.Currency,
-				"tax_rate":   invoice.TaxRate,
-				"discount":   invoice.Discount,
-				"notes":      invoice.Notes,
-				"terms":      invoice.Terms,
-				"subtotal":   invoice.Subtotal,
-				"tax_amount": invoice.TaxAmount,
-				"total":      invoice.Total,
-			}).Error; err != nil {
-			return err
-		}
-
-		if err := tx.Where("invoice_id = ?", invoice.ID).Delete(&models.InvoiceItem{}).Error; err != nil {
-			return err
-		}
-		if len(items) > 0 {
-			if err := tx.Create(&items).Error; err != nil {
+	return DoRetry(func() error {
+		return q.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", invoice.ID, userID).
+				Updates(map[string]interface{}{
+					"updated_at": time.Now(),
+					"client_id":  invoice.ClientID,
+					"status":     invoice.Status,
+					"issue_date": invoice.IssueDate,
+					"due_date":   invoice.DueDate,
+					"currency":   invoice.Currency,
+					"tax_rate":   invoice.TaxRate,
+					"discount":   invoice.Discount,
+					"notes":      invoice.Notes,
+					"terms":      invoice.Terms,
+					"subtotal":   invoice.Subtotal,
+					"tax_amount": invoice.TaxAmount,
+					"total":      invoice.Total,
+				}).Error; err != nil {
 				return err
 			}
-		}
 
-		return nil
+			if err := tx.Where("invoice_id = ?", invoice.ID).Delete(&models.InvoiceItem{}).Error; err != nil {
+				return err
+			}
+			if len(items) > 0 {
+				if err := tx.Create(&items).Error; err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
 	})
 }
 
@@ -258,9 +262,7 @@ func (q *InvoiceQueries) UpdateInvoiceStatus(userID, id uuid.UUID, status string
 
 // DeleteInvoice deletes an invoice of a user.
 func (q *InvoiceQueries) DeleteInvoice(userID, id uuid.UUID) error {
-	if err := q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Invoice{}).Error; err != nil {
-		return err
-	}
-
-	return nil
+	return DoRetry(func() error {
+		return q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Invoice{}).Error
+	})
 }
