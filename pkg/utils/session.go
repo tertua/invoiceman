@@ -34,7 +34,7 @@ func CurrentUserID(c fiber.Ctx) (uuid.UUID, error) {
 // transparent refresh in AuthRequired could never fire — forcing a
 // re-login despite the long refresh TTL.
 func IssueSession(c fiber.Ctx, userID uuid.UUID) (*Tokens, error) {
-	tokens, err := GenerateNewTokens(userID.String(), nil)
+	tokens, err := GenerateNewTokens(userID.String())
 	if err != nil {
 		return nil, err
 	}
