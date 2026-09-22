@@ -18,7 +18,7 @@ import (
 // @Tags Settings
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /settings [get]
 func GetSettings(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -44,7 +44,7 @@ func GetSettings(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.SettingsInput true "Settings payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /settings [patch]
 func UpdateSettings(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -106,7 +106,7 @@ var allowedLogoTypes = map[string]string{
 // @Produce json
 // @Param logo formData file true "Logo image (PNG/JPEG/SVG, max 400KB)"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /settings/logo [post]
 func UploadLogo(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

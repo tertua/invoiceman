@@ -26,7 +26,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "List audit trail entries.",
@@ -336,7 +336,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "List registered users.",
@@ -376,7 +376,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update a user's role.",
@@ -423,7 +423,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Generate an AI business summary.",
@@ -449,7 +449,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Generate an AI payment reminder.",
@@ -489,7 +489,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Parse a receipt with Gemini.",
@@ -527,7 +527,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Generate invoice notes or terms.",
@@ -649,7 +649,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "De-authorize user and delete session.",
@@ -677,7 +677,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get current session user.",
@@ -706,7 +706,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Change current user password.",
@@ -746,7 +746,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update current user profile.",
@@ -862,7 +862,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get all clients of current user.",
@@ -903,7 +903,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Create a new client.",
@@ -943,7 +943,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get client by ID with invoices and stats.",
@@ -979,7 +979,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Delete a client.",
@@ -1014,7 +1014,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update a client.",
@@ -1082,7 +1082,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get dashboard aggregates.",
@@ -1111,7 +1111,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get expenses of current user.",
@@ -1155,7 +1155,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Create an expense.",
@@ -1195,7 +1195,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Delete an expense.",
@@ -1227,7 +1227,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update an expense.",
@@ -1274,7 +1274,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Download an expense receipt.",
@@ -1306,7 +1306,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Upload an expense receipt.",
@@ -1349,7 +1349,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Delete an expense receipt.",
@@ -1381,11 +1381,6 @@ const docTemplate = `{
         },
         "/gateway/config": {
             "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
                 "description": "Get public payment gateway browser configuration.",
                 "produces": [
                     "application/json"
@@ -1610,7 +1605,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get invoices of current user.",
@@ -1675,7 +1670,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Create a new invoice.",
@@ -1715,7 +1710,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get invoice by ID.",
@@ -1751,7 +1746,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Delete an invoice.",
@@ -1786,7 +1781,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update an invoice.",
@@ -1833,7 +1828,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update invoice status.",
@@ -1880,7 +1875,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get catalog items of current user.",
@@ -1918,7 +1913,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Create a catalog item.",
@@ -1958,7 +1953,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Delete a catalog item.",
@@ -1990,7 +1985,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update a catalog item.",
@@ -2037,7 +2032,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get payments of current user.",
@@ -2075,7 +2070,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Record a payment.",
@@ -2121,7 +2116,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Create a public payment link.",
@@ -2170,7 +2165,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Send a public payment link by email.",
@@ -2210,7 +2205,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Delete a payment.",
@@ -2368,7 +2363,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get financial reports.",
@@ -2394,7 +2389,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Get settings of current user.",
@@ -2418,7 +2413,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Update settings of current user.",
@@ -2458,7 +2453,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "SessionCookie": []
                     }
                 ],
                 "description": "Upload company logo.",
@@ -3081,6 +3076,11 @@ const docTemplate = `{
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
+        },
+        "SessionCookie": {
+            "type": "apiKey",
+            "name": "access_token",
+            "in": "cookie"
         }
     }
 }`
@@ -3091,8 +3091,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "",
 	BasePath:         "/api",
 	Schemes:          []string{},
-	Title:            "API",
-	Description:      "This is an auto-generated API Docs.",
+	Title:            "Invoiceman API",
+	Description:      "Invoiceman API. Two prefixes serve the same routes: /api/v1\n(current, used by the SPA) and /api (legacy, deprecated —\nresponses carry a Sunset header). Unless tagged otherwise,\nendpoints speak JSON with this envelope. Success: the data\nkeys directly, e.g. {\"expense\": {...}} or\n{\"invoices\": [...], \"meta\": {\"page\": 1, \"per_page\": 20, \"total\": 42}}.\nList endpoints accept ?page (default 1) and ?per_page\n(default 20, max 100) and always return a meta object.\nErrors: {\"error\": {\"message\": \"...\", \"details\": {...}}} with a\nstable English message (translated client-side via i18n api.*\nkeys). DELETE and logout answer 204 with no body.\n\nAuth — three independent schemes, never mixed:\n1. SessionCookie (most endpoints): login/register set\nHttpOnly access_token + refresh_token cookies. Send cookies\nwith every request (fetch: credentials:include). An expired\naccess token is refreshed transparently from the refresh\ncookie. A Bearer access token in the Authorization header\nworks as a fallback where cookies are unavailable.\n2. CSRF double-submit (session-cookie POST/PATCH/DELETE only):\nlogin/register also set a readable csrf_token cookie — echo\nit back as the X-CSRF-Token header or the mutation is\nrejected with 403. Public GETs and API-key calls are exempt.\n3. ApiKeyAuth (service relay /gateway/* only): pass the\nproject API key as the Authorization header; cookie sessions\nare never accepted there.\nMutations that create money movement accept an Idempotency-Key\nheader (one UUID per intent); replays return the original\nresult instead of duplicating. Login/register/forgot-password\nare behind Cloudflare Turnstile when a secret is configured\n(captcha token required) and rate-limited; AI endpoints answer\n501 without GEMINI_API_KEY.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

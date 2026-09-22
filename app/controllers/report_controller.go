@@ -14,7 +14,7 @@ import (
 // @Tags Reports
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /reports [get]
 func GetReports(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

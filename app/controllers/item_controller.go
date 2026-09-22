@@ -20,7 +20,7 @@ import (
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /items [get]
 func ListItems(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -51,7 +51,7 @@ func ListItems(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.ItemInput true "Item payload"
 // @Success 201 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /items [post]
 func CreateItem(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -95,7 +95,7 @@ func CreateItem(c fiber.Ctx) error {
 // @Param id path string true "Item ID"
 // @Param request body models.ItemInput true "Item payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /items/{id} [patch]
 func UpdateItem(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -141,7 +141,7 @@ func UpdateItem(c fiber.Ctx) error {
 // @Produce json
 // @Param id path string true "Item ID"
 // @Success 204 {string} status "ok"
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /items/{id} [delete]
 func DeleteItem(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

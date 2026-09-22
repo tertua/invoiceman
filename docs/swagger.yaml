@@ -359,12 +359,44 @@ definitions:
 info:
   contact:
     name: API Support
-  description: This is an auto-generated API Docs.
+  description: |-
+    Invoiceman API. Two prefixes serve the same routes: /api/v1
+    (current, used by the SPA) and /api (legacy, deprecated —
+    responses carry a Sunset header). Unless tagged otherwise,
+    endpoints speak JSON with this envelope. Success: the data
+    keys directly, e.g. {"expense": {...}} or
+    {"invoices": [...], "meta": {"page": 1, "per_page": 20, "total": 42}}.
+    List endpoints accept ?page (default 1) and ?per_page
+    (default 20, max 100) and always return a meta object.
+    Errors: {"error": {"message": "...", "details": {...}}} with a
+    stable English message (translated client-side via i18n api.*
+    keys). DELETE and logout answer 204 with no body.
+
+    Auth — three independent schemes, never mixed:
+    1. SessionCookie (most endpoints): login/register set
+    HttpOnly access_token + refresh_token cookies. Send cookies
+    with every request (fetch: credentials:include). An expired
+    access token is refreshed transparently from the refresh
+    cookie. A Bearer access token in the Authorization header
+    works as a fallback where cookies are unavailable.
+    2. CSRF double-submit (session-cookie POST/PATCH/DELETE only):
+    login/register also set a readable csrf_token cookie — echo
+    it back as the X-CSRF-Token header or the mutation is
+    rejected with 403. Public GETs and API-key calls are exempt.
+    3. ApiKeyAuth (service relay /gateway/* only): pass the
+    project API key as the Authorization header; cookie sessions
+    are never accepted there.
+    Mutations that create money movement accept an Idempotency-Key
+    header (one UUID per intent); replays return the original
+    result instead of duplicating. Login/register/forgot-password
+    are behind Cloudflare Turnstile when a secret is configured
+    (captcha token required) and rate-limited; AI endpoints answer
+    501 without GEMINI_API_KEY.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
-  title: API
+  title: Invoiceman API
   version: "1.0"
 paths:
   /admin/audit-logs:
@@ -388,7 +420,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: list audit trail
       tags:
       - Admin
@@ -592,7 +624,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: list users
       tags:
       - Admin
@@ -622,7 +654,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update user role
       tags:
       - Admin
@@ -638,7 +670,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: generate business summary
       tags:
       - AI
@@ -663,7 +695,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: generate payment reminder
       tags:
       - AI
@@ -687,7 +719,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: parse receipt
       tags:
       - AI
@@ -712,7 +744,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: write invoice note
       tags:
       - AI
@@ -783,7 +815,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: de-authorize user and delete session
       tags:
       - Auth
@@ -801,7 +833,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get current session user
       tags:
       - Auth
@@ -826,7 +858,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: change current user password
       tags:
       - Auth
@@ -851,7 +883,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update current user profile
       tags:
       - Auth
@@ -928,7 +960,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get all clients of current user
       tags:
       - Clients
@@ -952,7 +984,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: create a new client
       tags:
       - Clients
@@ -975,7 +1007,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: delete a client
       tags:
       - Clients
@@ -998,7 +1030,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get client by ID with invoices and stats
       tags:
       - Clients
@@ -1027,7 +1059,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update a client
       tags:
       - Clients
@@ -1059,7 +1091,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get dashboard aggregates
       tags:
       - Dashboard
@@ -1088,7 +1120,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get expenses
       tags:
       - Expenses
@@ -1112,7 +1144,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: create expense
       tags:
       - Expenses
@@ -1133,7 +1165,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: delete expense
       tags:
       - Expenses
@@ -1162,7 +1194,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update expense
       tags:
       - Expenses
@@ -1183,7 +1215,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: delete expense receipt
       tags:
       - Expenses
@@ -1203,7 +1235,7 @@ paths:
           schema:
             type: file
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: download expense receipt
       tags:
       - Expenses
@@ -1231,7 +1263,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: upload expense receipt
       tags:
       - Expenses
@@ -1246,8 +1278,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      security:
-      - ApiKeyAuth: []
       summary: get gateway browser config
       tags:
       - Gateway
@@ -1423,7 +1453,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get invoices of current user
       tags:
       - Invoices
@@ -1447,7 +1477,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: create a new invoice
       tags:
       - Invoices
@@ -1470,7 +1500,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: delete an invoice
       tags:
       - Invoices
@@ -1493,7 +1523,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get invoice by ID
       tags:
       - Invoices
@@ -1522,7 +1552,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update an invoice
       tags:
       - Invoices
@@ -1552,7 +1582,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update invoice status
       tags:
       - Invoices
@@ -1577,7 +1607,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get catalog items
       tags:
       - Items
@@ -1601,7 +1631,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: create catalog item
       tags:
       - Items
@@ -1622,7 +1652,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: delete catalog item
       tags:
       - Items
@@ -1651,7 +1681,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update catalog item
       tags:
       - Items
@@ -1676,7 +1706,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get payments
       tags:
       - Payments
@@ -1704,7 +1734,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: create payment
       tags:
       - Payments
@@ -1725,7 +1755,7 @@ paths:
           schema:
             type: string
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: delete payment
       tags:
       - Payments
@@ -1756,7 +1786,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: create payment link
       tags:
       - Payments
@@ -1781,7 +1811,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: send payment link email
       tags:
       - Payments
@@ -1880,7 +1910,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get financial reports
       tags:
       - Reports
@@ -1896,7 +1926,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: get current user settings
       tags:
       - Settings
@@ -1920,7 +1950,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: update current user settings
       tags:
       - Settings
@@ -1944,7 +1974,7 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - ApiKeyAuth: []
+      - SessionCookie: []
       summary: upload company logo
       tags:
       - Settings
@@ -2003,5 +2033,9 @@ securityDefinitions:
   ApiKeyAuth:
     in: header
     name: Authorization
+    type: apiKey
+  SessionCookie:
+    in: cookie
+    name: access_token
     type: apiKey
 swagger: "2.0"

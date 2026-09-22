@@ -29,9 +29,40 @@ import (
 	_ "net/http/pprof" // localhost-only diagnostics (see startDebugListener)
 )
 
-// @title API
+// @title Invoiceman API
 // @version 1.0
-// @description This is an auto-generated API Docs.
+// @description Invoiceman API. Two prefixes serve the same routes: /api/v1
+// @description (current, used by the SPA) and /api (legacy, deprecated —
+// @description responses carry a Sunset header). Unless tagged otherwise,
+// @description endpoints speak JSON with this envelope. Success: the data
+// @description keys directly, e.g. {"expense": {...}} or
+// @description {"invoices": [...], "meta": {"page": 1, "per_page": 20, "total": 42}}.
+// @description List endpoints accept ?page (default 1) and ?per_page
+// @description (default 20, max 100) and always return a meta object.
+// @description Errors: {"error": {"message": "...", "details": {...}}} with a
+// @description stable English message (translated client-side via i18n api.*
+// @description keys). DELETE and logout answer 204 with no body.
+// @description
+// @description Auth — three independent schemes, never mixed:
+// @description 1. SessionCookie (most endpoints): login/register set
+// @description HttpOnly access_token + refresh_token cookies. Send cookies
+// @description with every request (fetch: credentials:include). An expired
+// @description access token is refreshed transparently from the refresh
+// @description cookie. A Bearer access token in the Authorization header
+// @description works as a fallback where cookies are unavailable.
+// @description 2. CSRF double-submit (session-cookie POST/PATCH/DELETE only):
+// @description login/register also set a readable csrf_token cookie — echo
+// @description it back as the X-CSRF-Token header or the mutation is
+// @description rejected with 403. Public GETs and API-key calls are exempt.
+// @description 3. ApiKeyAuth (service relay /gateway/* only): pass the
+// @description project API key as the Authorization header; cookie sessions
+// @description are never accepted there.
+// @description Mutations that create money movement accept an Idempotency-Key
+// @description header (one UUID per intent); replays return the original
+// @description result instead of duplicating. Login/register/forgot-password
+// @description are behind Cloudflare Turnstile when a secret is configured
+// @description (captcha token required) and rate-limited; AI endpoints answer
+// @description 501 without GEMINI_API_KEY.
 // @termsOfService http://swagger.io/terms/
 // @contact.name API Support
 // @license.name Apache 2.0
@@ -40,6 +71,9 @@ import (
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
+// @securityDefinitions.apikey SessionCookie
+// @in cookie
+// @name access_token
 func main() {
 	// Load and validate configuration first: fail fast on bad env
 	// (wrong DSN, default secrets in prod, invalid ports) before binding.

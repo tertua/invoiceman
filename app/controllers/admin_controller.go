@@ -31,7 +31,7 @@ func adminUserResponse(user models.User) fiber.Map {
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /admin/users [get]
 func ListUsers(c fiber.Ctx) error {
 	db, err := database.OpenDBConnection()
@@ -63,7 +63,7 @@ func ListUsers(c fiber.Ctx) error {
 // @Param id path string true "User ID"
 // @Param request body models.RoleInput true "Role payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /admin/users/{id}/role [patch]
 func UpdateUserRole(c fiber.Ctx) error {
 	adminID, err := utils.CurrentUserID(c)
@@ -114,7 +114,7 @@ func UpdateUserRole(c fiber.Ctx) error {
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /admin/audit-logs [get]
 func ListAuditLogs(c fiber.Ctx) error {
 	db, err := database.OpenDBConnection()

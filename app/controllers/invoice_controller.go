@@ -161,7 +161,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /invoices [get]
 func ListInvoices(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -219,7 +219,7 @@ func ListInvoices(c fiber.Ctx) error {
 // @Produce json
 // @Param id path string true "Invoice ID"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /invoices/{id} [get]
 func GetInvoice(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -256,7 +256,7 @@ func GetInvoice(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.InvoiceInput true "Create invoice payload"
 // @Success 201 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /invoices [post]
 func CreateInvoice(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -312,7 +312,7 @@ func CreateInvoice(c fiber.Ctx) error {
 // @Param id path string true "Invoice ID"
 // @Param request body models.InvoiceInput true "Update invoice payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /invoices/{id} [patch]
 func UpdateInvoice(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -386,7 +386,7 @@ func UpdateInvoice(c fiber.Ctx) error {
 // @Param id path string true "Invoice ID"
 // @Param request body models.InvoiceStatusInput true "Update status payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /invoices/{id}/status [patch]
 func UpdateInvoiceStatus(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -439,7 +439,7 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 // @Produce json
 // @Param id path string true "Invoice ID"
 // @Success 204 {string} status "ok"
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /invoices/{id} [delete]
 func DeleteInvoice(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

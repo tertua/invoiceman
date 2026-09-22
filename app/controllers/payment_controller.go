@@ -51,7 +51,7 @@ func paymentResponse(row models.PaymentListRow) fiber.Map {
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /payments [get]
 func ListPayments(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -97,7 +97,7 @@ func ListPayments(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.PaymentInput true "Payment payload"
 // @Success 201 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /payments [post]
 func CreatePayment(c fiber.Ctx) error {
@@ -173,7 +173,7 @@ func CreatePayment(c fiber.Ctx) error {
 // @Produce json
 // @Param id path string true "Payment ID"
 // @Success 204 {string} status "ok"
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /payments/{id} [delete]
 func DeletePayment(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -209,7 +209,7 @@ func DeletePayment(c fiber.Ctx) error {
 // @Produce json
 // @Param request body map[string]string true "Invoice ID"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /payments/online [post]
 func CreateOnlineLink(c fiber.Ctx) error {
@@ -281,7 +281,7 @@ func publicURL(path string) string {
 // @Produce json
 // @Param request body models.OnlineLinkEmailInput true "Payment link email payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /payments/online/send [post]
 func SendOnlineLink(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

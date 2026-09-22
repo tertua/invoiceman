@@ -16,7 +16,7 @@ import (
 // @Accept json
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /dashboard [get]
 func GetDashboard(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

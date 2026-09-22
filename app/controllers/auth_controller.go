@@ -220,7 +220,7 @@ func Login(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 204 {string} status "ok"
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /auth/logout [post]
 func Logout(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -244,7 +244,7 @@ func Logout(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /auth/me [get]
 func Me(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -274,7 +274,7 @@ func Me(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.UpdateProfile true "Update profile payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /auth/profile [patch]
 func UpdateProfile(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -316,7 +316,7 @@ func UpdateProfile(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.ChangePassword true "Change password payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /auth/password [patch]
 func ChangePassword(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

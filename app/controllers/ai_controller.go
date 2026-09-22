@@ -40,7 +40,7 @@ func parseAIJSON(text string, target interface{}) error {
 // @Produce json
 // @Param file formData file true "Receipt image or PDF"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /ai/receipt-parse [post]
 func ReceiptParse(c fiber.Ctx) error {
 	file, err := c.FormFile("file")
@@ -80,7 +80,7 @@ func ReceiptParse(c fiber.Ctx) error {
 // @Tags AI
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /ai/business-summary [post]
 func BusinessSummary(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -115,7 +115,7 @@ func BusinessSummary(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.PaymentReminderInput true "Reminder payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /ai/payment-reminder [post]
 func PaymentReminder(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -164,7 +164,7 @@ func PaymentReminder(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.WriteNoteInput true "Note payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /ai/write-note [post]
 func WriteNote(c fiber.Ctx) error {
 	if _, err := utils.CurrentUserID(c); err != nil {

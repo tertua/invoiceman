@@ -49,7 +49,7 @@ func receiptProxyURL(expense models.Expense) string {
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses [get]
 func ListExpenses(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -103,7 +103,7 @@ func ListExpenses(c fiber.Ctx) error {
 // @Produce json
 // @Param request body models.ExpenseInput true "Expense payload"
 // @Success 201 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses [post]
 func CreateExpense(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -161,7 +161,7 @@ func CreateExpense(c fiber.Ctx) error {
 // @Param id path string true "Expense ID"
 // @Param request body models.ExpenseInput true "Expense payload"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses/{id} [patch]
 func UpdateExpense(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -220,7 +220,7 @@ func UpdateExpense(c fiber.Ctx) error {
 // @Produce json
 // @Param id path string true "Expense ID"
 // @Success 204 {string} status "ok"
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses/{id} [delete]
 func DeleteExpense(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -273,7 +273,7 @@ func receiptContentType(header, sniffed string) (string, bool) {
 // @Param id path string true "Expense ID"
 // @Param file formData file true "Receipt image or PDF (max 10MB)"
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses/{id}/receipt [post]
 func UploadReceipt(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -341,7 +341,7 @@ func UploadReceipt(c fiber.Ctx) error {
 // @Produce octet-stream
 // @Param id path string true "Expense ID"
 // @Success 200 {file} binary
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses/{id}/receipt [get]
 func GetReceipt(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -387,7 +387,7 @@ func GetReceipt(c fiber.Ctx) error {
 // @Produce json
 // @Param id path string true "Expense ID"
 // @Success 204 {string} status "ok"
-// @Security ApiKeyAuth
+// @Security SessionCookie
 // @Router /expenses/{id}/receipt [delete]
 func DeleteReceipt(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)

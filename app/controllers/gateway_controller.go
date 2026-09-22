@@ -248,7 +248,6 @@ func ListMyTransactions(c fiber.Ctx) error {
 // @Tags Gateway
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Security ApiKeyAuth
 // @Router /gateway/config [get]
 func GatewayConfig(c fiber.Ctx) error {
 	cfg := midtrans.FromEnv()
