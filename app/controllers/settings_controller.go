@@ -89,11 +89,10 @@ func UpdateSettings(c fiber.Ctx) error {
 const maxLogoSize = 400 << 10
 
 var allowedLogoTypes = map[string]string{
-	"image/png":     ".png",
-	"image/jpeg":    ".jpg",
-	"image/gif":     ".gif",
-	"image/webp":    ".webp",
-	"image/svg+xml": ".svg",
+	"image/png":  ".png",
+	"image/jpeg": ".jpg",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
 }
 
 // UploadLogo stores the company logo file and points LogoURL at it.
@@ -104,7 +103,7 @@ var allowedLogoTypes = map[string]string{
 // @Tags Settings
 // @Accept multipart/form-data
 // @Produce json
-// @Param logo formData file true "Logo image (PNG/JPEG/SVG, max 400KB)"
+// @Param logo formData file true "Logo image (PNG/JPEG/GIF/WEBP, max 400KB)"
 // @Success 200 {object} map[string]interface{}
 // @Security SessionCookie
 // @Router /settings/logo [post]
@@ -138,7 +137,9 @@ func UploadLogo(c fiber.Ctx) error {
 	ct := http.DetectContentType(head[:n])
 	ext, ok := allowedLogoTypes[strings.ToLower(strings.TrimSpace(ct))]
 	if !ok {
-		return utils.Fail(c, fiber.StatusBadRequest, "logo must be a PNG, JPEG, GIF, WEBP or SVG image", nil)
+		// SVG is rejected: logos render on public pages, and inline SVG
+		// executes scripts in the viewer's origin (stored XSS).
+		return utils.Fail(c, fiber.StatusBadRequest, "logo must be a PNG, JPEG, GIF or WEBP image", nil)
 	}
 	store, err := storage.Shared()
 	if err != nil {

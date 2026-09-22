@@ -253,12 +253,17 @@ func DeleteExpense(c fiber.Ctx) error {
 // maxReceiptUploadSize caps stored receipt attachments.
 const maxReceiptUploadSize = 10 << 20
 
-// receiptContentType sniffs the uploaded content; only images and PDFs
-// are accepted as receipts.
+// receiptContentType sniffs the uploaded content; only raster images and
+// PDFs are accepted. SVG is rejected even though it sniffs as image/*:
+// stored SVG executes scripts in the viewer's origin when proxied.
 func receiptContentType(header, sniffed string) (string, bool) {
 	ct := sniffed
 	if ct == "" || ct == "application/octet-stream" {
 		ct = header
+	}
+	ct = strings.ToLower(strings.TrimSpace(ct))
+	if ct == "image/svg+xml" {
+		return "", false
 	}
 	if strings.HasPrefix(ct, "image/") || ct == "application/pdf" {
 		return ct, true
@@ -379,7 +384,15 @@ func GetReceipt(c fiber.Ctx) error {
 	}
 	// No Close here: the stream is sent after this handler returns and
 	// fasthttp closes body streams once written.
-	c.Set("Content-Type", ct)
+	// Legacy SVG receipts (blocked for new uploads) must never render
+	// inline — force download so embedded scripts can't execute.
+	if strings.HasSuffix(strings.ToLower(expense.ReceiptURL), ".svg") ||
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(ct)), "image/svg") {
+		c.Set("Content-Type", "application/octet-stream")
+		c.Set("Content-Disposition", `attachment; filename="receipt"`)
+	} else {
+		c.Set("Content-Type", ct)
+	}
 	return c.SendStream(rc)
 }
 

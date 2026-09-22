@@ -2510,7 +2510,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "Logo image (PNG/JPEG/SVG, max 400KB)",
+                        "description": "Logo image (PNG/JPEG/GIF/WEBP, max 400KB)",
                         "name": "logo",
                         "in": "formData",
                         "required": true

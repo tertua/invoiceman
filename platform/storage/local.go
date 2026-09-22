@@ -88,7 +88,10 @@ func contentTypeOf(path string) string {
 	case ".jpg", ".jpeg":
 		return "image/jpeg"
 	case ".svg":
-		return "image/svg+xml"
+		// Never served inline: legacy SVG uploads download instead of
+		// executing scripts in the viewer's origin (stored XSS). New SVG
+		// uploads are rejected at the controller layer.
+		return "application/octet-stream"
 	case ".pdf":
 		return "application/pdf"
 	case ".gif":

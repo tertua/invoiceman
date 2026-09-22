@@ -1995,7 +1995,7 @@ paths:
       - multipart/form-data
       description: Upload company logo.
       parameters:
-      - description: Logo image (PNG/JPEG/SVG, max 400KB)
+      - description: Logo image (PNG/JPEG/GIF/WEBP, max 400KB)
         in: formData
         name: logo
         required: true

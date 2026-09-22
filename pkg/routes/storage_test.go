@@ -77,6 +77,12 @@ func TestLogoUpload(t *testing.T) {
 	resp = multipartFile(t, app, "POST", "/api/settings/logo", "logo", "evil.txt", "text/plain", []byte("nope"), cookies)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
+
+	// SVG is rejected (stored XSS: logos render on public pages).
+	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)
+	resp = multipartFile(t, app, "POST", "/api/settings/logo", "logo", "logo.svg", "image/svg+xml", svg, cookies)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
 }
 
 // TestReceiptNotExposedViaStaticUploads guards the PRIVATE-receipt
@@ -135,6 +141,12 @@ func TestReceiptRoundTrip(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	receiptURL := decodeBody(t, resp)["expense"].(map[string]interface{})["receipt_url"].(string)
 	assert.Contains(t, receiptURL, "/api/v1/expenses/"+expenseID+"/receipt")
+
+	// SVG receipts are rejected even though they sniff as image/*.
+	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)
+	resp = multipartFile(t, app, "POST", "/api/expenses/"+expenseID+"/receipt", "file", "r.svg", "image/svg+xml", svg, cookies)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
 
 	// Authenticated proxy streams the bytes back.
 	resp = doRequest(t, app, "GET", "/api/expenses/"+expenseID+"/receipt", "", cookies)
