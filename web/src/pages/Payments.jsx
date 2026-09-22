@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
 import { usePayments, usePaymentMutations } from "@/hooks/usePayments";
@@ -14,7 +15,7 @@ import { formatMoney, formatDate } from "@/lib/utils";
 
 export default function Payments() {
   const { t } = useLang();
-  const { data, isLoading } = usePayments();
+  const { data, isLoading, error } = usePayments();
   const { remove } = usePaymentMutations();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -44,6 +45,8 @@ export default function Payments() {
 
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+      ) : error ? (
+        <QueryError error={error} />
       ) : payments.length === 0 ? (
         <EmptyState
           icon={Wallet}

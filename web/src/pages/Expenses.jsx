@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useExpenses, useExpenseMutations } from "@/hooks/useExpenses";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
@@ -26,7 +27,7 @@ import { formatMoney, formatDate, toDateInput, todayDateInput, cn } from "@/lib/
 export default function Expenses() {
   const { t } = useLang();
   const [category, setCategory] = useState("all");
-  const { data, isLoading } = useExpenses({ category });
+  const { data, isLoading, error } = useExpenses({ category });
   const { remove } = useExpenseMutations();
   const [modal, setModal] = useState(null); // null | expense-or-prefill
   const [scanning, setScanning] = useState(false);
@@ -55,7 +56,7 @@ export default function Expenses() {
       });
     } catch (ex) {
       setAiUnavailable(isAiUnavailable(ex));
-      setScanErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("expenses.scanFailed"));
+      if (ex.status !== 401) setScanErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("expenses.scanFailed"));
     } finally {
       setScanning(false);
     }
@@ -118,6 +119,8 @@ export default function Expenses() {
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
         </div>
+      ) : error ? (
+        <QueryError error={error} />
       ) : expenses.length === 0 ? (
         <EmptyState
           icon={Receipt}
@@ -220,7 +223,7 @@ function ExpenseModal({ open, expense, onClose }) {
       else await create.mutateAsync(payload);
       onClose();
     } catch (ex) {
-      setErr(ex.message || t("expenses.saveFailed"));
+      if (ex.status !== 401) setErr(ex.message || t("expenses.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -243,7 +246,7 @@ function ExpenseModal({ open, expense, onClose }) {
       const updated = await uploadReceipt.mutateAsync({ id: expense.id, file });
       setReceiptUrl(updated.receipt_url || "");
     } catch (ex) {
-      setErr(ex.message || t("expenses.receiptFailed"));
+      if (ex.status !== 401) setErr(ex.message || t("expenses.receiptFailed"));
     } finally {
       setReceiptBusy(false);
     }
@@ -257,7 +260,7 @@ function ExpenseModal({ open, expense, onClose }) {
       await deleteReceipt.mutateAsync(expense.id);
       setReceiptUrl("");
     } catch (ex) {
-      setErr(ex.message || t("expenses.receiptFailed"));
+      if (ex.status !== 401) setErr(ex.message || t("expenses.receiptFailed"));
     } finally {
       setReceiptBusy(false);
     }

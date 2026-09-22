@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Loader2, ShieldCheck, Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useToast } from "@/context/UIContext";
@@ -49,7 +50,7 @@ function UserRow({ account, currentUserId }) {
       toast.success(t("admin.roleUpdated"));
     } catch (error) {
       setRole(account.role);
-      toast.error(t("admin.roleUpdateFailed"), error?.message);
+      if (error?.status !== 401) toast.error(t("admin.roleUpdateFailed"), error?.message);
     }
   }
 
@@ -93,7 +94,7 @@ export default function AdminUsers() {
   }
 
   if (error) {
-    return <EmptyState icon={ShieldCheck} title={t("admin.loadFailed")} description={error.message} />;
+    return <QueryError error={error} />;
   }
 
   return (

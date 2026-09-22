@@ -89,6 +89,7 @@ export default function ClientDetail() {
       </div>
     );
   }
+  if (error?.status === 401) return null;
   if (error || !data?.client) {
     return <EmptyState icon={Mail} title={t("clientDetail.notFound")} description={t("clientDetail.deleted")} />;
   }

@@ -50,6 +50,7 @@ export default function InvoiceDetail() {
       </div>
     );
   }
+  if (error?.status === 401) return null;
   if (error || !invoice) {
     return <EmptyState icon={Mail} title={t("invDetail.notFound")} description={t("invDetail.deleted")} />;
   }
@@ -297,7 +298,7 @@ function PaymentCard({ invoice }) {
       const res = await paymentsApi.createOnlineLink(invoice.id);
       setShareLink(res);
     } catch (e) {
-      setShareErr(e.message || t("payments.saveFailed"));
+      if (e.status !== 401) setShareErr(e.message || t("payments.saveFailed"));
     } finally {
       setShareLoading(false);
     }
@@ -454,7 +455,7 @@ function PaymentReminderCard({ invoiceId }) {
       setDraft(res.draft);
     } catch (e) {
       setUnavailable(isAiUnavailable(e));
-      setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("invDetail.generateFailed"));
+      if (e.status !== 401) setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("invDetail.generateFailed"));
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { QueryError } from "@/components/ui/QueryError";
 import { Input } from "@/components/ui/Input";
 import { useLang } from "@/context/LangContext";
 import { useToast } from "@/context/UIContext";
@@ -91,7 +92,7 @@ function CreateProjectForm({ onCreated }) {
       onCreated(project);
       toast.success(t("gateway.created"));
     } catch (err) {
-      setError(err.message || t("gateway.saveFailed"));
+      if (err.status !== 401) setError(err.message || t("gateway.saveFailed"));
     }
   }
 
@@ -128,14 +129,14 @@ function ProjectsTable({ projects, onCredentials }) {
     try {
       onCredentials(await mutation.mutateAsync(slug));
     } catch (error) {
-      toast.error(error.message || t("gateway.saveFailed"));
+      if (error.status !== 401) toast.error(error.message || t("gateway.saveFailed"));
     }
   }
   async function toggle(project) {
     try {
       await update.mutateAsync({ slug: project.slug, payload: { is_active: !project.is_active } });
     } catch (error) {
-      toast.error(error.message || t("gateway.saveFailed"));
+      if (error.status !== 401) toast.error(error.message || t("gateway.saveFailed"));
     }
   }
   return (
@@ -176,9 +177,13 @@ function ProjectsTable({ projects, onCredentials }) {
 
 function OperationsTables() {
   const { t } = useLang();
-  const { data: transactions = [] } = useGatewayTransactions();
-  const { data: deliveries = [] } = useGatewayDeliveries();
+  const { data: transactions = [], error: transactionsError } = useGatewayTransactions();
+  const { data: deliveries = [], error: deliveriesError } = useGatewayDeliveries();
   const retry = useRetryGatewayDelivery();
+  const opsError = transactionsError || deliveriesError;
+  if (opsError?.status !== 401 && opsError) {
+    return <QueryError error={opsError} />;
+  }
   return (
     <div className="mt-6 grid gap-6 xl:grid-cols-2">
       <Card padding="none" className="overflow-hidden">
@@ -202,7 +207,7 @@ export default function AdminGateway() {
   const { data: projects = [], isLoading, error } = useGatewayProjects();
   const [credentials, setCredentials] = useState(null);
   if (isLoading) return <div className="flex items-center justify-center py-24 text-[var(--ink-muted)]"><Loader2 size={20} className="animate-spin" /></div>;
-  if (error) return <EmptyState icon={ShieldCheck} title={t("gateway.loadFailed")} description={error.message} />;
+  if (error) return <QueryError error={error} />;
   return (
     <div>
       <PageHeader title={t("gateway.title")} description={t("gateway.desc")} />

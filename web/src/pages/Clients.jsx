@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryError";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { useClients } from "@/hooks/useClients";
 import { useLang } from "@/context/LangContext";
@@ -15,7 +16,7 @@ import { formatMoney } from "@/lib/utils";
 export default function Clients() {
   const nav = useNavigate();
   const { t } = useLang();
-  const { data, isLoading } = useClients();
+  const { data, isLoading, error } = useClients();
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -58,6 +59,8 @@ export default function Clients() {
             <Skeleton key={i} className="h-[150px] rounded-3xl" />
           ))}
         </div>
+      ) : error ? (
+        <QueryError error={error} />
       ) : clients.length === 0 ? (
         <EmptyState
           icon={Users}

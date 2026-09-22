@@ -14,6 +14,7 @@ import {
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { QueryError } from "@/components/ui/QueryError";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -40,9 +41,7 @@ export default function Dashboard() {
   const { data: reports } = useReports(currency);
 
   if (isLoading) return <DashboardSkeleton />;
-  if (error) {
-    return <EmptyState icon={Wallet} title={t("dash.loadError")} description={error.message} />;
-  }
+  if (error) return <QueryError error={error} />;
 
   const { stats, revenueSeries, recentInvoices } = data || {};
 
@@ -120,7 +119,7 @@ function AISummaryCard({ stats }) {
       setSummary(res.summary);
     } catch (e) {
       setUnavailable(isAiUnavailable(e));
-      setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("dash.generateFailed"));
+      if (e.status !== 401) setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("dash.generateFailed"));
     } finally {
       setLoading(false);
     }

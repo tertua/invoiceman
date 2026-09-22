@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryError";
 import { useItems, useItemMutations } from "@/hooks/useItems";
 import { formatMoney } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
 
 export default function Items() {
   const { t } = useLang();
-  const { data: items, isLoading } = useItems();
+  const { data: items, isLoading, error } = useItems();
   const [modal, setModal] = useState(null); // null | {} | item
   const { remove } = useItemMutations();
 
@@ -41,6 +42,8 @@ export default function Items() {
             <Skeleton key={i} className="h-[120px] rounded-3xl" />
           ))}
         </div>
+      ) : error ? (
+        <QueryError error={error} />
       ) : !items?.length ? (
         <EmptyState
           icon={Package}
@@ -133,7 +136,7 @@ function ItemModal({ open, item, onClose }) {
       else await create.mutateAsync(payload);
       onClose();
     } catch (ex) {
-      setErr(ex.message || t("items.saveFailed"));
+      if (ex.status !== 401) setErr(ex.message || t("items.saveFailed"));
     } finally {
       setSaving(false);
     }

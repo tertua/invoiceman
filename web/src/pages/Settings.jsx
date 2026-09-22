@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLang } from "@/context/LangContext";
 import { useToast } from "@/context/UIContext";
+import { QueryError } from "@/components/ui/QueryError";
 import { authApi } from "@/api/auth";
 import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
 import { CURRENCIES, cn } from "@/lib/utils";
@@ -25,7 +26,7 @@ function CompanySection() {
   const { t } = useLang();
   const { user } = useAuth();
   const readOnly = user?.role === "moderator";
-  const { data: settings } = useSettings();
+  const { data: settings, error: settingsError } = useSettings();
   const update = useUpdateSettings();
   const uploadLogo = useUploadLogo();
   const toast = useToast();
@@ -48,6 +49,9 @@ function CompanySection() {
     }
   }, [settings, form]);
 
+  if (settingsError) {
+    return <QueryError error={settingsError} />;
+  }
   if (!form) {
     return (
       <div className="flex items-center py-16 justify-center text-[var(--ink-muted)]">
@@ -70,7 +74,7 @@ function CompanySection() {
       const updated = await uploadLogo.mutateAsync(file);
       setForm((f) => ({ ...f, logo_url: updated.logo_url || "" }));
     } catch (err) {
-      toast.error(t("settings.logoFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.logoFailed"), err?.message);
     }
   }
 
@@ -81,7 +85,7 @@ function CompanySection() {
       await update.mutateAsync({ ...form, tax_rate: Number(form.tax_rate) || 0 });
       toast.success(t("settings.companySaved"));
     } catch (err) {
-      toast.error(t("settings.saveFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.saveFailed"), err?.message);
     } finally {
       setSaving(false);
     }
@@ -215,7 +219,7 @@ function ProfileSection() {
       await updateProfile({ name: name.trim() });
       toast.success(t("settings.profileUpdated"));
     } catch (err) {
-      toast.error(t("settings.profileFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.profileFailed"), err?.message);
     } finally {
       setSaving(false);
     }
@@ -364,7 +368,7 @@ function PasswordSection() {
       setNext("");
       setConfirm("");
     } catch (err) {
-      toast.error(t("settings.passwordFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.passwordFailed"), err?.message);
     } finally {
       setSaving(false);
     }

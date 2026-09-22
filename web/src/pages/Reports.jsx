@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryError";
 import { useReports } from "@/hooks/useReports";
 import { useSettings } from "@/hooks/useSettings";
 import { todayDateInput } from "@/lib/utils";
@@ -25,9 +26,10 @@ export default function Reports() {
   const { t } = useLang();
   const appName = useAppName();
   const { data: settings } = useSettings();
-  const { data, isLoading } = useReports(settings?.currency || "IDR");
+  const { data, isLoading, error } = useReports(settings?.currency || "IDR");
 
   if (isLoading) return <ReportsSkeleton />;
+  if (error) return <QueryError error={error} />;
   if (!data) return <EmptyState icon={BarChart3} title={t("reports.noData")} description={t("reports.noDataDesc")} />;
 
   const {

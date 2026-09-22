@@ -15,6 +15,7 @@ import { SearchInput } from "@/components/ui/Input";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryError";
 import { useLang } from "@/context/LangContext";
 import { useInvoices, useDeleteInvoice } from "@/hooks/useInvoices";
 import { formatMoney, formatDate, cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ export default function Invoices() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState({ by: "issue_date", order: "desc" });
 
-  const { data, isLoading } = useInvoices({
+  const { data, isLoading, error } = useInvoices({
     status,
     search: search.trim() || undefined,
     sort: sort.by,
@@ -104,6 +105,8 @@ export default function Invoices() {
             <Skeleton key={i} className="h-16 rounded-2xl" />
           ))}
         </div>
+      ) : error ? (
+        <QueryError error={error} />
       ) : invoices.length === 0 ? (
         <EmptyState
           icon={FileText}

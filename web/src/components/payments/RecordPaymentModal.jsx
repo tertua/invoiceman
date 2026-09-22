@@ -115,7 +115,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
         setLink(res);
         setSendEmail(defaultEmail || selectedInvoice?.client_email || "");
       } catch (ex) {
-        setErr(ex.message || t("payments.saveFailed"));
+        if (ex.status !== 401) setErr(ex.message || t("payments.saveFailed"));
       } finally {
         setSaving(false);
       }
@@ -128,7 +128,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
       await create.mutateAsync({ ...form, amount: Number(form.amount) });
       onClose();
     } catch (ex) {
-      setErr(ex.message || t("payments.saveFailed"));
+      if (ex.status !== 401) setErr(ex.message || t("payments.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -145,15 +145,19 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
   }
 
   async function sendLink() {
-    if (!sendEmail.trim()) return setEmailErr(t("payments.selectInvoice"));
+    if (!sendEmail.trim()) return setEmailErr(t("common.validEmail"));
     setEmailState("sending");
     setEmailErr("");
     try {
       await paymentsApi.sendOnlineLink(form.invoiceId, sendEmail.trim());
       setEmailState("sent");
     } catch (ex) {
-      setEmailState(ex.status === 501 ? "unavailable" : "error");
-      setEmailErr(ex.status === 501 ? t("payments.emailUnavailable") : ex.message || t("payments.saveFailed"));
+      if (ex.status === 401) {
+        setEmailState("");
+      } else {
+        setEmailState(ex.status === 501 ? "unavailable" : "error");
+        setEmailErr(ex.status === 501 ? t("payments.emailUnavailable") : ex.message || t("payments.saveFailed"));
+      }
     }
   }
 
@@ -167,7 +171,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
       const snap = await loadMidtransSnap(config.is_production);
       snap.pay(intent.snap_token, { onClose: () => setOnlinePaying(false), onError: () => setOnlinePaying(false) });
     } catch (ex) {
-      setEmailErr(ex.message || t("payments.saveFailed"));
+      if (ex.status !== 401) setEmailErr(ex.message || t("payments.saveFailed"));
       setOnlinePaying(false);
     }
   }

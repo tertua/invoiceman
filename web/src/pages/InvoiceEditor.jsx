@@ -10,9 +10,11 @@ import {
   ScanLine,
   Package,
   X,
+  Mail,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { useClients } from "@/hooks/useClients";
 import { useSettings } from "@/hooks/useSettings";
@@ -46,7 +48,7 @@ export default function InvoiceEditor() {
 
   const { data: clients } = useClients();
   const { data: settings } = useSettings();
-  const { data: existing, isLoading: loadingInvoice } = useInvoice(id);
+  const { data: existing, isLoading: loadingInvoice, error: invoiceError } = useInvoice(id);
   const create = useCreateInvoice();
   const update = useUpdateInvoice();
 
@@ -104,6 +106,10 @@ export default function InvoiceEditor() {
     return { subtotal, discount: disc, taxAmount, total: round(base + taxAmount) };
   }, [form]);
 
+  if (isEdit && invoiceError?.status === 401) return null;
+  if (isEdit && invoiceError) {
+    return <EmptyState icon={Mail} title={t("invDetail.notFound")} description={t("invDetail.deleted")} />;
+  }
   if (!form || (isEdit && loadingInvoice)) {
     return (
       <div className="flex items-center justify-center py-24 text-[var(--ink-muted)]">
@@ -162,7 +168,7 @@ export default function InvoiceEditor() {
         : await create.mutateAsync(payload);
       nav(`/invoices/${inv.id}`);
     } catch (e) {
-      setErr(e.message || t("invEditor.saveFailed"));
+      if (e.status !== 401) setErr(e.message || t("invEditor.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -467,7 +473,7 @@ function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
       onChange(text);
     } catch (error) {
       setUnavailable(isAiUnavailable(error));
-      setErr(isAiUnavailable(error) ? t("ai.unavailable") : isAiFailure(error) ? t("ai.failed") : error.message || t("invEditor.writeFailed"));
+      if (error.status !== 401) setErr(isAiUnavailable(error) ? t("ai.unavailable") : isAiFailure(error) ? t("ai.failed") : error.message || t("invEditor.writeFailed"));
     } finally {
       setLoading(false);
     }
@@ -561,7 +567,7 @@ function ReceiptScanButton({ onParsed }) {
       onParsed(res);
     } catch (ex) {
       setUnavailable(isAiUnavailable(ex));
-      setErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("invEditor.scanFailed"));
+      if (ex.status !== 401) setErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("invEditor.scanFailed"));
     } finally {
       setLoading(false);
     }
