@@ -4,6 +4,9 @@
 #
 # Build (BuildKit; Dockerfile.dev.dockerignore keeps web/ sources in context):
 #   docker build -f Dockerfile.dev -t invoiceman:dev .
+# With captcha (see README "Turnstile"):
+#   docker build -f Dockerfile.dev \
+#     --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t invoiceman:dev .
 # Run:   docker run --rm -p 5000:5000 --env-file .env invoiceman:dev
 # Then open http://localhost:5000 (SPA) — /api/* is served same-origin,
 # so no CORS or vite proxy is needed.
@@ -13,6 +16,12 @@ WORKDIR /fe
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+# Turnstile SITE key is build-time: Vite inlines VITE_* into the bundle, so
+# an embedded SPA must receive it here, not at runtime. Pass it with
+# --build-arg when the API enforces captcha; empty = widget hidden.
+# The matching SECRET key is runtime-only (docker --env-file) — never here.
+ARG VITE_TURNSTILE_SITE_KEY=""
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
 RUN npm run build
 
 FROM golang:1.27-alpine AS builder
