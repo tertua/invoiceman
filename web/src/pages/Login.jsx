@@ -14,7 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, sessionExpired, setSessionExpired } = useAuth();
   const { t } = useLang();
   const nav = useNavigate();
   const location = useLocation();
@@ -30,12 +30,12 @@ export default function Login() {
       }
       subhead={t("auth.login.subhead")}
     >
-      <LoginForm login={login} nav={nav} location={location} t={t} />
+      <LoginForm login={login} nav={nav} location={location} t={t} sessionExpired={sessionExpired} clearSessionExpired={() => setSessionExpired(false)} />
     </AuthShell>
   );
 }
 
-function LoginForm({ login, nav, location, t }) {
+function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpired }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
@@ -44,6 +44,7 @@ function LoginForm({ login, nav, location, t }) {
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
+    clearSessionExpired?.();
     setLoading(true);
     try {
       await login(form, captchaToken);
@@ -103,6 +104,11 @@ function LoginForm({ login, nav, location, t }) {
           />
 
           <AuthErrorBanner>{err}</AuthErrorBanner>
+          {sessionExpired && !err && (
+            <div className="text-xs text-[var(--warning)] bg-[var(--warning)]/10 rounded-2xl px-4 py-2.5 leading-snug">
+              {t("auth.sessionExpired")}
+            </div>
+          )}
 
           <Turnstile onVerify={setCaptchaToken} />
 

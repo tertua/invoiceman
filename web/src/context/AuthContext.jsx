@@ -1,18 +1,21 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/api/auth";
+import { AUTH_EXPIRED_EVENT } from "@/api/http";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const queryClient = useQueryClient();
 
   const refresh = useCallback(async () => {
     try {
       const { user } = await authApi.me();
       setUser(user);
+      setSessionExpired(false);
     } catch {
       setUser(null);
     } finally {
@@ -24,15 +27,30 @@ export function AuthProvider({ children }) {
     refresh();
   }, [refresh]);
 
+  // Any authenticated API call returning 401 means the session is gone
+  // (expired, revoked, or wiped by a server restart). Drop the stale user
+  // so ProtectedShell bounces to /login — no manual reload needed.
+  useEffect(() => {
+    const onExpired = () => {
+      setUser(null);
+      setSessionExpired(true);
+      queryClient.clear();
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, [queryClient]);
+
   const login = useCallback(async (credentials, captchaToken) => {
     const { user } = await authApi.login(credentials, captchaToken);
     setUser(user);
+    setSessionExpired(false);
     return user;
   }, []);
 
   const register = useCallback(async (payload, captchaToken) => {
     const { user } = await authApi.register(payload, captchaToken);
     setUser(user);
+    setSessionExpired(false);
     return user;
   }, []);
 
@@ -47,12 +65,13 @@ export function AuthProvider({ children }) {
       await authApi.logout();
     } finally {
       setUser(null);
+      setSessionExpired(false);
       queryClient.clear();
     }
   }, [queryClient]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh, updateProfile, sessionExpired, setSessionExpired }}>
       {children}
     </AuthContext.Provider>
   );

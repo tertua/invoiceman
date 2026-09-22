@@ -11,7 +11,7 @@ import { router } from "@/routes";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: (failureCount, error) => error?.status !== 401 && failureCount < 1,
       refetchOnWindowFocus: false,
       staleTime: 30_000,
     },
