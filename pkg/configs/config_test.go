@@ -25,6 +25,7 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, 20, cfg.Outbox.Batch)
 	assert.Equal(t, 60, cfg.Cache.AggTTLSeconds)
 	assert.Equal(t, "local", cfg.Storage.Backend)
+	assert.True(t, cfg.Auth.AllowRegistration)
 	assert.Empty(t, cfg.Server.TrustedProxies)
 	assert.Equal(t, "X-Forwarded-For", cfg.Server.ProxyHeader)
 }
@@ -36,6 +37,7 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("CORS_ORIGINS", "https://a.example.com, https://b.example.com")
 	t.Setenv("REDIS_HOST", "redis")
 	t.Setenv("LOG_LEVEL", "DEBUG")
+	t.Setenv("ALLOW_REGISTRATION", "false")
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -44,6 +46,7 @@ func TestLoadOverrides(t *testing.T) {
 	assert.Equal(t, []string{"https://a.example.com", "https://b.example.com"}, cfg.CORS.Origins)
 	assert.True(t, cfg.Redis.Enabled())
 	assert.Equal(t, "debug", cfg.Log.Level)
+	assert.False(t, cfg.Auth.AllowRegistration)
 }
 
 // TestValidateProxyTrust covers the TRUSTED_PROXIES allowlist parsing.

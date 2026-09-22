@@ -15,3 +15,8 @@ export function useAppName() {
   const { data } = useAppConfig();
   return data?.appName || "Invoiceman";
 }
+
+export function useAllowRegistration() {
+  const { data } = useAppConfig();
+  return data?.allowRegistration ?? true;
+}

@@ -19,5 +19,8 @@ func AppName() string {
 // @Success 200 {object} map[string]interface{}
 // @Router /config [get]
 func AppConfig(c fiber.Ctx) error {
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"appName": AppName()})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{
+		"appName":           AppName(),
+		"allowRegistration": configs.Get().Auth.AllowRegistration,
+	})
 }

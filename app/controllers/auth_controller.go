@@ -136,6 +136,9 @@ func checkCaptcha(c fiber.Ctx) bool {
 // @Success 201 {object} map[string]interface{}
 // @Router /auth/register [post]
 func Register(c fiber.Ctx) error {
+	if !configs.Get().Auth.AllowRegistration {
+		return utils.Fail(c, fiber.StatusForbidden, "registration is disabled", nil)
+	}
 	if !checkCaptcha(c) {
 		return nil
 	}

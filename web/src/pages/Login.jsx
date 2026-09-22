@@ -12,6 +12,7 @@ import Turnstile from "@/components/auth/Turnstile";
 import AILogo from "@/components/layout/AILogo";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
+import { useAllowRegistration } from "@/hooks/useConfig";
 
 export default function Login() {
   const { login, sessionExpired, setSessionExpired } = useAuth();
@@ -36,6 +37,7 @@ export default function Login() {
 }
 
 function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpired }) {
+  const allowRegistration = useAllowRegistration();
   const [form, setForm] = useState({ email: "", password: "" });
   const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
@@ -128,15 +130,17 @@ function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpire
           </div>
         </form>
 
-        <div className="text-sm text-[var(--ink-muted)] text-center mt-8">
-          {t("auth.noAccount")}{" "}
-          <Link
-            to="/register"
-            className="text-[var(--accent-strong)] font-semibold hover:underline"
-          >
-            {t("auth.createOne")}
-          </Link>
-        </div>
+        {allowRegistration && (
+          <div className="text-sm text-[var(--ink-muted)] text-center mt-8">
+            {t("auth.noAccount")}{" "}
+            <Link
+              to="/register"
+              className="text-[var(--accent-strong)] font-semibold hover:underline"
+            >
+              {t("auth.createOne")}
+            </Link>
+          </div>
+        )}
     </motion.div>
   );
 }

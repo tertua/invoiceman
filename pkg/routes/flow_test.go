@@ -860,14 +860,32 @@ func TestAppConfig(t *testing.T) {
 
 	resp := doRequest(t, app, "GET", "/api/config", "", nil)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, "Invoiceman", decodeBody(t, resp)["appName"])
-	resp.Body.Close()
+	body := decodeBody(t, resp)
+	assert.Equal(t, "Invoiceman", body["appName"])
+	assert.Equal(t, true, body["allowRegistration"])
 
 	t.Setenv("APP_NAME", "  Acme Billing  ")
 	resp = doRequest(t, app, "GET", "/api/config", "", nil)
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "Acme Billing", decodeBody(t, resp)["appName"])
 	resp.Body.Close()
+}
+
+// TestRegistrationToggle covers the ALLOW_REGISTRATION kill switch:
+// closed mode rejects new signups with 403 while login keeps working.
+func TestRegistrationToggle(t *testing.T) {
+	t.Setenv("RATE_LIMIT_AUTH", "100")
+	t.Setenv("ALLOW_REGISTRATION", "false")
+	app := newTestApp()
+
+	resp := doRequest(t, app, "GET", "/api/config", "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, false, decodeBody(t, resp)["allowRegistration"])
+
+	resp = doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Closed User","email":"closed-reg@example.com","password":"secret123"}`, nil)
+	assert.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "registration is disabled", decodeBody(t, resp)["error"].(map[string]interface{})["message"])
 }
 
 // TestDraftOnlinePaymentBlocked covers the draft/paid guards on public links:

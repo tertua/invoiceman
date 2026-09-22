@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LangContext";
-import { useAppName } from "@/hooks/useConfig";
+import { useAppName, useAllowRegistration } from "@/hooks/useConfig";
 import AILogo from "@/components/layout/AILogo";
 
 const TEAL = "#0d9488";
@@ -52,6 +52,7 @@ export default function Landing() {
 function Nav() {
   const { t } = useLang();
   const appName = useAppName();
+  const allowRegistration = useAllowRegistration();
   return (
     <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/70 border-b border-black/[0.05]">
       <div className="max-w-[1400px] mx-auto px-5 h-16 flex items-center justify-between">
@@ -63,13 +64,15 @@ function Nav() {
           <Link to="/login" className="h-10 px-4 rounded-full text-sm font-semibold hover:bg-black/[0.04] flex items-center transition-colors">
             {t("landing.nav.signIn")}
           </Link>
-          <Link
-            to="/register"
-            className="group h-10 px-5 rounded-full text-sm font-semibold text-white flex items-center gap-1.5 shadow-[0_8px_24px_-8px_rgba(13,148,136,0.6)] hover:shadow-[0_12px_30px_-8px_rgba(13,148,136,0.75)] transition-all"
-            style={{ background: "linear-gradient(135deg,#14b8a6,#0d9488 50%,#0f766e)" }}
-          >
-            {t("landing.nav.getStarted")} <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          {allowRegistration && (
+            <Link
+              to="/register"
+              className="group h-10 px-5 rounded-full text-sm font-semibold text-white flex items-center gap-1.5 shadow-[0_8px_24px_-8px_rgba(13,148,136,0.6)] hover:shadow-[0_12px_30px_-8px_rgba(13,148,136,0.75)] transition-all"
+              style={{ background: "linear-gradient(135deg,#14b8a6,#0d9488 50%,#0f766e)" }}
+            >
+              {t("landing.nav.getStarted")} <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          )}
         </div>
       </div>
     </header>
@@ -79,6 +82,7 @@ function Nav() {
 /* ─────────────────────────── Hero ─────────────────────────── */
 function Hero() {
   const { t } = useLang();
+  const allowRegistration = useAllowRegistration();
   return (
     <section className="relative overflow-hidden">
       <div className="absolute -top-40 -left-40 w-[560px] h-[560px] rounded-full pointer-events-none"
@@ -106,11 +110,13 @@ function Hero() {
             {t("landing.hero.desc")}
           </p>
           <div className="flex items-center gap-3 mt-8">
-            <Link to="/register"
-              className="group h-12 px-7 rounded-full text-sm font-semibold text-white flex items-center gap-2 shadow-[0_12px_30px_-8px_rgba(13,148,136,0.65)] hover:shadow-[0_16px_38px_-8px_rgba(13,148,136,0.8)] transition-all"
-              style={{ background: "linear-gradient(135deg,#14b8a6,#0d9488 50%,#0f766e)" }}>
-              {t("landing.hero.startFree")} <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+            {allowRegistration && (
+              <Link to="/register"
+                className="group h-12 px-7 rounded-full text-sm font-semibold text-white flex items-center gap-2 shadow-[0_12px_30px_-8px_rgba(13,148,136,0.65)] hover:shadow-[0_16px_38px_-8px_rgba(13,148,136,0.8)] transition-all"
+                style={{ background: "linear-gradient(135deg,#14b8a6,#0d9488 50%,#0f766e)" }}>
+                {t("landing.hero.startFree")} <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            )}
             <Link to="/login" className="h-12 px-6 rounded-full text-sm font-semibold border border-black/10 bg-white hover:bg-black/[0.03] flex items-center transition-colors">
               {t("landing.nav.signIn")}
             </Link>
@@ -426,6 +432,8 @@ function CoreSection() {
 /* ───────────────── CTA ───────────────── */
 function CTASection() {
   const { t } = useLang();
+  const allowRegistration = useAllowRegistration();
+  const ctaTo = allowRegistration ? "/register" : "/login";
   return (
     <section className="max-w-[1400px] mx-auto px-5 py-24">
       <div className="relative rounded-[36px] px-8 py-24 text-center text-white overflow-hidden shadow-[0_40px_80px_-30px_rgba(15,118,110,0.5)]"
@@ -450,7 +458,7 @@ function CTASection() {
           <p className="text-white/75 mt-4 max-w-md mx-auto text-lg">
             {t("landing.cta.sub")}
           </p>
-          <Link to="/register"
+          <Link to={ctaTo}
             className="group inline-flex items-center gap-2 mt-9 h-13 px-8 py-4 rounded-full bg-white text-[#0f766e] text-sm font-bold hover:shadow-[0_16px_40px_-10px_rgba(255,255,255,0.5)] transition-all">
             {t("landing.cta.button")} <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
@@ -522,6 +530,7 @@ function CtaRevenue() {
 function Footer() {
   const { t } = useLang();
   const appName = useAppName();
+  const allowRegistration = useAllowRegistration();
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-black/[0.05]">
@@ -533,7 +542,9 @@ function Footer() {
         <span className="text-sm text-[#5a6f6a]">{t("landing.footer.copyright", { year, app: appName })}</span>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm font-semibold text-[#0f766e] hover:underline">{t("landing.footer.signIn")}</Link>
-          <Link to="/register" className="text-sm font-semibold text-[#0f766e] hover:underline">{t("landing.footer.getStarted")}</Link>
+          {allowRegistration && (
+            <Link to="/register" className="text-sm font-semibold text-[#0f766e] hover:underline">{t("landing.footer.getStarted")}</Link>
+          )}
         </div>
       </div>
     </footer>

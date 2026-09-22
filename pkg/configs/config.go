@@ -31,6 +31,7 @@ type Config struct {
 	RateLimit RateLimitConfig
 	AI        AIConfig
 	Mail      MailConfig
+	Auth      AuthConfig
 
 	Midtrans    MidtransConfig
 	NOWPayments NOWPaymentsConfig
@@ -116,6 +117,11 @@ type AIConfig struct {
 	TimeoutSec  int    // AI_TIMEOUT_SECONDS
 	GeminiKey   string // GEMINI_API_KEY
 	GeminiModel string // GEMINI_MODEL
+}
+
+// AuthConfig holds public auth toggles.
+type AuthConfig struct {
+	AllowRegistration bool // ALLOW_REGISTRATION
 }
 
 // MailConfig holds SMTP settings.
@@ -250,6 +256,9 @@ func Load() (Config, error) {
 			TimeoutSec:  envInt("AI_TIMEOUT_SECONDS", 30),
 			GeminiKey:   strings.TrimSpace(os.Getenv("GEMINI_API_KEY")),
 			GeminiModel: envOr("GEMINI_MODEL", "gemini-2.0-flash"),
+		},
+		Auth: AuthConfig{
+			AllowRegistration: envBool("ALLOW_REGISTRATION", true),
 		},
 		Mail: MailConfig{
 			SMTPHost:     strings.TrimSpace(os.Getenv("SMTP_HOST")),
