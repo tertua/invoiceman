@@ -8,6 +8,12 @@ Project Go baru dari template [tertua/go-template](https://github.com/tertua/go-
 2. Jalankan: `make docker.run`
 3. Buka Swagger: http://127.0.0.1:5000/swagger/index.html
 
+## Docker
+
+Image hanya berisi binary — secret tidak pernah di-bake. Inject saat run:
+
+`docker run --env-file .env apiserver`
+
 ## Perintah
 
 `make build` / `make test` / `make web.check` / `make docker.stop`

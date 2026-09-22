@@ -1,9 +1,9 @@
-# Files (kept out of the Go build context; the image only needs the
-# apiserver binary plus the root .env copied by the Dockerfile)
+# Files (kept out of the Go build context; the image holds only the
+# apiserver binary — secrets are injected at run time, never baked in)
 .dockerignore
 .editorconfig
 .gitignore
-.env.*
+.env*
 Dockerfile
 Makefile
 LICENSE
@@ -36,5 +36,5 @@ web/
 # baked into the image. Production gets a fresh volume/mount instead.
 data/
 
-# NOTE: the root .env itself must stay includable — the Dockerfile copies
-# /build/.env into the scratch image (create it from .env.example first).
+# NOTE: no .env variant ever enters the image — the Dockerfile copies only
+# the binary. Inject config at run time via --env-file / -e / secrets.

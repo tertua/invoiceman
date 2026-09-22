@@ -18,8 +18,12 @@ RUN go build -ldflags="-s -w" -o apiserver .
 
 FROM scratch
 
-# Copy binary and config files from /build to root folder of scratch container.
-COPY --from=builder ["/build/apiserver", "/build/.env", "/"]
+# Copy only the binary. Secrets are never baked in: godotenv/autoload is a
+# no-op when no .env file exists, so inject config at run time instead:
+#   docker run --env-file .env apiserver
+# or per-var -e flags / orchestrator secrets. Anyone with the image
+# (registry pull, docker export, layer history) must not recover keys.
+COPY --from=builder ["/build/apiserver", "/"]
 
 # Probes (see pkg/routes/health_routes.go). The orchestrator, not the app,
 # decides restart/unready based on these.
