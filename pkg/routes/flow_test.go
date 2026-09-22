@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/relay"
 )
 
 // newTestApp builds the full API app for flow tests.
@@ -244,6 +245,22 @@ func TestAuthFlow(t *testing.T) {
 		`{"token":"nope","new_password":"anothersecret123"}`, nil)
 	assert.Equal(t, 400, resp.StatusCode)
 	decodeBody(t, resp)
+
+	// Reset tokens are stored hashed: the DB row holds relay.HashKey(raw),
+	// never the raw link, and the raw token still resets the password.
+	rawToken := strings.Repeat("a", 64)
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	require.NoError(t, db.DeletePasswordResetsByUser(uuid.MustParse(userID)))
+	require.NoError(t, db.CreatePasswordReset(uuid.MustParse(userID), relay.HashKey(rawToken), time.Now().Add(time.Hour)))
+	stored, err := db.GetPasswordReset(relay.HashKey(rawToken))
+	require.NoError(t, err)
+	assert.Equal(t, relay.HashKey(rawToken), stored.Token)
+	assert.NotEqual(t, rawToken, stored.Token)
+	resp = doRequest(t, app, "POST", "/api/auth/reset-password",
+		`{"token":"`+rawToken+`","new_password":"hashedtoken123"}`, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
 
 	// Logout ends the session: cookies are cleared and renewal is revoked.
 	resp = doRequest(t, app, "POST", "/api/auth/logout", "", cookies)

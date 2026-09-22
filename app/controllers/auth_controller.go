@@ -19,6 +19,7 @@ import (
 	"github.com/tertua/invoiceman/platform/captcha"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/mail"
+	"github.com/tertua/invoiceman/platform/relay"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -387,7 +388,9 @@ func ForgotPassword(c fiber.Ctx) error {
 		if _, err := rand.Read(raw); err == nil {
 			token := hex.EncodeToString(raw)
 			_ = db.DeletePasswordResetsByUser(user.ID)
-			if err := db.CreatePasswordReset(user.ID, token, time.Now().Add(time.Hour)); err != nil {
+			// Store only the hash: a DB leak must not hand out live
+			// reset links (same rule as service API keys, relay.HashKey).
+			if err := db.CreatePasswordReset(user.ID, relay.HashKey(token), time.Now().Add(time.Hour)); err != nil {
 				return utils.Fail(c, fiber.StatusInternalServerError, "failed to create password reset request", nil)
 			}
 			resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
@@ -436,7 +439,7 @@ func ResetPassword(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	reset, err := db.GetPasswordReset(payload.Token)
+	reset, err := db.GetPasswordReset(relay.HashKey(strings.TrimSpace(payload.Token)))
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid or expired token", nil)
 	}
