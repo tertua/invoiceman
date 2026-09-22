@@ -13,6 +13,8 @@ import {
   Mail,
   Plus,
   Wallet,
+  Link2,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +29,7 @@ import {
 import { useSettings } from "@/hooks/useSettings";
 import { usePaymentMutations } from "@/hooks/usePayments";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
+import { paymentsApi } from "@/api/payments";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate, cn } from "@/lib/utils";
@@ -273,9 +276,41 @@ function PaymentCard({ invoice }) {
   const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
   const payments = invoice.payments || [];
 
+  // Shareable public link (POST /payments/online is get-or-create).
+  const [shareLink, setShareLink] = useState(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareErr, setShareErr] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
+  const canShareOnline = balance > 0 && invoice.effective_status !== "draft" && currency === "IDR";
+  const shareUrl = shareLink ? new URL(shareLink.url, window.location.origin).href : "";
+
   async function onDelete(p) {
     if (!window.confirm(t("payments.confirmDelete", { amount: formatMoney(p.amount, currency) }))) return;
     await remove.mutateAsync(p.id);
+  }
+
+  async function onShare() {
+    if (shareLink || shareLoading) return;
+    setShareLoading(true);
+    setShareErr("");
+    try {
+      const res = await paymentsApi.createOnlineLink(invoice.id);
+      setShareLink(res);
+    } catch (e) {
+      setShareErr(e.message || t("payments.saveFailed"));
+    } finally {
+      setShareLoading(false);
+    }
+  }
+
+  async function copyShareLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
   }
 
   return (
@@ -311,6 +346,28 @@ function PaymentCard({ invoice }) {
       <div className="h-1.5 w-full rounded-full bg-[var(--surface-2)] mb-4 overflow-hidden">
         <div className="h-full rounded-full bg-[var(--success)] transition-all" style={{ width: `${pct}%` }} />
       </div>
+
+      {canShareOnline && !shareLink && (
+        <Button variant="outline" size="sm" className="w-full mb-3" onClick={onShare} disabled={shareLoading}>
+          {shareLoading ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+          {t("payments.shareLink")}
+        </Button>
+      )}
+      {shareErr && !shareLink && <p className="text-xs text-[var(--danger)] mb-3">{shareErr}</p>}
+      {shareLink && (
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 mb-4">
+          <span className="flex-1 min-w-0 text-xs text-[var(--ink)] truncate">{shareUrl}</span>
+          <button type="button" onClick={copyShareLink} aria-label={t("payments.onlineCopy")}
+            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)]">
+            {linkCopied ? <Check size={12} /> : <Copy size={12} />}
+            {linkCopied ? t("payments.onlineCopied") : t("payments.onlineCopy")}
+          </button>
+          <a href={shareUrl} target="_blank" rel="noreferrer" aria-label={t("payments.onlineOpen")}
+            className="shrink-0 inline-flex items-center text-[var(--ink-muted)] hover:text-[var(--ink)]">
+            <ExternalLink size={13} />
+          </a>
+        </div>
+      )}
 
       {payments.length === 0 ? (
         <p className="text-xs text-[var(--ink-muted)]">{t("invDetail.noPayments")}</p>
