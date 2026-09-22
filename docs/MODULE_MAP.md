@@ -36,7 +36,7 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 - **Request guards** (all in `pkg/middleware` + `pkg/routes/versioning.go`): `AuthRequired`, `GatewayAuth`, CSRF double-submit, version-guard, `RequireRoles`, idempotency keys (`idempotency_model.go`, `app/queries/idempotency_query.go`), pagination (`?page/?per_page` + `meta`).
 - **Cache** (dual-backend: Redis when `REDIS_HOST` set, memory otherwise): `platform/cache` (`session_store.go` sessions, `aggregates.go` dashboard/reports with singleflight), invalidated from controllers via `cache_helper.go` (`invalidateAggregates`).
 - **DB/schema**: `platform/database` (GORM `AutoMigrate`, backend health, `migrations.go` reversible registry + `POST /admin/migrate/down` rollback) with a forward-only version guard via `schema_migration_model.go` — a newer DB than the binary refuses to start.
-- **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `not_found_route.go` (JSON 404 for unknown `/api/*`), `swagger_route.go` (`/swagger`), `VERSION` file (read once at startup).
+- **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `not_found_route.go` (JSON 404 for unknown `/api/*`), `uploads_route.go` (`MountUploads`: local `/uploads/logos/*` only — receipts stay behind the auth proxy), `swagger_route.go` (`/swagger`), `VERSION` file (read once at startup).
 - **Captcha**: `platform/captcha` (Turnstile) — enforced on login/register.
 - **Docs**: Swagger annotations → `swag init` → committed `docs/` (`swagger.json/yaml`, `docs/docs.go`); `docs/API_DOCS.md` is a stub.
 

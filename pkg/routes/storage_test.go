@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
@@ -76,6 +77,43 @@ func TestLogoUpload(t *testing.T) {
 	resp = multipartFile(t, app, "POST", "/api/settings/logo", "logo", "evil.txt", "text/plain", []byte("nope"), cookies)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
+}
+
+// TestReceiptNotExposedViaStaticUploads guards the PRIVATE-receipt
+// contract: even with a valid storage key, /uploads must never serve
+// receipts — only the ownership-checked proxy may.
+func TestReceiptNotExposedViaStaticUploads(t *testing.T) {
+	dir := t.TempDir()
+	app := fiber.New()
+	require.NoError(t, MountUploads(app, dir))
+
+	// Seed a receipt file directly on disk (as UploadReceipt would).
+	receiptDir := dir + "/receipts/u1"
+	require.NoError(t, os.MkdirAll(receiptDir, 0o755))
+	require.NoError(t, os.WriteFile(receiptDir+"/e1.png", tinyPNG, 0o644))
+
+	for _, path := range []string{
+		"/uploads/receipts/u1/e1.png",
+		"/uploads/RECEIPTS/u1/e1.png",
+		"/uploads/logos/../../receipts/u1/e1.png",
+		"/uploads/receipts",
+		"/uploads",
+	} {
+		resp, err := app.Test(httptest.NewRequest("GET", path, nil), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+		require.NoError(t, err)
+		assert.Equal(t, 404, resp.StatusCode, path)
+		resp.Body.Close()
+	}
+
+	// Logos still serve.
+	require.NoError(t, os.WriteFile(dir+"/logos/u1.png", tinyPNG, 0o644))
+	resp, err := app.Test(httptest.NewRequest("GET", "/uploads/logos/u1.png", nil), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+	require.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+	got, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	require.NoError(t, err)
+	assert.Equal(t, tinyPNG, got)
 }
 
 // TestReceiptRoundTrip covers upload, proxy download and deletion.
