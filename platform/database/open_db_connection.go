@@ -1,7 +1,12 @@
 package database
 
 import (
+	"errors"
+	"fmt"
+	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/app/queries"
@@ -23,6 +28,7 @@ type Queries struct {
 	*queries.DashboardQueries   // load queries for Dashboard aggregates
 	*queries.IdempotencyQueries // load queries for idempotency keys
 	*queries.MailOutboxQueries  // load queries for mail outbox
+	*queries.AuditQueries       // load queries for audit trail
 }
 
 var (
@@ -60,17 +66,23 @@ func OpenDBConnection() (*Queries, error) {
 		DashboardQueries:   &queries.DashboardQueries{DB: db},   // for Dashboard aggregates
 		IdempotencyQueries: &queries.IdempotencyQueries{DB: db}, // for idempotency keys
 		MailOutboxQueries:  &queries.MailOutboxQueries{DB: db},  // for mail outbox
+		AuditQueries:       &queries.AuditQueries{DB: db},       // for audit trail
 	}, nil
 }
 
-// Migrate creates or updates tables from models.
+// SchemaVersion is the current schema revision. Bump it by 1 every time a
+// model changes so the version guard below can detect newer databases.
+const SchemaVersion = 1
+
+// Migrate creates or updates tables from models, then enforces the schema
+// version guard (forward-only upgrades; newer DB than binary is fatal).
 func Migrate() error {
 	db, err := openShared()
 	if err != nil {
 		return err
 	}
 
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Client{},
 		&models.Invoice{},
@@ -87,5 +99,51 @@ func Migrate() error {
 		&models.PasswordReset{},
 		&models.IdempotencyKey{},
 		&models.MailOutbox{},
-	)
+		&models.SchemaMigration{},
+		&models.AuditLog{},
+	); err != nil {
+		return err
+	}
+
+	return checkSchemaVersion(db)
+}
+
+// checkSchemaVersion implements the forward-only guard.
+func checkSchemaVersion(db *gorm.DB) error {
+	row := models.SchemaMigration{}
+	err := db.Where("id = ?", 1).First(&row).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		// Fresh database: stamp it.
+		return db.Create(&models.SchemaMigration{
+			ID: 1, Version: SchemaVersion,
+			AppVersion: appVersion(), AppliedAt: time.Now(),
+		}).Error
+	}
+	if row.Version > SchemaVersion {
+		return fmt.Errorf(
+			"database schema version %d is newer than this binary (version %d): refusing to start",
+			row.Version, SchemaVersion)
+	}
+	if row.Version < SchemaVersion {
+		row.Version = SchemaVersion
+		row.AppVersion = appVersion()
+		row.AppliedAt = time.Now()
+		return db.Save(&row).Error
+	}
+	return nil
+}
+
+// appVersion reads the single-source VERSION file, falling back to "dev".
+func appVersion() string {
+	raw, err := os.ReadFile("VERSION")
+	if err != nil {
+		return "dev"
+	}
+	if v := strings.TrimSpace(string(raw)); v != "" {
+		return v
+	}
+	return "dev"
 }

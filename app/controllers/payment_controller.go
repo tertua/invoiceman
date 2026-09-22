@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -152,6 +153,8 @@ func CreatePayment(c fiber.Ctx) error {
 	if err := db.CreatePayment(payment); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment", nil)
 	}
+	recordAudit(c, db, userID, "payment.create", "payment", payment.ID.String(),
+		`{"invoice_id":"`+invoiceID.String()+`","amount":`+strconv.FormatFloat(input.Amount, 'f', -1, 64)+`}`)
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": fiber.Map{
 		"id":         payment.ID,
 		"invoice_id": payment.InvoiceID,
@@ -194,6 +197,7 @@ func DeletePayment(c fiber.Ctx) error {
 	if err := db.DeletePayment(userID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete payment", nil)
 	}
+	recordAudit(c, db, userID, "payment.delete", "payment", id.String(), "")
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

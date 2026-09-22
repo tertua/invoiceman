@@ -72,6 +72,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	if err := db.UpdateSettings(&settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update settings", nil)
 	}
+	recordAudit(c, db, userID, "settings.update", "settings", userID.String(), "")
 	settings, err = db.GetSettings(userID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)

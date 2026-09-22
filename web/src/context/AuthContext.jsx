@@ -24,14 +24,14 @@ export function AuthProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  const login = useCallback(async (credentials) => {
-    const { user } = await authApi.login(credentials);
+  const login = useCallback(async (credentials, captchaToken) => {
+    const { user } = await authApi.login(credentials, captchaToken);
     setUser(user);
     return user;
   }, []);
 
-  const register = useCallback(async (payload) => {
-    const { user } = await authApi.register(payload);
+  const register = useCallback(async (payload, captchaToken) => {
+    const { user } = await authApi.register(payload, captchaToken);
     setUser(user);
     return user;
   }, []);

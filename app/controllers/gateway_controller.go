@@ -539,6 +539,9 @@ func RotateProjectKey(c fiber.Ctx) error {
 	if err := db.SaveProject(&p); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate key", nil)
 	}
+	if adminID, aerr := utils.CurrentUserID(c); aerr == nil {
+		recordAudit(c, db, adminID, "gateway.key.rotate", "project", p.Slug, "")
+	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, apiKey)})
 }
 
@@ -570,6 +573,9 @@ func RotateProjectSecret(c fiber.Ctx) error {
 	p.UpdatedAt = time.Now()
 	if err := db.SaveProject(&p); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate secret", nil)
+	}
+	if adminID, aerr := utils.CurrentUserID(c); aerr == nil {
+		recordAudit(c, db, adminID, "gateway.secret.rotate", "project", p.Slug, "")
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, "")})
 }

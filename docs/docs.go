@@ -22,6 +22,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/audit-logs": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "List audit trail entries.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "list audit trail",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/gateway/deliveries": {
             "get": {
                 "description": "List relay deliveries.",
@@ -545,6 +585,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.ForgotPassword"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Turnstile token (required when CAPTCHA is enabled)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -580,6 +626,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Login"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Turnstile token (required when CAPTCHA is enabled)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -752,6 +804,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Register"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Turnstile token (required when CAPTCHA is enabled)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
                     }
                 ],
                 "responses": {

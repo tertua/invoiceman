@@ -367,6 +367,31 @@ info:
   title: API
   version: "1.0"
 paths:
+  /admin/audit-logs:
+    get:
+      description: List audit trail entries.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: list audit trail
+      tags:
+      - Admin
   /admin/gateway/deliveries:
     get:
       description: List relay deliveries.
@@ -703,6 +728,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.ForgotPassword'
+      - description: Turnstile token (required when CAPTCHA is enabled)
+        in: header
+        name: X-Captcha-Token
+        type: string
       produces:
       - application/json
       responses:
@@ -726,6 +755,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.Login'
+      - description: Turnstile token (required when CAPTCHA is enabled)
+        in: header
+        name: X-Captcha-Token
+        type: string
       produces:
       - application/json
       responses:
@@ -834,6 +867,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.Register'
+      - description: Turnstile token (required when CAPTCHA is enabled)
+        in: header
+        name: X-Captcha-Token
+        type: string
       produces:
       - application/json
       responses:

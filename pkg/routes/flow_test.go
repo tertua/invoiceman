@@ -39,11 +39,34 @@ func doRequest(t *testing.T, app *fiber.App, method, route, body string, cookies
 	req.Header.Set("Content-Type", "application/json")
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
+		// Mirror the SPA: echo the CSRF cookie as its header.
+		if cookie.Name == "csrf_token" && cookie.Value != "" {
+			req.Header.Set("X-CSRF-Token", cookie.Value)
+		}
 	}
 
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	return resp
+}
+
+// mergeCookies overlays new cookies onto the jar by name (a refresh
+// response only carries session cookies; the CSRF cookie persists).
+func mergeCookies(old, new []*http.Cookie) []*http.Cookie {
+	merged := append([]*http.Cookie{}, old...)
+	index := map[string]int{}
+	for i, c := range merged {
+		index[c.Name] = i
+	}
+	for _, c := range new {
+		if i, ok := index[c.Name]; ok {
+			merged[i] = c
+		} else {
+			index[c.Name] = len(merged)
+			merged = append(merged, c)
+		}
+	}
+	return merged
 }
 
 // decodeBody decodes a JSON response body.
@@ -166,7 +189,7 @@ func TestAuthFlow(t *testing.T) {
 		}
 	}
 	assert.True(t, renewed, "expected a fresh access_token cookie")
-	cookies = resp.Cookies()
+	cookies = mergeCookies(cookies, resp.Cookies())
 
 	// Change password.
 	resp = doRequest(t, app, "PATCH", "/api/auth/password",

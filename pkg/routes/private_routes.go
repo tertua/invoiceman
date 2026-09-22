@@ -8,8 +8,15 @@ import (
 
 // PrivateRoutes func for describe group of private routes.
 func PrivateRoutes(a *fiber.App) {
-	// Create routes group matching the frontend apiClient baseURL ("/api").
-	route := a.Group("/api", middleware.GeneralLimiter(), middleware.AuthRequired())
+	PrivateRoutesAt(a, APILegacyPrefix)
+}
+
+// PrivateRoutesAt registers private routes under prefix (see versioning.go).
+func PrivateRoutesAt(a *fiber.App, prefix string) {
+	// Create routes group matching the frontend apiClient baseURL.
+	// RequireCSRF runs after AuthRequired: only session-cookie mutations
+	// need the double-submit header; API-key relay has its own group.
+	route := a.Group(prefix, middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireCSRF())
 
 	// Auth session routes:
 	route.Get("/auth/me", controllers.Me)                     // get current session user
@@ -72,7 +79,8 @@ func PrivateRoutes(a *fiber.App) {
 		middleware.Idempotency(middleware.SessionIdempotencyScope),
 		middleware.WithAITimeout(controllers.CreateInvoiceIntent))
 
-	admin := a.Group("/api/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireRoles("admin"))
+	admin := a.Group(prefix+"/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
 	admin.Get("/users", controllers.ListUsers)
 	admin.Patch("/users/:id/role", controllers.UpdateUserRole)
+	admin.Get("/audit-logs", controllers.ListAuditLogs)
 }

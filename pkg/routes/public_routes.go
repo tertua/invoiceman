@@ -12,8 +12,13 @@ import (
 // a subgroup with an empty prefix mounts its middleware on the parent
 // prefix, which would throttle every /api route including private ones.
 func PublicRoutes(a *fiber.App) {
-	// Create routes group matching the frontend apiClient baseURL ("/api").
-	route := a.Group("/api")
+	PublicRoutesAt(a, APILegacyPrefix)
+}
+
+// PublicRoutesAt registers public routes under prefix (see versioning.go).
+func PublicRoutesAt(a *fiber.App, prefix string) {
+	// Create routes group matching the frontend apiClient baseURL.
+	route := a.Group(prefix)
 
 	// Brute-forceable auth endpoints get the strict limiter.
 	auth := middleware.AuthLimiter()

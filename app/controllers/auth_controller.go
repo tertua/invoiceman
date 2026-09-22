@@ -13,9 +13,11 @@ import (
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/logger"
+	"github.com/tertua/invoiceman/pkg/middleware"
 	"github.com/tertua/invoiceman/pkg/repository"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
+	"github.com/tertua/invoiceman/platform/captcha"
 	"github.com/tertua/invoiceman/platform/database"
 
 	"github.com/gofiber/fiber/v3"
@@ -50,6 +52,31 @@ func deleteRefreshToken(userID uuid.UUID) error {
 	return store.Delete(context.Background(), userID.String())
 }
 
+// issueCSRF mints the double-submit token for a fresh session.
+func issueCSRF(c fiber.Ctx) error {
+	token, err := middleware.NewCSRFToken()
+	if err != nil {
+		return err
+	}
+	middleware.SetCSRFCookie(c, token)
+	return nil
+}
+
+// checkCaptcha enforces Turnstile verification when configured.
+// Disabled (no secret) in dev/test; fails closed otherwise.
+// It writes the 403 response itself: callers must return nil when it
+// reports false (utils.Fail returns nil after writing).
+func checkCaptcha(c fiber.Ctx) bool {
+	if !captcha.Required() {
+		return true
+	}
+	if err := captcha.Verify(c.Context(), c.Get(captcha.TokenHeader), c.IP()); err != nil {
+		_ = utils.Fail(c, fiber.StatusForbidden, "captcha verification failed", nil)
+		return false
+	}
+	return true
+}
+
 // Register creates a new user and starts a session.
 // @Description Register a new user.
 // @Summary register a new user
@@ -57,9 +84,13 @@ func deleteRefreshToken(userID uuid.UUID) error {
 // @Accept json
 // @Produce json
 // @Param request body models.Register true "Register payload"
+// @Param X-Captcha-Token header string false "Turnstile token (required when CAPTCHA is enabled)"
 // @Success 201 {object} map[string]interface{}
 // @Router /auth/register [post]
 func Register(c fiber.Ctx) error {
+	if !checkCaptcha(c) {
+		return nil
+	}
 	payload := &models.Register{}
 
 	if err := c.Bind().Body(payload); err != nil {
@@ -119,6 +150,9 @@ func Register(c fiber.Ctx) error {
 	if err := saveRefreshToken(user.ID, tokens.Refresh); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
 	}
+	if err := issueCSRF(c); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
+	}
 
 	user.PasswordHash = ""
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"user": publicUser(*user)})
@@ -131,9 +165,13 @@ func Register(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param request body models.Login true "Login payload"
+// @Param X-Captcha-Token header string false "Turnstile token (required when CAPTCHA is enabled)"
 // @Success 200 {object} map[string]interface{}
 // @Router /auth/login [post]
 func Login(c fiber.Ctx) error {
+	if !checkCaptcha(c) {
+		return nil
+	}
 	payload := &models.Login{}
 
 	if err := c.Bind().Body(payload); err != nil {
@@ -166,6 +204,9 @@ func Login(c fiber.Ctx) error {
 	if err := saveRefreshToken(user.ID, tokens.Refresh); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
 	}
+	if err := issueCSRF(c); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
+	}
 
 	user.PasswordHash = ""
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user)})
@@ -190,6 +231,7 @@ func Logout(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete session", nil)
 	}
 	utils.ClearSession(c)
+	middleware.ClearCSRFCookie(c)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -305,6 +347,7 @@ func ChangePassword(c fiber.Ctx) error {
 	if err := db.UpdateUserPassword(userID, utils.GeneratePassword(payload.NewPassword)); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update password", nil)
 	}
+	recordAudit(c, db, userID, "auth.password.change", "user", userID.String(), "")
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "password updated"})
 }
@@ -316,9 +359,13 @@ func ChangePassword(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param request body models.ForgotPassword true "Forgot password payload"
+// @Param X-Captcha-Token header string false "Turnstile token (required when CAPTCHA is enabled)"
 // @Success 200 {object} map[string]interface{}
 // @Router /auth/forgot-password [post]
 func ForgotPassword(c fiber.Ctx) error {
+	if !checkCaptcha(c) {
+		return nil
+	}
 	payload := &models.ForgotPassword{}
 
 	if err := c.Bind().Body(payload); err != nil {

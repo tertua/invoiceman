@@ -9,6 +9,7 @@ import {
   AuthErrorBanner,
 } from "@/components/auth/AuthShell";
 import AILogo from "@/components/layout/AILogo";
+import Turnstile from "@/components/auth/Turnstile";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 
@@ -17,6 +18,7 @@ export default function Register() {
   const { t } = useLang();
   const nav = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +27,7 @@ export default function Register() {
     setErr("");
     setLoading(true);
     try {
-      await register(form);
+      await register(form, captchaToken);
       nav("/dashboard");
     } catch (e) {
       setErr(e.message || t("auth.registrationFailed"));
@@ -93,6 +95,8 @@ export default function Register() {
           />
 
           <AuthErrorBanner>{err}</AuthErrorBanner>
+
+          <Turnstile onVerify={setCaptchaToken} />
 
           <div className="pt-1">
             <AuthPrimaryButton type="submit" disabled={loading}>

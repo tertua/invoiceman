@@ -264,6 +264,7 @@ func DeleteClient(c fiber.Ctx) error {
 	if err := db.DeleteClient(userID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete client", nil)
 	}
+	recordAudit(c, db, userID, "client.delete", "client", id.String(), "")
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

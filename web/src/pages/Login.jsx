@@ -8,6 +8,7 @@ import {
   AuthPrimaryButton,
   AuthErrorBanner,
 } from "@/components/auth/AuthShell";
+import Turnstile from "@/components/auth/Turnstile";
 import AILogo from "@/components/layout/AILogo";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
@@ -36,6 +37,7 @@ export default function Login() {
 
 function LoginForm({ login, nav, location, t }) {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +46,7 @@ function LoginForm({ login, nav, location, t }) {
     setErr("");
     setLoading(true);
     try {
-      await login(form);
+      await login(form, captchaToken);
       const destination = location.state?.from;
       nav(destination ? `${destination.pathname}${destination.search}${destination.hash}` : "/dashboard", { replace: true });
     } catch (e) {
@@ -101,6 +103,8 @@ function LoginForm({ login, nav, location, t }) {
           />
 
           <AuthErrorBanner>{err}</AuthErrorBanner>
+
+          <Turnstile onVerify={setCaptchaToken} />
 
           <div className="pt-1">
             <AuthPrimaryButton type="submit" disabled={loading}>

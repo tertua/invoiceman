@@ -7,18 +7,23 @@ import (
 )
 
 // GatewayRoutes registers the service-to-service relay endpoints.
+func GatewayRoutes(a *fiber.App) {
+	GatewayRoutesAt(a, APILegacyPrefix)
+}
+
+// GatewayRoutesAt registers relay endpoints under prefix (see versioning.go).
 // It must be registered BEFORE PrivateRoutes: the session AuthRequired
-// group matches the /api prefix, so anything registered after it would
+// group matches the prefix, so anything registered after it would
 // be forced through cookie sessions. Service identity here comes only
 // from the API key header (see GatewayAuth).
-func GatewayRoutes(a *fiber.App) {
-	gateway := a.Group("/api/gateway", middleware.GatewayLimiter(), middleware.GatewayAuth())
+func GatewayRoutesAt(a *fiber.App, prefix string) {
+	gateway := a.Group(prefix+"/gateway", middleware.GatewayLimiter(), middleware.GatewayAuth())
 	gateway.Post("/intents", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateIntent)
 	gateway.Get("/intents/:order_id", controllers.GetIntent)
 	gateway.Get("/transactions", controllers.ListMyTransactions)
 	gateway.Get("/deliveries", controllers.ListMyDeliveries)
 
-	admin := a.Group("/api/admin/gateway", middleware.AuthRequired(), middleware.RequireRoles("admin"))
+	admin := a.Group(prefix+"/admin/gateway", middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
 	admin.Post("/projects", controllers.CreateProject)
 	admin.Get("/projects", controllers.ListProjects)
 	admin.Patch("/projects/:slug", controllers.UpdateProject)

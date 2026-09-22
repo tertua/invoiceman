@@ -467,6 +467,7 @@ func DeleteInvoice(c fiber.Ctx) error {
 	if err := db.DeleteInvoice(userID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete invoice", nil)
 	}
+	recordAudit(c, db, userID, "invoice.delete", "invoice", id.String(), "")
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

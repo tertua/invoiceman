@@ -41,6 +41,10 @@ type Config struct {
 
 	Outbox OutboxConfig
 
+	Captcha CaptchaConfig
+
+	Debug DebugConfig
+
 	Metrics MetricsConfig
 }
 
@@ -127,6 +131,16 @@ type IdempotencyConfig struct {
 type OutboxConfig struct {
 	PollSeconds int // OUTBOX_POLL_SECONDS
 	Batch       int // OUTBOX_BATCH
+}
+
+// CaptchaConfig holds bot protection settings.
+type CaptchaConfig struct {
+	TurnstileSecret string // TURNSTILE_SECRET: empty = verification skipped
+}
+
+// DebugConfig holds the localhost-only diagnostics listener.
+type DebugConfig struct {
+	Port string // DEBUG_PORT: empty = disabled
 }
 
 // MidtransConfig holds Midtrans relay credentials.
@@ -232,6 +246,12 @@ func Load() (Config, error) {
 			PollSeconds: envInt("OUTBOX_POLL_SECONDS", 10),
 			Batch:       envInt("OUTBOX_BATCH", 20),
 		},
+		Captcha: CaptchaConfig{
+			TurnstileSecret: strings.TrimSpace(os.Getenv("TURNSTILE_SECRET")),
+		},
+		Debug: DebugConfig{
+			Port: strings.TrimSpace(os.Getenv("DEBUG_PORT")),
+		},
 		Log: LogConfig{Level: strings.ToLower(envOr("LOG_LEVEL", "info"))},
 		Metrics: MetricsConfig{
 			Enabled: envBool("METRICS_ENABLED", true),
@@ -296,6 +316,11 @@ func (c Config) Validate() error {
 		}
 		if c.Redis.DBNumber < 0 {
 			return fmt.Errorf("invalid REDIS_DB_NUMBER: must be >= 0")
+		}
+	}
+	if c.Debug.Port != "" {
+		if port, err := strconv.Atoi(c.Debug.Port); err != nil || port < 1 || port > 65535 {
+			return fmt.Errorf("invalid DEBUG_PORT %q: must be 1-65535", c.Debug.Port)
 		}
 	}
 	if c.Mail.SMTPHost != "" {

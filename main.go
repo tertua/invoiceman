@@ -24,6 +24,8 @@ import (
 	_ "github.com/tertua/invoiceman/docs" // load API Docs files (Swagger)
 
 	_ "github.com/joho/godotenv/autoload" // load .env file automatically
+
+	_ "net/http/pprof" // localhost-only diagnostics (see startDebugListener)
 )
 
 // @title API
@@ -73,7 +75,8 @@ func main() {
 	app := fiber.New(fiberConfig)
 
 	// Middlewares.
-	middleware.FiberMiddleware(app) // Register Fiber's middleware for app.
+	middleware.FiberMiddleware(app)      // Register Fiber's middleware for app.
+	app.Use(routes.DeprecationHeaders()) // Mark legacy /api responses.
 
 	// Migrate database schema (SQLite file is auto-created on first run).
 	if err := database.Migrate(); err != nil {
@@ -91,14 +94,17 @@ func main() {
 	worker.Start(context.Background())
 	defer worker.Stop()
 
+	// Localhost-only diagnostics (pprof). Off unless DEBUG_PORT is set;
+	// never exposed publicly.
+	startDebugListener(cfg.Debug.Port)
+
 	// Routes.
-	routes.HealthRoutes(app)  // Liveness/readiness probes (public, before auth).
-	routes.MetricsRoutes(app) // Prometheus-compatible scrape endpoint.
-	routes.SwaggerRoute(app)  // Register a route for API Docs (Swagger).
-	routes.PublicRoutes(app)  // Register a public routes for app.
-	routes.GatewayRoutes(app) // Register service relay routes (API key, before sessions).
-	routes.PrivateRoutes(app) // Register a private routes for app.
-	routes.NotFoundRoute(app) // Register route for 404 Error.
+	routes.HealthRoutes(app)                        // Liveness/readiness probes (public, before auth).
+	routes.MetricsRoutes(app)                       // Prometheus-compatible scrape endpoint.
+	routes.SwaggerRoute(app)                        // Register a route for API Docs (Swagger).
+	routes.RegisterAPI(app, routes.APIV1Prefix)     // Current prefix first (see versioning.go ordering).
+	routes.RegisterAPI(app, routes.APILegacyPrefix) // Legacy prefix (deprecation headers).
+	routes.NotFoundRoute(app)                       // Register route for 404 Error.
 
 	// One-line startup summary (secrets never logged).
 	logger.L().Info("starting server",
@@ -130,6 +136,21 @@ func healthcheck(port string) int {
 		return 1
 	}
 	return 0
+}
+
+// startDebugListener serves net/http/pprof on 127.0.0.1 only.
+// Empty port disables it (default).
+func startDebugListener(port string) {
+	if port == "" {
+		return
+	}
+	go func() {
+		// Bound to loopback deliberately: profiles can leak internals.
+		if err := http.ListenAndServe("127.0.0.1:"+port, nil); err != nil {
+			logger.L().Warn("debug listener stopped", "err", err)
+		}
+	}()
+	logger.L().Info("debug listener on 127.0.0.1:" + port)
 }
 
 // appVersion reads the single-source VERSION file, falling back to "dev".

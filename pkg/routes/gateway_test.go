@@ -38,6 +38,10 @@ func doGatewayRequest(t *testing.T, app *fiber.App, method, route, body string, 
 	}
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
+		// Mirror the SPA: echo the CSRF cookie as its header.
+		if cookie.Name == "csrf_token" && cookie.Value != "" {
+			req.Header.Set("X-CSRF-Token", cookie.Value)
+		}
 	}
 	resp, err := app.Test(req)
 	require.NoError(t, err)

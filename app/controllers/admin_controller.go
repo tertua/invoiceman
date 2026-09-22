@@ -101,6 +101,42 @@ func UpdateUserRole(c fiber.Ctx) error {
 	if err := db.UpdateUserRole(userID, input.Role); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update user role", nil)
 	}
+	recordAudit(c, db, adminID, "user.role.update", "user", userID.String(), `{"role":"`+input.Role+`"}`)
 	user.UserRole = input.Role
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": adminUserResponse(user)})
+}
+
+// ListAuditLogs returns one page of the audit trail for an administrator.
+// @Description List audit trail entries.
+// @Summary list audit trail
+// @Tags Admin
+// @Produce json
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /admin/audit-logs [get]
+func ListAuditLogs(c fiber.Ctx) error {
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	paging := utils.ParsePagination(c)
+	rows, err := db.ListAuditLogs(paging.Limit(), paging.Offset())
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load audit logs", nil)
+	}
+	total, err := db.CountAuditLogs()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count audit logs", nil)
+	}
+	out := make([]fiber.Map, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, fiber.Map{
+			"id": r.ID, "user_id": r.UserID, "action": r.Action,
+			"entity": r.Entity, "entity_id": r.EntityID,
+			"ip": r.IP, "created_at": r.CreatedAt,
+		})
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"audit_logs": out, "meta": paging.Meta(total)})
 }

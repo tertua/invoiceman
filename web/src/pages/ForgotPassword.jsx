@@ -9,12 +9,14 @@ import {
   AuthErrorBanner,
 } from "@/components/auth/AuthShell";
 import AILogo from "@/components/layout/AILogo";
+import Turnstile from "@/components/auth/Turnstile";
 import { authApi } from "@/api/auth";
 import { useLang } from "@/context/LangContext";
 
 export default function ForgotPassword() {
   const { t } = useLang();
   const [email, setEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -24,7 +26,7 @@ export default function ForgotPassword() {
     setErr("");
     setLoading(true);
     try {
-      await authApi.forgotPassword({ email });
+      await authApi.forgotPassword({ email }, captchaToken);
       setSent(true);
     } catch (ex) {
       setErr(ex.message || t("auth.resetFailed"));
@@ -82,6 +84,8 @@ export default function ForgotPassword() {
             />
 
             <AuthErrorBanner>{err}</AuthErrorBanner>
+
+            <Turnstile onVerify={setCaptchaToken} />
 
             <div className="pt-1">
               <AuthPrimaryButton type="submit" disabled={loading}>
