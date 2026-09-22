@@ -107,6 +107,7 @@ func (q *ExpenseQueries) UpdateExpense(expense *models.Expense) error {
 			"amount":       expense.Amount,
 			"currency":     expense.Currency,
 			"notes":        expense.Notes,
+			"receipt_url":  expense.ReceiptURL,
 		}).Error
 }
 

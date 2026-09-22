@@ -3,6 +3,9 @@ package controllers
 import (
 	"database/sql"
 	"errors"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -10,6 +13,7 @@ import (
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/storage"
 )
 
 func expenseResponse(expense models.Expense) fiber.Map {
@@ -21,7 +25,17 @@ func expenseResponse(expense models.Expense) fiber.Map {
 		"amount":       expense.Amount,
 		"currency":     expense.Currency,
 		"notes":        expense.Notes,
+		"receipt_url":  receiptProxyURL(expense),
 	}
+}
+
+// receiptProxyURL returns the authenticated proxy path for an attached
+// receipt, or "" when none is attached.
+func receiptProxyURL(expense models.Expense) string {
+	if strings.TrimSpace(expense.ReceiptURL) == "" {
+		return ""
+	}
+	return "/api/v1/expenses/" + expense.ID.String() + "/receipt"
 }
 
 // ListExpenses returns one page of expenses plus global totals.
@@ -231,4 +245,206 @@ func DeleteExpense(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete expense", nil)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// maxReceiptUploadSize caps stored receipt attachments.
+const maxReceiptUploadSize = 10 << 20
+
+// receiptContentType sniffs the uploaded content; only images and PDFs
+// are accepted as receipts.
+func receiptContentType(header, sniffed string) (string, bool) {
+	ct := sniffed
+	if ct == "" || ct == "application/octet-stream" {
+		ct = header
+	}
+	if strings.HasPrefix(ct, "image/") || ct == "application/pdf" {
+		return ct, true
+	}
+	return "", false
+}
+
+// UploadReceipt stores a receipt attachment for an expense owned by the
+// current user, replacing any previous one.
+// @Description Upload an expense receipt.
+// @Summary upload expense receipt
+// @Tags Expenses
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "Expense ID"
+// @Param file formData file true "Receipt image or PDF (max 10MB)"
+// @Success 200 {object} map[string]interface{}
+// @Security ApiKeyAuth
+// @Router /expenses/{id}/receipt [post]
+func UploadReceipt(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	expense, err := db.GetExpense(userID, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+	}
+	file, err := c.FormFile("file")
+	if err != nil || file == nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "receipt file is required", nil)
+	}
+	if file.Size > maxReceiptUploadSize {
+		return utils.Fail(c, fiber.StatusBadRequest, "receipt file is too large", nil)
+	}
+	reader, err := file.Open()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
+	}
+	defer reader.Close()
+	ct, ok := receiptContentType(file.Header.Get("Content-Type"), sniffContentType(reader))
+	if !ok {
+		return utils.Fail(c, fiber.StatusBadRequest, "receipt must be an image or PDF", nil)
+	}
+	store, err := storage.Shared()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "file storage is not configured", nil)
+	}
+	key := storage.ReceiptKey(userID.String(), id.String(), extForContentType(ct))
+	if _, err := reader.Seek(0, io.SeekStart); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
+	}
+	if err := store.Put(c.Context(), key, reader, file.Size, ct); err != nil {
+		return utils.Fail(c, fiber.StatusBadGateway, "failed to store receipt file", nil)
+	}
+	if old := strings.TrimSpace(expense.ReceiptURL); old != "" && old != key {
+		_ = store.Delete(c.Context(), old)
+	}
+	expense.ReceiptURL = key
+	if err := db.UpdateExpense(&expense); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to save receipt", nil)
+	}
+	recordAudit(c, db, userID, "expense.receipt.upload", "expense", id.String(), "")
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"expense": expenseResponse(expense)})
+}
+
+// GetReceipt streams the attached receipt through an authenticated,
+// ownership-checked endpoint (works for local and S3 backends).
+// @Description Download an expense receipt.
+// @Summary download expense receipt
+// @Tags Expenses
+// @Produce octet-stream
+// @Param id path string true "Expense ID"
+// @Success 200 {file} binary
+// @Security ApiKeyAuth
+// @Router /expenses/{id}/receipt [get]
+func GetReceipt(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	expense, err := db.GetExpense(userID, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+	}
+	if strings.TrimSpace(expense.ReceiptURL) == "" {
+		return utils.Fail(c, fiber.StatusNotFound, "receipt not found", nil)
+	}
+	store, err := storage.Shared()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "file storage is not configured", nil)
+	}
+	rc, ct, err := store.Get(c.Context(), expense.ReceiptURL)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "receipt not found", nil)
+	}
+	// No Close here: the stream is sent after this handler returns and
+	// fasthttp closes body streams once written.
+	c.Set("Content-Type", ct)
+	return c.SendStream(rc)
+}
+
+// DeleteReceipt removes the attached receipt of an expense.
+// @Description Delete an expense receipt.
+// @Summary delete expense receipt
+// @Tags Expenses
+// @Produce json
+// @Param id path string true "Expense ID"
+// @Success 204 {string} status "ok"
+// @Security ApiKeyAuth
+// @Router /expenses/{id}/receipt [delete]
+func DeleteReceipt(c fiber.Ctx) error {
+	userID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	expense, err := db.GetExpense(userID, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+	}
+	if key := strings.TrimSpace(expense.ReceiptURL); key != "" {
+		if store, serr := storage.Shared(); serr == nil {
+			_ = store.Delete(c.Context(), key)
+		}
+		expense.ReceiptURL = ""
+		if err := db.UpdateExpense(&expense); err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to remove receipt", nil)
+		}
+	}
+	recordAudit(c, db, userID, "expense.receipt.delete", "expense", id.String(), "")
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// sniffContentType reads the first bytes for mime sniffing. The reader is
+// left consumed; callers must Seek back before uploading.
+func sniffContentType(r io.Reader) string {
+	head := make([]byte, 512)
+	n, _ := io.ReadFull(r, head)
+	return http.DetectContentType(head[:n])
+}
+
+func extForContentType(ct string) string {
+	switch strings.ToLower(strings.TrimSpace(ct)) {
+	case "image/png":
+		return ".png"
+	case "image/jpeg":
+		return ".jpg"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	case "image/svg+xml":
+		return ".svg"
+	case "application/pdf":
+		return ".pdf"
+	default:
+		return ".bin"
+	}
 }

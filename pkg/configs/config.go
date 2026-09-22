@@ -45,6 +45,8 @@ type Config struct {
 
 	Debug DebugConfig
 
+	Storage StorageConfig
+
 	Metrics MetricsConfig
 }
 
@@ -141,6 +143,20 @@ type CaptchaConfig struct {
 // DebugConfig holds the localhost-only diagnostics listener.
 type DebugConfig struct {
 	Port string // DEBUG_PORT: empty = disabled
+}
+
+// StorageConfig holds file storage settings (logos, receipts).
+type StorageConfig struct {
+	Backend   string // STORAGE_BACKEND: "local" or "s3"
+	Dir       string // STORAGE_DIR for the local backend
+	PublicURL string // STORAGE_PUBLIC_URL: public origin for stored files
+
+	S3Endpoint  string // S3_ENDPOINT
+	S3Bucket    string // S3_BUCKET
+	S3Region    string // S3_REGION
+	S3AccessKey string // S3_ACCESS_KEY
+	S3SecretKey string // S3_SECRET_KEY
+	S3UseSSL    bool   // S3_USE_SSL
 }
 
 // MidtransConfig holds Midtrans relay credentials.
@@ -252,6 +268,17 @@ func Load() (Config, error) {
 		Debug: DebugConfig{
 			Port: strings.TrimSpace(os.Getenv("DEBUG_PORT")),
 		},
+		Storage: StorageConfig{
+			Backend:     envOr("STORAGE_BACKEND", "local"),
+			Dir:         envOr("STORAGE_DIR", "./data/uploads"),
+			PublicURL:   strings.TrimRight(strings.TrimSpace(os.Getenv("STORAGE_PUBLIC_URL")), "/"),
+			S3Endpoint:  strings.TrimSpace(os.Getenv("S3_ENDPOINT")),
+			S3Bucket:    strings.TrimSpace(os.Getenv("S3_BUCKET")),
+			S3Region:    envOr("S3_REGION", "us-east-1"),
+			S3AccessKey: strings.TrimSpace(os.Getenv("S3_ACCESS_KEY")),
+			S3SecretKey: os.Getenv("S3_SECRET_KEY"),
+			S3UseSSL:    envBool("S3_USE_SSL", true),
+		},
 		Log: LogConfig{Level: strings.ToLower(envOr("LOG_LEVEL", "info"))},
 		Metrics: MetricsConfig{
 			Enabled: envBool("METRICS_ENABLED", true),
@@ -321,6 +348,17 @@ func (c Config) Validate() error {
 	if c.Debug.Port != "" {
 		if port, err := strconv.Atoi(c.Debug.Port); err != nil || port < 1 || port > 65535 {
 			return fmt.Errorf("invalid DEBUG_PORT %q: must be 1-65535", c.Debug.Port)
+		}
+	}
+	if c.Storage.Backend != "local" && c.Storage.Backend != "s3" {
+		return fmt.Errorf("invalid STORAGE_BACKEND %q: must be \"local\" or \"s3\"", c.Storage.Backend)
+	}
+	if c.Storage.Backend == "s3" {
+		if c.Storage.S3Endpoint == "" || c.Storage.S3Bucket == "" {
+			return fmt.Errorf("S3_ENDPOINT and S3_BUCKET are required when STORAGE_BACKEND=s3")
+		}
+		if c.Storage.S3AccessKey == "" || c.Storage.S3SecretKey == "" {
+			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required when STORAGE_BACKEND=s3")
 		}
 	}
 	if c.Mail.SMTPHost != "" {

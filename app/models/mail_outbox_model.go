@@ -20,10 +20,12 @@ const (
 // Controllers enqueue and return fast; SMTP latency and retries never
 // block API responses.
 type MailOutbox struct {
-	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id"`
-	To          string     `gorm:"size:255;index" db:"to" json:"-"`
-	Subject     string     `gorm:"size:255" db:"subject" json:"-"`
-	Body        string     `gorm:"type:text" db:"body" json:"-"`
+	ID      uuid.UUID `gorm:"type:uuid;primaryKey" db:"id" json:"id"`
+	To      string    `gorm:"size:255;index" db:"to" json:"-"`
+	Subject string    `gorm:"size:255" db:"subject" json:"-"`
+	Body    string    `gorm:"type:text" db:"body" json:"-"`
+	// HtmlBody holds the optional HTML part (multipart/alternative).
+	HtmlBody    string     `gorm:"type:text" db:"html_body" json:"-"`
 	Status      string     `gorm:"size:16;index;default:pending" db:"status" json:"-"`
 	Attempt     int        `db:"attempt" json:"-"`
 	NextRetryAt *time.Time `gorm:"index" db:"next_retry_at" json:"-"`

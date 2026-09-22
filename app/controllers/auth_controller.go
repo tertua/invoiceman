@@ -19,6 +19,7 @@ import (
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/captcha"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/mail"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -392,10 +393,17 @@ func ForgotPassword(c fiber.Ctx) error {
 			}
 			resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
 			body := fmt.Sprintf("Hello %s,\n\nReset your password using this link:\n%s\n\nThis link expires in one hour.", user.Name, resetURL)
+			htmlBody, terr := mail.Render("reset_password", mail.TemplateData{
+				AppName: configs.Get().AppName, Name: user.Name, URL: resetURL,
+			})
+			if terr != nil {
+				logger.L().Warn("password reset email template failed", "err", terr)
+			}
 			if err := db.EnqueueMail(&models.MailOutbox{
-				To:      user.Email,
-				Subject: "Reset your Invoiceman password",
-				Body:    body,
+				To:       user.Email,
+				Subject:  "Reset your Invoiceman password",
+				Body:     body,
+				HtmlBody: htmlBody,
 			}); err != nil {
 				logger.L().Warn("password reset email queue failed", "email", user.Email, "err", err)
 			}

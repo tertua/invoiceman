@@ -176,10 +176,13 @@ const CATEGORIES = ["General", "Software", "Hosting", "Meals", "Travel", "Office
 function ExpenseModal({ open, expense, onClose }) {
   const isEdit = !!expense?.id;
   const { t } = useLang();
-  const { create, update } = useExpenseMutations();
+  const { create, update, uploadReceipt, deleteReceipt } = useExpenseMutations();
   const [form, setForm] = useState(null);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptBusy, setReceiptBusy] = useState(false);
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
+  const receiptRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -190,6 +193,7 @@ function ExpenseModal({ open, expense, onClose }) {
         amount: expense?.amount ?? 0,
         notes: expense?.notes || "",
       });
+      setReceiptUrl(expense?.receipt_url || "");
       setErr("");
     }
   }, [open, expense]);
@@ -224,6 +228,40 @@ function ExpenseModal({ open, expense, onClose }) {
 
   const selectClass = "h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
   const prefilled = open && !isEdit && (form.vendor || Number(form.amount) > 0);
+
+  async function onReceiptPick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !isEdit) return;
+    if (file.size > 10_000_000) {
+      setErr(t("expenses.receiptTooLarge"));
+      return;
+    }
+    setReceiptBusy(true);
+    setErr("");
+    try {
+      const updated = await uploadReceipt.mutateAsync({ id: expense.id, file });
+      setReceiptUrl(updated.receipt_url || "");
+    } catch (ex) {
+      setErr(ex.message || t("expenses.receiptFailed"));
+    } finally {
+      setReceiptBusy(false);
+    }
+  }
+
+  async function onReceiptDelete() {
+    if (!isEdit) return;
+    setReceiptBusy(true);
+    setErr("");
+    try {
+      await deleteReceipt.mutateAsync(expense.id);
+      setReceiptUrl("");
+    } catch (ex) {
+      setErr(ex.message || t("expenses.receiptFailed"));
+    } finally {
+      setReceiptBusy(false);
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -265,6 +303,26 @@ function ExpenseModal({ open, expense, onClose }) {
               <Field label={t("common.notes")}>
                 <Input value={form.notes} onChange={set("notes")} placeholder={t("expenses.notesPlaceholder")} />
               </Field>
+              {isEdit && (
+                <Field label={t("expenses.receipt")}>
+                  <input ref={receiptRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onReceiptPick} />
+                  {receiptUrl ? (
+                    <div className="flex items-center gap-2">
+                      <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[var(--accent-strong)] hover:underline truncate">
+                        {t("expenses.receipt")}
+                      </a>
+                      <button type="button" onClick={onReceiptDelete} disabled={receiptBusy} className="text-xs text-[var(--danger)] font-semibold">
+                        {t("expenses.removeReceipt")}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button type="button" variant="outline" onClick={() => receiptRef.current?.click()} disabled={receiptBusy}>
+                      {receiptBusy && <Loader2 size={14} className="animate-spin" />}
+                      {t("expenses.uploadReceipt")}
+                    </Button>
+                  )}
+                </Field>
+              )}
             </div>
             {err && <p className="text-sm text-[var(--danger)] mt-3">{err}</p>}
             <div className="flex items-center justify-end gap-2 mt-6">

@@ -1166,6 +1166,75 @@ paths:
       summary: update expense
       tags:
       - Expenses
+  /expenses/{id}/receipt:
+    delete:
+      description: Delete an expense receipt.
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ok
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: delete expense receipt
+      tags:
+      - Expenses
+    get:
+      description: Download an expense receipt.
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - ApiKeyAuth: []
+      summary: download expense receipt
+      tags:
+      - Expenses
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload an expense receipt.
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Receipt image or PDF (max 10MB)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: upload expense receipt
+      tags:
+      - Expenses
   /gateway/config:
     get:
       description: Get public payment gateway browser configuration.
@@ -1853,6 +1922,30 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: update current user settings
+      tags:
+      - Settings
+  /settings/logo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload company logo.
+      parameters:
+      - description: Logo image (PNG/JPEG/SVG, max 400KB)
+        in: formData
+        name: logo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: upload company logo
       tags:
       - Settings
   /webhooks/{gateway}:

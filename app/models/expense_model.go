@@ -18,6 +18,9 @@ type Expense struct {
 	Amount      float64    `db:"amount" json:"amount" validate:"gte=0"`
 	Currency    string     `db:"currency" json:"currency" validate:"required,lte=3"`
 	Notes       string     `db:"notes" json:"notes"`
+	// ReceiptURL is the storage key of the uploaded receipt (private,
+	// served via the receipt proxy endpoint). Empty = no attachment.
+	ReceiptURL string `db:"receipt_url" json:"receipt_url"`
 }
 
 // ExpenseInput describes create and update expense payloads.

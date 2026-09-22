@@ -10,7 +10,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useLang } from "@/context/LangContext";
 import { useToast } from "@/context/UIContext";
 import { authApi } from "@/api/auth";
-import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
+import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
 import { CURRENCIES, cn } from "@/lib/utils";
 
 function FieldLabel({ children }) {
@@ -27,6 +27,7 @@ function CompanySection() {
   const readOnly = user?.role === "moderator";
   const { data: settings } = useSettings();
   const update = useUpdateSettings();
+  const uploadLogo = useUploadLogo();
   const toast = useToast();
   const fileRef = useRef(null);
   const [form, setForm] = useState(null);
@@ -57,7 +58,7 @@ function CompanySection() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  function onLogoPick(e) {
+  async function onLogoPick(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -65,9 +66,12 @@ function CompanySection() {
       toast.error(t("settings.logoTooLarge"), t("settings.logoTooLargeDesc"));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, logo_url: reader.result }));
-    reader.readAsDataURL(file);
+    try {
+      const updated = await uploadLogo.mutateAsync(file);
+      setForm((f) => ({ ...f, logo_url: updated.logo_url || "" }));
+    } catch (err) {
+      toast.error(t("settings.logoFailed"), err?.message);
+    }
   }
 
   async function onSave(e) {

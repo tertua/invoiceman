@@ -17,5 +17,7 @@ export function useExpenseMutations() {
     create: useMutation({ mutationFn: expensesApi.create, onSuccess: invalidate }),
     update: useMutation({ mutationFn: ({ id, payload }) => expensesApi.update(id, payload), onSuccess: invalidate }),
     remove: useMutation({ mutationFn: expensesApi.remove, onSuccess: invalidate }),
+    uploadReceipt: useMutation({ mutationFn: ({ id, file }) => expensesApi.uploadReceipt(id, file), onSuccess: invalidate }),
+    deleteReceipt: useMutation({ mutationFn: (id) => expensesApi.deleteReceipt(id), onSuccess: invalidate }),
   };
 }

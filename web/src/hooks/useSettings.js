@@ -14,3 +14,11 @@ export function useUpdateSettings() {
     onSuccess: (settings) => qc.setQueryData(settingsKey, settings),
   });
 }
+
+export function useUploadLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file) => settingsApi.uploadLogo(file),
+    onSuccess: (settings) => qc.setQueryData(settingsKey, settings),
+  });
+}

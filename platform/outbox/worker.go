@@ -56,12 +56,12 @@ func nextRetryAt(attempt int, now time.Time) *time.Time {
 
 // SendMail delivers one email. It is a variable (not a direct mail call)
 // so tests can capture sends without an SMTP server.
-var SendMail = func(to, subject, body string) error {
+var SendMail = func(to, subject, textBody, htmlBody string) error {
 	mailer, err := mail.NewFromEnv()
 	if err != nil {
 		return err
 	}
-	return mailer.Send(to, subject, body)
+	return mailer.SendHTML(to, subject, textBody, htmlBody)
 }
 
 // Worker polls due jobs until its context is cancelled.
@@ -157,7 +157,7 @@ func (w *Worker) sendOneMail(db *database.Queries, m models.MailOutbox, now time
 	if err != nil || !claimed {
 		return
 	}
-	if err := SendMail(m.To, m.Subject, m.Body); err != nil {
+	if err := SendMail(m.To, m.Subject, m.Body, m.HtmlBody); err != nil {
 		if errors.Is(err, mail.ErrNotConfigured) {
 			// No SMTP configured (dev): leave pending without burning
 			// attempts; reset the claim so the next tick retries.

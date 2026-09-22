@@ -50,17 +50,18 @@ func TestMailSent(t *testing.T) {
 	var mu sync.Mutex
 	var gotTo, gotSubject string
 	old := SendMail
-	SendMail = func(to, subject, body string) error {
+	SendMail = func(to, subject, textBody, htmlBody string) error {
 		mu.Lock()
 		gotTo, gotSubject = to, subject
 		mu.Unlock()
+		assert.NotEmpty(t, htmlBody, "queued mail carries the HTML part")
 		return nil
 	}
 	defer func() { SendMail = old }()
 
 	db := testDB(t)
 	require.NoError(t, db.EnqueueMail(&models.MailOutbox{
-		To: "user@example.com", Subject: "hi", Body: "hello",
+		To: "user@example.com", Subject: "hi", Body: "hello", HtmlBody: "<p>hello</p>",
 	}))
 
 	New().ProcessOnce(context.Background())
@@ -79,7 +80,7 @@ func TestMailSent(t *testing.T) {
 // eventually park as dead.
 func TestMailFailureRetries(t *testing.T) {
 	old := SendMail
-	SendMail = func(to, subject, body string) error { return errors.New("smtp down") }
+	SendMail = func(to, subject, textBody, htmlBody string) error { return errors.New("smtp down") }
 	defer func() { SendMail = old }()
 
 	db := testDB(t)

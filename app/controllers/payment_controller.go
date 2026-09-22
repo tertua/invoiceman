@@ -346,10 +346,17 @@ func SendOnlineLink(c fiber.Ctx) error {
 	}
 	url := publicURL("/pay/" + link.Token)
 	body := fmt.Sprintf("Hello,\n\nPlease use the following link to pay invoice %s:\n%s\n\nThank you.", invoice.InvoiceNumber, url)
+	htmlBody, terr := mail.Render("payment_link", mail.TemplateData{
+		AppName: configs.Get().AppName, URL: url, InvoiceNumber: invoice.InvoiceNumber,
+	})
+	if terr != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to render payment link email", nil)
+	}
 	if err := db.EnqueueMail(&models.MailOutbox{
-		To:      input.Email,
-		Subject: "Payment link for invoice " + invoice.InvoiceNumber,
-		Body:    body,
+		To:       input.Email,
+		Subject:  "Payment link for invoice " + invoice.InvoiceNumber,
+		Body:     body,
+		HtmlBody: htmlBody,
 	}); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to queue payment link email", nil)
 	}

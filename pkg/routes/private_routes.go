@@ -53,6 +53,9 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Post("/expenses", controllers.CreateExpense)
 	route.Patch("/expenses/:id", controllers.UpdateExpense)
 	route.Delete("/expenses/:id", controllers.DeleteExpense)
+	route.Post("/expenses/:id/receipt", controllers.UploadReceipt)
+	route.Get("/expenses/:id/receipt", controllers.GetReceipt)
+	route.Delete("/expenses/:id/receipt", controllers.DeleteReceipt)
 
 	// Payment routes (mutating payment routes replay on Idempotency-Key).
 	route.Get("/payments", controllers.ListPayments)
@@ -67,6 +70,7 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	// Settings routes (GET for any session user; PATCH restricted to admin/user):
 	route.Get("/settings", controllers.GetSettings)
 	route.Patch("/settings", middleware.RequireRoles("admin", "user"), controllers.UpdateSettings)
+	route.Post("/settings/logo", controllers.UploadLogo)
 
 	// AI routes (slower upstream calls get a per-request timeout).
 	route.Post("/ai/receipt-parse", middleware.WithAITimeout(controllers.ReceiptParse))

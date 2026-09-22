@@ -496,6 +496,11 @@ export const translations = {
     "expenses.prefilled": "Pre-filled from your receipt — review and save.",
     "expenses.notesPlaceholder": "What was this for?",
     "expenses.saveFailed": "Couldn't save expense",
+    "expenses.receipt": "Receipt",
+    "expenses.uploadReceipt": "Upload receipt",
+    "expenses.removeReceipt": "Remove receipt",
+    "expenses.receiptTooLarge": "Receipt is too large (max 10MB).",
+    "expenses.receiptFailed": "Couldn't upload receipt",
 
     /* ============================ payments ============================ */
     "payments.title": "Payments",
@@ -615,6 +620,7 @@ export const translations = {
     "settings.companySaved": "Company settings saved",
     "settings.saveFailed": "Couldn't save settings",
     "settings.logoTooLarge": "Logo too large",
+    "settings.logoFailed": "Couldn't upload logo",
     "settings.logoTooLargeDesc": "Please use an image under 400KB.",
     "settings.yourAccount": "Your account",
     "settings.accountDesc": "Your name appears on the dashboard greeting.",
@@ -1269,6 +1275,11 @@ export const translations = {
     "expenses.prefilled": "Terisi otomatis dari struk — periksa lalu simpan.",
     "expenses.notesPlaceholder": "Untuk apa ini?",
     "expenses.saveFailed": "Gagal menyimpan pengeluaran",
+    "expenses.receipt": "Struk",
+    "expenses.uploadReceipt": "Unggah struk",
+    "expenses.removeReceipt": "Hapus struk",
+    "expenses.receiptTooLarge": "Struk terlalu besar (maks 10MB).",
+    "expenses.receiptFailed": "Gagal mengunggah struk",
 
     /* ============================ payments ============================ */
     "payments.title": "Pembayaran",
@@ -1388,6 +1399,7 @@ export const translations = {
     "settings.companySaved": "Pengaturan perusahaan disimpan",
     "settings.saveFailed": "Gagal menyimpan pengaturan",
     "settings.logoTooLarge": "Logo terlalu besar",
+    "settings.logoFailed": "Gagal mengunggah logo",
     "settings.logoTooLargeDesc": "Gunakan gambar di bawah 400KB.",
     "settings.yourAccount": "Akun Anda",
     "settings.accountDesc": "Nama Anda muncul di sapaan dasbor.",

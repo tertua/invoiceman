@@ -20,6 +20,7 @@ import (
 	"github.com/tertua/invoiceman/platform/outbox"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/static"
 
 	_ "github.com/tertua/invoiceman/docs" // load API Docs files (Swagger)
 
@@ -99,8 +100,12 @@ func main() {
 	startDebugListener(cfg.Debug.Port)
 
 	// Routes.
-	routes.HealthRoutes(app)                        // Liveness/readiness probes (public, before auth).
-	routes.MetricsRoutes(app)                       // Prometheus-compatible scrape endpoint.
+	routes.HealthRoutes(app)  // Liveness/readiness probes (public, before auth).
+	routes.MetricsRoutes(app) // Prometheus-compatible scrape endpoint.
+	if cfg.Storage.Backend == "local" {
+		// Public logo files for the local backend (S3 serves its own).
+		app.Use("/uploads", static.New(cfg.Storage.Dir))
+	}
 	routes.SwaggerRoute(app)                        // Register a route for API Docs (Swagger).
 	routes.RegisterAPI(app, routes.APIV1Prefix)     // Current prefix first (see versioning.go ordering).
 	routes.RegisterAPI(app, routes.APILegacyPrefix) // Legacy prefix (deprecation headers).
