@@ -4,13 +4,32 @@
 # Dev build
 build/
 tmp/
+dist/
 
-# Test
+# Logs
+*.log
+logs/
+
+# Test / coverage
 *.out
+coverage/
 
-# Environment variables
-.env
+# Environment variables (local only — examples stay tracked)
+.env*
+!.env.example
+!.env.test
 data/
+
+# Local databases (outside data/)
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+
+# Editor
+.vscode/
+.idea/
+*.sw?
 
 # Misc.
 *opencode*
