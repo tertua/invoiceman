@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +10,15 @@ import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
 import { useAppName } from "@/hooks/useConfig";
 
-function detectLang() {
+const LANG_STORAGE_KEY = "arr-lang";
+
+function detectLang(searchParams) {
+  const param = searchParams?.get("lang");
+  if (param === "en" || param === "id") return param;
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(LANG_STORAGE_KEY);
+    if (stored === "en" || stored === "id") return stored;
+  }
   if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("id")) return "id";
   return "en";
 }
@@ -26,15 +34,35 @@ function Row({ label, value, bold }) {
 
 export default function PublicPay() {
   const { token } = useParams();
-  const lang = detectLang();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [lang, setLang] = useState(() => detectLang(searchParams));
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [paying, setPaying] = useState(false);
   const [payErr, setPayErr] = useState("");
 
   useEffect(() => {
+    document.documentElement.setAttribute("lang", lang);
     setLocale(lang);
   }, [lang]);
+
+  function changeLang(next) {
+    if (next !== "en" && next !== "id") return;
+    setLang(next);
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, next);
+    } catch {
+      // Private mode may block storage; the ?lang= param still applies.
+    }
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        nextParams.set("lang", next);
+        return nextParams;
+      },
+      { replace: true }
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +122,7 @@ export default function PublicPay() {
 
   if (err) {
     return (
-      <PublicShell>
+      <PublicShell lang={lang} onLang={changeLang}>
         <Card padding="lg" className="max-w-md w-full text-center">
           <p className="text-sm text-[var(--ink-muted)]">{err}</p>
         </Card>
@@ -103,7 +131,7 @@ export default function PublicPay() {
   }
   if (!data) {
     return (
-      <PublicShell>
+      <PublicShell lang={lang} onLang={changeLang}>
         <Loader2 className="animate-spin text-[var(--ink-muted)]" size={22} />
       </PublicShell>
     );
@@ -114,7 +142,7 @@ export default function PublicPay() {
   const isPaid = invoice.effective_status === "paid";
 
   return (
-    <PublicShell branding={branding}>
+    <PublicShell branding={branding} lang={lang} onLang={changeLang}>
       <Card padding="lg" className="w-full max-w-[520px]">
         <div className="flex items-start justify-between gap-4 pb-5 border-b border-[var(--border)]">
           <div>
@@ -200,10 +228,33 @@ export default function PublicPay() {
   );
 }
 
-function PublicShell({ children, branding }) {
+function LangToggle({ lang, onLang }) {
+  return (
+    <div className="flex items-center gap-1 rounded-full border border-[var(--border)] p-1 text-[11px] font-semibold">
+      {["en", "id"].map((code) => (
+        <button
+          key={code}
+          type="button"
+          onClick={() => onLang(code)}
+          aria-pressed={lang === code}
+          className={`px-2.5 py-1 rounded-full uppercase tracking-wide transition-colors ${
+            lang === code ? "bg-[var(--ink)] text-[var(--bg)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          }`}
+        >
+          {code}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PublicShell({ children, branding, lang, onLang }) {
   const appName = useAppName();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-[var(--bg)]">
+      <div className="w-full max-w-[520px] flex justify-end">
+        <LangToggle lang={lang} onLang={onLang} />
+      </div>
       {branding?.logo_url ? (
         <img src={branding.logo_url} alt={branding.company_name || "logo"} className="h-12 w-12 object-contain rounded" />
       ) : null}
