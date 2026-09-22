@@ -1,0 +1,28 @@
+name: Module Map Check
+
+on:
+  push:
+    paths:
+      - "docs/MODULE_MAP.md"
+      - "scripts/check-module-map.mjs"
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "web/src/**"
+      - ".github/workflows/module-map-check.yml"
+  pull_request:
+    paths:
+      - "docs/MODULE_MAP.md"
+      - "scripts/check-module-map.mjs"
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "web/src/**"
+      - ".github/workflows/module-map-check.yml"
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm --prefix web run check:map

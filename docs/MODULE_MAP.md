@@ -6,13 +6,15 @@ below; you should not need to grep the codebase to find an owner file.
 
 Request path: `web/src/pages/*.jsx` → `web/src/hooks/*` →
 `web/src/api/*.js` (axios only in `http.js`) → `pkg/routes/*` →
-`pkg/middleware/*` → `app/controllers/*` → `platform/*` + `pkg/*`.
+`pkg/middleware/*` → `app/controllers/*` → `app/queries/*` (one file per
+domain: SQL/GORM detail lives here, never inline in controllers) →
+`platform/*` + `pkg/*`.
 
 ## Domains
 
 | Domain | Backend controller | Model(s) | Routes | FE api / hook | FE pages | Platform / misc |
 |---|---|---|---|---|---|---|
-| Auth & session | `app/controllers/auth_controller.go` | `auth_model.go`, `user_model.go` | `public_routes.go` (register/login/forgot/reset), `private_routes.go` (me/logout) | `api/auth.js`, `context/AuthContext.jsx` | `Login/Register/ForgotPassword/ResetPassword.jsx` | `pkg/middleware/auth_middleware.go`, `platform/cache` (sessions), session issue/parse in `pkg/utils` |
+| Auth & session | `app/controllers/auth_controller.go` | `auth_model.go`, `user_model.go` | `public_routes.go` (register/login/forgot/reset), `private_routes.go` (me/logout) | `api/auth.js`, `context/AuthContext.jsx` | `Login.jsx`, `Register.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx` | `pkg/middleware/auth_middleware.go`, `platform/cache` (sessions), session issue/parse in `pkg/utils` |
 | Users (admin) | `admin_controller.go` | `admin_model.go`, `user_model.go` | private | `api/admin.js`, `hooks/useAdminUsers.js` | `AdminUsers.jsx` | `pkg/middleware/role_middleware.go` |
 | Clients | `client_controller.go` | `client_model.go` | private | `api/clients.js`, `hooks/useClients.js` | `Clients.jsx`, `ClientDetail.jsx`, `components/clients/ClientCharts.jsx` | — |
 | Items | `item_controller.go` | `item_model.go` | private | `api/items.js`, `hooks/useItems.js` | `Items.jsx` | — |
@@ -24,16 +26,18 @@ Request path: `web/src/pages/*.jsx` → `web/src/hooks/*` →
 | Reports | `report_controller.go` | `report_model.go` | private | `api/reports.js`, `hooks/useReports.js` | `Reports.jsx`, `components/reports/ReportsCharts.jsx` | — |
 | Settings + logo | `settings_controller.go` | `settings_model.go` | private (`/settings/logo`) | `api/settings.js`, `hooks/useSettings.js` | `Settings.jsx` | logo via `platform/storage` (public) |
 | AI | `ai_controller.go` | `ai_model.go` | private (501 without `GEMINI_API_KEY`) | `api/ai.js` (used directly by pages) | `Dashboard/InvoiceEditor/InvoiceDetail/Expenses.jsx` | `platform/ai` |
-| App config (public) | `config_controller.go` | — | public (`/config`) | `api/config.js`, `hooks/useConfig.js` | branding for SPA shell | — |
+| App config (public) | `config_controller.go` | — | public (`/config`) | `api/config.js`, `hooks/useConfig.js` | `Landing.jsx` (public site), branding for SPA shell | — |
+| Shell providers | — | — | — | — | — | `context/LangContext.jsx` (i18n), `context/ThemeContext.jsx`, `context/UIContext.jsx` (toasts/modals) |
 
 ## Cross-cutting
 
 - **Mail**: `platform/mail` (`mailer.go`, `templates.go`, `templates/*.html`) → queued into `mail_outbox_model.go` → sent by `platform/outbox` worker. Render HTML at enqueue time; envelope stays `multipart/alternative`.
 - **Audit**: `app/controllers/audit_helper.go` + `audit_log_model.go`; CSRF middleware writes the audit trail (see P3).
-- **Request guards** (all in `pkg/middleware` + `pkg/routes/versioning.go`): `AuthRequired`, `GatewayAuth`, CSRF double-submit, version-guard, `RequireRoles`, idempotency keys, pagination (`?page/?per_page` + `meta`).
-- **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `VERSION` file (read once at startup).
+- **Request guards** (all in `pkg/middleware` + `pkg/routes/versioning.go`): `AuthRequired`, `GatewayAuth`, CSRF double-submit, version-guard, `RequireRoles`, idempotency keys (`idempotency_model.go`, `app/queries/idempotency_query.go`), pagination (`?page/?per_page` + `meta`).
+- **DB/schema**: `platform/database` (GORM `AutoMigrate`, backend health) with a forward-only version guard via `schema_migration_model.go` — a newer DB than the binary refuses to start.
+- **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `not_found_route.go` (JSON 404 for unknown `/api/*`), `swagger_route.go` (`/swagger`), `VERSION` file (read once at startup).
 - **Captcha**: `platform/captcha` (Turnstile) — enforced on login/register.
-- **Docs**: Swagger annotations → `swag init` → committed `docs/` (`swagger.json/yaml`, `docs.go`); `docs/API_DOCS.md` is a stub.
+- **Docs**: Swagger annotations → `swag init` → committed `docs/` (`swagger.json/yaml`, `docs/docs.go`); `docs/API_DOCS.md` is a stub.
 
 ## Flow tests (behavior contracts)
 

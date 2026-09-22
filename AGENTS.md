@@ -1,6 +1,6 @@
 # AGENTS.md
 
-File owners per domain live in `docs/MODULE_MAP.md` — read it before grepping the codebase.
+File owners per domain live in `docs/MODULE_MAP.md` — read it before grepping the codebase. CI `module-map-check` fails on drift (run `npm --prefix web run check:map` after adding/renaming owner files).
 
 ## Layout
 
