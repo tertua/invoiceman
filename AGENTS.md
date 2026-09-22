@@ -1,5 +1,7 @@
 # AGENTS.md
 
+File owners per domain live in `docs/MODULE_MAP.md` — read it before grepping the codebase.
+
 ## Layout
 
 - Go/Fiber API at root (`main.go`); Vite/React SPA in `web/` (`web/src/main.jsx`, routes in `web/src/routes.jsx`).
