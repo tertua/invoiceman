@@ -2,14 +2,14 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	sqliteDriver "github.com/glebarez/sqlite"
+	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -18,17 +18,12 @@ import (
 var UsingSQLite = false
 var UsingPostgreSQL = false
 
-// DefaultSQLitePath is used when SQL_DSN is empty (zero-config dev mode).
-const DefaultSQLitePath = "./data/invoiceman.db"
-
-// chooseDB opens a database handle based on SQL_DSN:
-//   - empty -> SQLite file (dev, auto-created; path from SQLITE_PATH)
+// chooseDB opens a database handle from the central config:
+//   - empty DSN -> SQLite file (dev, auto-created; path from SQLITE_PATH)
 //   - "postgres://..." or "postgresql://..." prefix -> PostgreSQL (production)
 //   - anything else -> error (fail fast instead of silently using SQLite,
 //     e.g. a MySQL DSN which this app does not support)
-func chooseDB(envName string) (*gorm.DB, error) {
-	dsn := strings.TrimSpace(os.Getenv(envName))
-
+func chooseDB(dsn string) (*gorm.DB, error) {
 	if dsn == "" {
 		return openSQLite()
 	}
@@ -41,9 +36,10 @@ func chooseDB(envName string) (*gorm.DB, error) {
 	)
 }
 
-// openPostgreSQL opens a PostgreSQL connection with pool settings from env.
+// openPostgreSQL opens a PostgreSQL connection with pool settings from the
+// central config.
 func openPostgreSQL(dsn string) (*gorm.DB, error) {
-	log.Println("database: using PostgreSQL")
+	logger.L().Info("database: using PostgreSQL")
 	UsingPostgreSQL = true
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -58,15 +54,10 @@ func openPostgreSQL(dsn string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if maxConn, err := strconv.Atoi(os.Getenv("DB_MAX_CONNECTIONS")); err == nil && maxConn > 0 {
-		sqlDB.SetMaxOpenConns(maxConn)
-	}
-	if maxIdleConn, err := strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNECTIONS")); err == nil && maxIdleConn > 0 {
-		sqlDB.SetMaxIdleConns(maxIdleConn)
-	}
-	if maxLifetimeConn, err := strconv.Atoi(os.Getenv("DB_MAX_LIFETIME_CONNECTIONS")); err == nil && maxLifetimeConn > 0 {
-		sqlDB.SetConnMaxLifetime(time.Duration(maxLifetimeConn) * time.Second)
-	}
+	pool := configs.Get().DB
+	sqlDB.SetMaxOpenConns(pool.MaxConn)
+	sqlDB.SetMaxIdleConns(pool.MaxIdle)
+	sqlDB.SetConnMaxLifetime(time.Duration(pool.MaxLifetimeSec) * time.Second)
 
 	if err := sqlDB.Ping(); err != nil {
 		return nil, err
@@ -79,11 +70,8 @@ func openPostgreSQL(dsn string) (*gorm.DB, error) {
 // A single connection is used because SQLite serializes writers;
 // this avoids "database is locked" errors entirely.
 func openSQLite() (*gorm.DB, error) {
-	path := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
-	if path == "" {
-		path = DefaultSQLitePath
-	}
-	log.Printf("database: using SQLite (%s)", path)
+	path := configs.Get().DB.SQLitePath
+	logger.L().Info("database: using SQLite", "path", path)
 	UsingSQLite = true
 
 	if !strings.HasPrefix(path, "file:") {

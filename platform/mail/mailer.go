@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"net"
 	"net/smtp"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 var ErrNotConfigured = errors.New("mail provider is not configured")
@@ -27,12 +28,13 @@ type SMTPMailer struct {
 }
 
 func NewFromEnv() (Mailer, error) {
-	host := strings.TrimSpace(os.Getenv("SMTP_HOST"))
+	cfg := configs.Get().Mail
+	host := cfg.SMTPHost
 	if host == "" {
 		return nil, ErrNotConfigured
 	}
 
-	port := strings.TrimSpace(os.Getenv("SMTP_PORT"))
+	port := cfg.SMTPPort
 	if port == "" {
 		port = "587"
 	}
@@ -40,9 +42,9 @@ func NewFromEnv() (Mailer, error) {
 		return nil, fmt.Errorf("invalid SMTP_PORT: %w", err)
 	}
 
-	from := strings.TrimSpace(os.Getenv("SMTP_FROM"))
+	from := cfg.SMTPFrom
 	if from == "" {
-		from = strings.TrimSpace(os.Getenv("SMTP_USER"))
+		from = cfg.SMTPUser
 	}
 	if from == "" {
 		return nil, errors.New("SMTP_FROM or SMTP_USER is required")
@@ -52,8 +54,8 @@ func NewFromEnv() (Mailer, error) {
 		host:   host,
 		port:   port,
 		from:   from,
-		user:   strings.TrimSpace(os.Getenv("SMTP_USER")),
-		pass:   os.Getenv("SMTP_PASS"),
+		user:   cfg.SMTPUser,
+		pass:   cfg.SMTPPass,
 		secure: port == "465",
 	}, nil
 }

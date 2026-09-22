@@ -1,12 +1,11 @@
 package utils
 
 import (
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // Session cookie names.
@@ -34,16 +33,10 @@ func IssueSession(c fiber.Ctx, userID uuid.UUID) (*Tokens, error) {
 		return nil, err
 	}
 
-	accessMinutes, _ := strconv.Atoi(os.Getenv("JWT_SECRET_KEY_EXPIRE_MINUTES_COUNT"))
-	refreshHours, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT"))
-	if accessMinutes <= 0 {
-		accessMinutes = 15
-	}
-	if refreshHours <= 0 {
-		refreshHours = 720
-	}
+	accessMinutes := configs.Get().JWT.AccessMinutes
+	refreshHours := configs.Get().JWT.RefreshHours
 
-	secure := os.Getenv("STAGE_STATUS") != "dev"
+	secure := !configs.Get().IsDev()
 
 	c.Cookie(&fiber.Cookie{
 		Name:     AccessCookieName,

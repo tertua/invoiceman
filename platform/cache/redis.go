@@ -1,30 +1,20 @@
 package cache
 
 import (
-	"os"
-	"strconv"
-
-	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/pkg/configs"
 
 	"github.com/redis/go-redis/v9"
 )
 
 // RedisConnection func for connect to Redis server.
 func RedisConnection() (*redis.Client, error) {
-	// Define Redis database number.
-	dbNumber, _ := strconv.Atoi(os.Getenv("REDIS_DB_NUMBER"))
-
-	// Build Redis connection URL.
-	redisConnURL, err := utils.ConnectionURLBuilder("redis")
-	if err != nil {
-		return nil, err
-	}
+	cfg := configs.Get().Redis
 
 	// Set Redis options.
 	options := &redis.Options{
-		Addr:     redisConnURL,
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       dbNumber,
+		Addr:     cfg.Addr(),
+		Password: cfg.Password,
+		DB:       cfg.DBNumber,
 	}
 
 	return redis.NewClient(options), nil

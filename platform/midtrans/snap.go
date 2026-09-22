@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // ErrNotConfigured is returned when the Midtrans server key is missing.
@@ -26,13 +27,14 @@ type Config struct {
 	BaseURL string
 }
 
-// FromEnv reads Midtrans config from the environment.
+// FromEnv reads Midtrans config from the central config.
 func FromEnv() Config {
+	cfg := configs.Get().Midtrans
 	return Config{
-		ServerKey: strings.TrimSpace(os.Getenv("MIDTRANS_SERVER_KEY")),
-		ClientKey: strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
-		IsProd:    strings.EqualFold(strings.TrimSpace(os.Getenv("MIDTRANS_IS_PROD")), "true"),
-		BaseURL:   strings.TrimSpace(os.Getenv("MIDTRANS_SNAP_BASE_URL")),
+		ServerKey: cfg.ServerKey,
+		ClientKey: cfg.ClientKey,
+		IsProd:    cfg.IsProd,
+		BaseURL:   cfg.SnapBase,
 	}
 }
 

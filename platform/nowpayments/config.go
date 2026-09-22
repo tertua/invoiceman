@@ -1,8 +1,9 @@
 package nowpayments
 
 import (
-	"os"
 	"strings"
+
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // Config holds NOWPayments credentials. All values come from env;
@@ -22,14 +23,15 @@ type Config struct {
 	CallbackBase string
 }
 
-// FromEnv reads NOWPayments config from the environment.
+// FromEnv reads NOWPayments config from the central config.
 func FromEnv() Config {
+	cfg := configs.Get()
 	return Config{
-		APIKey:       strings.TrimSpace(os.Getenv("NOWPAYMENTS_API_KEY")),
-		IPNSecret:    strings.TrimSpace(os.Getenv("NOWPAYMENTS_IPN_SECRET")),
-		Sandbox:      strings.EqualFold(strings.TrimSpace(os.Getenv("NOWPAYMENTS_SANDBOX")), "true"),
-		Endpoint:     strings.TrimSpace(os.Getenv("NOWPAYMENTS_BASE_URL")),
-		CallbackBase: strings.TrimSpace(os.Getenv("INVOICEMAN_PUBLIC_URL")),
+		APIKey:       cfg.NOWPayments.APIKey,
+		IPNSecret:    cfg.NOWPayments.IPNSecret,
+		Sandbox:      cfg.NOWPayments.Sandbox,
+		Endpoint:     cfg.NOWPayments.BaseURL,
+		CallbackBase: cfg.Relay.PublicURL,
 	}
 }
 

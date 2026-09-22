@@ -1,8 +1,6 @@
 package configs
 
 import (
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -11,9 +9,9 @@ import (
 // FiberConfig func for configuration Fiber app.
 // See: https://docs.gofiber.io/api/fiber#config
 func FiberConfig() fiber.Config {
-	// Define server settings.
-	readTimeoutSecondsCount, _ := strconv.Atoi(os.Getenv("SERVER_READ_TIMEOUT"))
+	// Define server settings from the central config.
+	cfg := Get()
 
 	// Return Fiber configuration.
-	return fiber.Config{ReadTimeout: time.Second * time.Duration(readTimeoutSecondsCount)}
+	return fiber.Config{ReadTimeout: time.Second * time.Duration(cfg.Server.ReadTimeoutSec)}
 }

@@ -1,12 +1,12 @@
 package utils
 
 import (
-	"os"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // TokenMetadata struct to describe metadata in JWT.
@@ -81,5 +81,5 @@ func verifyToken(c fiber.Ctx) (*jwt.Token, error) {
 }
 
 func jwtKeyFunc(token *jwt.Token) (interface{}, error) {
-	return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+	return []byte(configs.Get().JWT.Secret), nil
 }

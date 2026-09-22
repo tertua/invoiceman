@@ -1,13 +1,13 @@
 package utils
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/tertua/invoiceman/pkg/logger"
 )
 
 // shutdownTimeout bounds graceful shutdown so containers (SIGTERM from
@@ -28,7 +28,7 @@ func StartServerWithGracefulShutdown(a *fiber.App) {
 		// Received a shutdown signal, drain with a bounded timeout.
 		if err := a.ShutdownWithTimeout(shutdownTimeout); err != nil {
 			// Error from closing listeners, or context timeout:
-			log.Printf("Oops... Server is not shutting down! Reason: %v", err)
+			logger.L().Error("server is not shutting down", "err", err)
 		}
 
 		close(idleConnsClosed)
@@ -39,7 +39,7 @@ func StartServerWithGracefulShutdown(a *fiber.App) {
 
 	// Run server.
 	if err := a.Listen(fiberConnURL); err != nil {
-		log.Printf("Oops... Server is not running! Reason: %v", err)
+		logger.L().Error("server is not running", "err", err)
 	}
 
 	<-idleConnsClosed
@@ -52,6 +52,6 @@ func StartServer(a *fiber.App) {
 
 	// Run server.
 	if err := a.Listen(fiberConnURL); err != nil {
-		log.Printf("Oops... Server is not running! Reason: %v", err)
+		logger.L().Error("server is not running", "err", err)
 	}
 }

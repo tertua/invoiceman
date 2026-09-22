@@ -3,12 +3,11 @@ package cache
 import (
 	"context"
 	"errors"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // ErrSessionNotFound is returned when a session key does not exist.
@@ -21,13 +20,9 @@ type SessionStore interface {
 	Delete(ctx context.Context, key string) error
 }
 
-// RefreshTTL returns the refresh token lifetime from env.
+// RefreshTTL returns the refresh token lifetime from the central config.
 func RefreshTTL() time.Duration {
-	hours, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT"))
-	if hours <= 0 {
-		hours = 720
-	}
-	return time.Hour * time.Duration(hours)
+	return time.Hour * time.Duration(configs.Get().JWT.RefreshHours)
 }
 
 var (
@@ -40,7 +35,7 @@ var (
 // in-memory otherwise (single instance, suitable for dev without Redis).
 func Sessions() (SessionStore, error) {
 	storeOnce.Do(func() {
-		if os.Getenv("REDIS_HOST") == "" {
+		if !configs.Get().Redis.Enabled() {
 			sharedStore = newMemoryStore()
 			return
 		}

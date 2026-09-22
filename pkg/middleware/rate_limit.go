@@ -2,28 +2,16 @@ package middleware
 
 import (
 	"context"
-	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/redis/go-redis/v9"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/relay"
-)
-
-// Rate-limit profiles (requests per minute). Overridable via env so
-// production can tighten without a redeploy.
-const (
-	defaultGeneralMax = 100
-	defaultAuthMax    = 10
-	defaultPublicMax  = 30
-	defaultWebhookMax = 60
-	defaultGatewayMax = 120
 )
 
 var rateLimitWindow = time.Minute
@@ -35,7 +23,7 @@ var redisStorage fiber.Storage
 // empty, otherwise a Redis-backed fiber.Storage so limits are shared across
 // replicas. Nil is a valid Storage for limiter.New (uses process memory).
 func rateLimitStorage() fiber.Storage {
-	if strings.TrimSpace(os.Getenv("REDIS_HOST")) == "" {
+	if !configs.Get().Redis.Enabled() {
 		return nil
 	}
 	redisStorageOnce.Do(func() {
@@ -55,13 +43,6 @@ func limitReached(c fiber.Ctx) error {
 	return utils.Fail(c, fiber.StatusTooManyRequests, "rate limit exceeded, try again later", nil)
 }
 
-func envMax(key string, fallback int) int {
-	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key))); err == nil && v > 0 {
-		return v
-	}
-	return fallback
-}
-
 func newLimiter(max int, keyGen func(fiber.Ctx) string) fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:          max,
@@ -72,38 +53,38 @@ func newLimiter(max int, keyGen func(fiber.Ctx) string) fiber.Handler {
 	})
 }
 
-// GeneralLimiter guards authenticated /api traffic (100 req/min/IP).
+// GeneralLimiter guards authenticated /api traffic.
 func GeneralLimiter() fiber.Handler {
-	return newLimiter(envMax("RATE_LIMIT_GENERAL", defaultGeneralMax), func(c fiber.Ctx) string {
+	return newLimiter(configs.Get().RateLimit.General, func(c fiber.Ctx) string {
 		return c.IP()
 	})
 }
 
-// AuthLimiter guards brute-forceable auth endpoints (10 req/min/IP).
+// AuthLimiter guards brute-forceable auth endpoints.
 func AuthLimiter() fiber.Handler {
-	return newLimiter(envMax("RATE_LIMIT_AUTH", defaultAuthMax), func(c fiber.Ctx) string {
+	return newLimiter(configs.Get().RateLimit.Auth, func(c fiber.Ctx) string {
 		return c.IP()
 	})
 }
 
-// PublicPayLimiter guards the public payment pages (30 req/min/IP).
+// PublicPayLimiter guards the public payment pages.
 func PublicPayLimiter() fiber.Handler {
-	return newLimiter(envMax("RATE_LIMIT_PUBLIC", defaultPublicMax), func(c fiber.Ctx) string {
+	return newLimiter(configs.Get().RateLimit.Public, func(c fiber.Ctx) string {
 		return c.IP()
 	})
 }
 
-// WebhookLimiter guards provider webhooks (60 req/min/IP).
+// WebhookLimiter guards provider webhooks.
 func WebhookLimiter() fiber.Handler {
-	return newLimiter(envMax("RATE_LIMIT_WEBHOOK", defaultWebhookMax), func(c fiber.Ctx) string {
+	return newLimiter(configs.Get().RateLimit.Webhook, func(c fiber.Ctx) string {
 		return c.IP()
 	})
 }
 
-// GatewayLimiter guards the service relay (120 req/min/API key, IP fallback).
+// GatewayLimiter guards the service relay (per API key, IP fallback).
 // Keying by API key is fairer than IP when one downstream fans out.
 func GatewayLimiter() fiber.Handler {
-	return newLimiter(envMax("RATE_LIMIT_GATEWAY", defaultGatewayMax), func(c fiber.Ctx) string {
+	return newLimiter(configs.Get().RateLimit.Gateway, func(c fiber.Ctx) string {
 		if key := relay.ExtractKey(c.Get("Authorization"), c.Get("X-Api-Key")); key != "" {
 			return "gw:" + relay.HashKey(key)
 		}

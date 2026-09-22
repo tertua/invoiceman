@@ -1,9 +1,8 @@
 package middleware
 
 import (
-	"os"
-
 	"github.com/gofiber/fiber/v3"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 
 	jwtMiddleware "github.com/gofiber/contrib/v3/jwt"
@@ -14,7 +13,7 @@ import (
 func JWTProtected() func(fiber.Ctx) error {
 	// Create config for JWT authentication middleware.
 	config := jwtMiddleware.Config{
-		SigningKey:   jwtMiddleware.SigningKey{Key: []byte(os.Getenv("JWT_SECRET_KEY"))},
+		SigningKey:   jwtMiddleware.SigningKey{Key: []byte(configs.Get().JWT.Secret)},
 		ErrorHandler: jwtError,
 	}
 

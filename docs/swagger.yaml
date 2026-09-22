@@ -1194,6 +1194,20 @@ paths:
       summary: list own intents
       tags:
       - Gateway
+  /healthz:
+    get:
+      description: Liveness probe.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: liveness probe
+      tags:
+      - Health
   /invoices:
     get:
       consumes:
@@ -1621,6 +1635,25 @@ paths:
       summary: create public payment transaction
       tags:
       - Public Payments
+  /readyz:
+    get:
+      description: Readiness probe.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties: true
+            type: object
+      summary: readiness probe
+      tags:
+      - Health
   /reports:
     get:
       description: Get financial reports.

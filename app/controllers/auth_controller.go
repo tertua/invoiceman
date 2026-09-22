@@ -7,12 +7,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/pkg/repository"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
@@ -345,17 +345,13 @@ func ForgotPassword(c fiber.Ctx) error {
 				return utils.Fail(c, fiber.StatusInternalServerError, "failed to create password reset request", nil)
 			}
 			if mailer, mailErr := mail.NewFromEnv(); mailErr == nil {
-				base := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_PUBLIC_URL")), "/")
-				if base == "" {
-					base = "http://localhost:5173"
-				}
-				resetURL := base + "/reset-password?token=" + token
+				resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
 				body := fmt.Sprintf("Hello %s,\n\nReset your password using this link:\n%s\n\nThis link expires in one hour.", user.Name, resetURL)
 				if err := mailer.Send(user.Email, "Reset your Invoiceman password", body); err != nil {
-					log.Printf("password reset email for %s failed: %v", user.Email, err)
+					logger.L().Warn("password reset email failed", "email", user.Email, "err", err)
 				}
 			} else if !errors.Is(mailErr, mail.ErrNotConfigured) {
-				log.Printf("password reset email provider configuration is invalid: %v", mailErr)
+				logger.L().Warn("password reset email provider configuration is invalid", "err", mailErr)
 			}
 		}
 	}

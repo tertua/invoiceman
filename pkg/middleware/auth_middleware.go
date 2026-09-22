@@ -3,9 +3,9 @@ package middleware
 import (
 	"context"
 	"errors"
-	"os"
 	"time"
 
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
@@ -153,5 +153,5 @@ func splitBearer(header string) string {
 
 // jwtKeyFunc returns the JWT signing key.
 func jwtKeyFunc(token *jwt.Token) (interface{}, error) {
-	return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+	return []byte(configs.Get().JWT.Secret), nil
 }

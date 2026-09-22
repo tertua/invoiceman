@@ -8,9 +8,7 @@ import (
 // chooseDB must fail fast on DSNs it does not support (e.g. MySQL)
 // instead of silently falling back to SQLite with the wrong data.
 func TestChooseDBRejectsUnsupportedDSN(t *testing.T) {
-	t.Setenv("TEST_SQL_DSN", "mysql://user:password@localhost:3306/invoiceman")
-
-	db, err := chooseDB("TEST_SQL_DSN")
+	db, err := chooseDB("mysql://user:password@localhost:3306/invoiceman")
 	if err == nil {
 		t.Fatal("expected an error for a MySQL DSN, got nil")
 	}
@@ -24,10 +22,9 @@ func TestChooseDBRejectsUnsupportedDSN(t *testing.T) {
 
 // An empty DSN keeps selecting the zero-config SQLite backend.
 func TestChooseDBEmptySelectsSQLite(t *testing.T) {
-	t.Setenv("TEST_SQL_DSN", "")
 	t.Setenv("SQLITE_PATH", "file::memory:?cache=shared")
 
-	db, err := chooseDB("TEST_SQL_DSN")
+	db, err := chooseDB("")
 	if err != nil {
 		t.Fatalf("expected SQLite for an empty DSN, got: %v", err)
 	}

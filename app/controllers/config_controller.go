@@ -1,20 +1,14 @@
 package controllers
 
 import (
-	"os"
-	"strings"
-
 	"github.com/gofiber/fiber/v3"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 )
 
 // AppName returns the configured application brand name.
 func AppName() string {
-	name := strings.TrimSpace(os.Getenv("APP_NAME"))
-	if name == "" {
-		return "Invoiceman"
-	}
-	return name
+	return configs.Get().AppName
 }
 
 // AppConfig returns public branding configuration for the SPA.

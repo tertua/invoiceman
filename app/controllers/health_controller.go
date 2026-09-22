@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
@@ -50,7 +51,7 @@ func Ready(c fiber.Ctx) error {
 	if err := database.Ping(); err != nil {
 		return utils.Fail(c, fiber.StatusServiceUnavailable, "not ready", nil)
 	}
-	if strings.TrimSpace(os.Getenv("REDIS_HOST")) != "" {
+	if configs.Get().Redis.Enabled() {
 		ctx, cancel := context.WithTimeout(c.Context(), 2*time.Second)
 		defer cancel()
 		client, err := cache.RedisConnection()

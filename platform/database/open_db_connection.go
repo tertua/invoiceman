@@ -5,6 +5,7 @@ import (
 
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/app/queries"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"gorm.io/gorm"
 )
 
@@ -31,7 +32,7 @@ var (
 // openShared opens the database handle once per process.
 func openShared() (*gorm.DB, error) {
 	dbOnce.Do(func() {
-		sharedDB, sharedErr = chooseDB("SQL_DSN")
+		sharedDB, sharedErr = chooseDB(configs.Get().DSN())
 	})
 	return sharedDB, sharedErr
 }

@@ -4,12 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // Tokens struct to describe tokens object.
@@ -41,14 +41,10 @@ func GenerateNewTokens(id string, credentials []string) (*Tokens, error) {
 }
 
 func generateNewAccessToken(id string, credentials []string) (string, error) {
-	// Set secret key from .env file.
-	secret := os.Getenv("JWT_SECRET_KEY")
-
-	// Set expires minutes count for secret key from .env file.
-	minutesCount, _ := strconv.Atoi(os.Getenv("JWT_SECRET_KEY_EXPIRE_MINUTES_COUNT"))
-	if minutesCount <= 0 {
-		minutesCount = 15
-	}
+	// Set secret key and expiry from the central config.
+	cfg := configs.Get().JWT
+	secret := cfg.Secret
+	minutesCount := cfg.AccessMinutes
 
 	// Create a new claims.
 	claims := jwt.MapClaims{}
@@ -83,7 +79,7 @@ func generateNewRefreshToken() (string, error) {
 	hash := sha256.New()
 
 	// Create a new now date and time string with salt.
-	refresh := os.Getenv("JWT_REFRESH_KEY") + time.Now().String()
+	refresh := configs.Get().JWT.RefreshKey + time.Now().String()
 
 	// See: https://pkg.go.dev/io#Writer.Write
 	_, err := hash.Write([]byte(refresh))
@@ -92,11 +88,8 @@ func generateNewRefreshToken() (string, error) {
 		return "", err
 	}
 
-	// Set expires hours count for refresh key from .env file.
-	hoursCount, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT"))
-	if hoursCount <= 0 {
-		hoursCount = 720
-	}
+	// Set expires hours count for refresh key from the central config.
+	hoursCount := configs.Get().JWT.RefreshHours
 
 	// Set expiration time.
 	expireTime := fmt.Sprint(time.Now().Add(time.Hour * time.Duration(hoursCount)).Unix())

@@ -1,15 +1,14 @@
 package middleware
 
 import (
-	"os"
-	"strings"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/helmet"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/metrics"
 	"github.com/tertua/invoiceman/pkg/utils"
 )
 
@@ -42,9 +41,11 @@ func FiberMiddleware(a *fiber.App) {
 		logger.New(logger.Config{
 			Format: "[${time}] ${ip} ${status} - ${latency} ${method} ${path} rid=${reqHeader:X-Request-ID} ${error}\n",
 			Skip: func(c fiber.Ctx) bool {
-				return c.Path() == "/healthz" || c.Path() == "/readyz"
+				return c.Path() == "/healthz" || c.Path() == "/readyz" || metrics.SkipMetrics(c.Path())
 			},
 		}),
+		// Request metrics (method/route-template/status/latency).
+		metrics.Recorder(),
 	)
 }
 
@@ -52,12 +53,7 @@ func FiberMiddleware(a *fiber.App) {
 // (CORS_ORIGINS, comma-separated). Empty CORS_ORIGINS keeps the permissive
 // dev default.
 func corsConfig() cors.Config {
-	origins := []string{}
-	for _, o := range strings.Split(strings.TrimSpace(os.Getenv("CORS_ORIGINS")), ",") {
-		if o = strings.TrimSpace(o); o != "" {
-			origins = append(origins, o)
-		}
-	}
+	origins := configs.Get().CORS.Origins
 	if len(origins) == 0 {
 		return cors.Config{}
 	}

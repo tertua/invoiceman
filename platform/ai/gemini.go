@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 var ErrNotConfigured = errors.New("AI provider is not configured")
@@ -61,18 +62,12 @@ type geminiResponse struct {
 }
 
 func NewGeminiClient() *GeminiClient {
+	cfg := configs.Get().AI
 	return &GeminiClient{
-		APIKey:     os.Getenv("GEMINI_API_KEY"),
-		Model:      envOrDefault("GEMINI_MODEL", "gemini-2.0-flash"),
+		APIKey:     cfg.GeminiKey,
+		Model:      cfg.GeminiModel,
 		HTTPClient: &http.Client{Timeout: 45 * time.Second},
 	}
-}
-
-func envOrDefault(name, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
-		return value
-	}
-	return fallback
 }
 
 func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, error) {

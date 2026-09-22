@@ -6,13 +6,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -258,10 +258,7 @@ func CreateOnlineLink(c fiber.Ctx) error {
 }
 
 func publicURL(path string) string {
-	base := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_PUBLIC_URL")), "/")
-	if base == "" {
-		base = "http://localhost:5173"
-	}
+	base := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/")
 	return base + path
 }
 
@@ -361,8 +358,8 @@ func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map,
 		},
 		"gateway": fiber.Map{
 			"name":          "midtrans",
-			"client_key":    strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
-			"is_production": strings.EqualFold(strings.TrimSpace(os.Getenv("MIDTRANS_IS_PROD")), "true"),
+			"client_key":    configs.Get().Midtrans.ClientKey,
+			"is_production": configs.Get().Midtrans.IsProd,
 		},
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
