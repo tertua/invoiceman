@@ -316,6 +316,7 @@ export const translations = {
     "auth.agreeTerms": "By creating an account you agree to our terms.",
     "auth.neverShare": "We never share your billing data with third parties.",
     "auth.registrationFailed": "Registration failed",
+    "auth.backToHome": "Back to home",
 
     /* ============================ dashboard ============================ */
     "dash.loadError": "Couldn't load your dashboard",
@@ -1100,6 +1101,7 @@ export const translations = {
     "auth.agreeTerms": "Dengan membuat akun, Anda menyetujui ketentuan kami.",
     "auth.neverShare": "Kami tidak pernah membagikan data penagihan Anda ke pihak ketiga.",
     "auth.registrationFailed": "Pendaftaran gagal",
+    "auth.backToHome": "Kembali ke beranda",
 
     /* ============================ dashboard ============================ */
     "dash.loadError": "Gagal memuat dasbor",

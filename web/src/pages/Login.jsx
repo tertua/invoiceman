@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, Mail, Lock } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Mail, Lock } from "lucide-react";
 import {
   AuthShell,
   AuthField,
@@ -141,6 +141,15 @@ function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpire
             </Link>
           </div>
         )}
+
+        <div className="text-sm text-center mt-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-[var(--ink-muted)] font-medium hover:text-[var(--accent-strong)] hover:underline"
+          >
+            <ArrowLeft size={14} /> {t("auth.backToHome")}
+          </Link>
+        </div>
     </motion.div>
   );
 }
