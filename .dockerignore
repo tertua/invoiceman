@@ -24,6 +24,10 @@ build/
 dist/
 tmp/
 
+# Dev-only tooling (npm/CI scripts): never compiled into the Go binary,
+# never needed inside the image.
+scripts/
+
 # Frontend: the Go image never serves the SPA source (282M+ node_modules).
 # The SPA is built and hosted separately; see web/ and make web.check.
 web/
