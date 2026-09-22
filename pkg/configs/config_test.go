@@ -25,6 +25,8 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, 20, cfg.Outbox.Batch)
 	assert.Equal(t, 60, cfg.Cache.AggTTLSeconds)
 	assert.Equal(t, "local", cfg.Storage.Backend)
+	assert.Empty(t, cfg.Server.TrustedProxies)
+	assert.Equal(t, "X-Forwarded-For", cfg.Server.ProxyHeader)
 }
 
 // TestLoadOverrides verifies env values win over defaults.
@@ -44,7 +46,33 @@ func TestLoadOverrides(t *testing.T) {
 	assert.Equal(t, "debug", cfg.Log.Level)
 }
 
-// TestValidateProdSecrets ensures prod fails fast on example secrets.
+// TestValidateProxyTrust covers the TRUSTED_PROXIES allowlist parsing.
+func TestValidateProxyTrust(t *testing.T) {
+	t.Setenv("TRUSTED_PROXIES", "10.0.0.1, 192.168.0.0/16, 2001:db8::1")
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"10.0.0.1", "192.168.0.0/16", "2001:db8::1"}, cfg.Server.TrustedProxies)
+
+	t.Setenv("TRUSTED_PROXIES", "not-an-ip")
+	_, err = Load()
+	require.ErrorContains(t, err, "TRUSTED_PROXIES")
+
+	t.Setenv("TRUSTED_PROXIES", "10.0.0.0/33")
+	_, err = Load()
+	require.ErrorContains(t, err, "TRUSTED_PROXIES")
+
+	// Blank header falls back to the default (envOr), never an error.
+	t.Setenv("TRUSTED_PROXIES", "")
+	t.Setenv("PROXY_HEADER", "   ")
+	cfg, err = Load()
+	require.NoError(t, err)
+	assert.Equal(t, "X-Forwarded-For", cfg.Server.ProxyHeader)
+
+	t.Setenv("PROXY_HEADER", "X-Real-IP")
+	cfg, err = Load()
+	require.NoError(t, err)
+	assert.Equal(t, "X-Real-IP", cfg.Server.ProxyHeader)
+}
 func TestValidateProdSecrets(t *testing.T) {
 	t.Setenv("STAGE_STATUS", "prod")
 	t.Setenv("JWT_SECRET_KEY", "secret")

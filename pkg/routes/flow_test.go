@@ -84,6 +84,10 @@ func decodeBody(t *testing.T, resp *http.Response) map[string]interface{} {
 
 // TestAuthFlow covers register, login, profile and password flows.
 func TestAuthFlow(t *testing.T) {
+	// The flow performs ~11 auth calls (registers, logins, resets); raise
+	// the per-test budget so the strict default limiter stays out of the way
+	// (dedicated coverage lives in TestAuthRateLimitExceeded).
+	t.Setenv("RATE_LIMIT_AUTH", "100")
 	app := newTestApp()
 
 	// Register a new user.
@@ -132,6 +136,9 @@ func TestAuthFlow(t *testing.T) {
 	resp = doRequest(t, app, "PATCH", "/api/admin/users/"+moderatorID+"/role", `{"role":"moderator"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "moderator", decodeBody(t, resp)["user"].(map[string]interface{})["role"])
+	// Role change is a privilege moment: the admin CSRF token rotated, so
+	// merge the fresh cookies before the next mutation.
+	cookies = mergeCookies(cookies, resp.Cookies())
 
 	resp = doRequest(t, app, "POST", "/api/auth/login",
 		`{"email":"moderator@example.com","password":"secret123"}`, nil)
@@ -271,6 +278,25 @@ func TestAuthFlow(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
 
+	// A password reset kills the live session: the old cookies are dead.
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", cookies)
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+
+	// Login with the reset password.
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"flow@example.com","password":"hashedtoken123"}`, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies = resp.Cookies()
+	refreshCookie = nil
+	for _, cookie := range cookies {
+		if cookie.Name == "refresh_token" {
+			refreshCookie = cookie
+		}
+	}
+	require.NotNil(t, refreshCookie)
+
 	// Logout ends the session: cookies are cleared and renewal is revoked.
 	resp = doRequest(t, app, "POST", "/api/auth/logout", "", cookies)
 	assert.Equal(t, 204, resp.StatusCode)
@@ -284,6 +310,68 @@ func TestAuthFlow(t *testing.T) {
 	resp = doRequest(t, app, "GET", "/api/auth/me", "", []*http.Cookie{
 		{Name: "access_token", Value: expiredString},
 		refreshCookie,
+	})
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+}
+
+// TestStrictSingleSession covers kick-on-relogin: a second login mints a
+// new sid, and the previous access + refresh tokens die immediately.
+func TestStrictSingleSession(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Single User","email":"single@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	userID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"single@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	first := resp.Cookies()
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", first)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	// Second login kicks the first session.
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"single@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	second := resp.Cookies()
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", second)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	// Old access token is dead even though it is not expired yet.
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", first)
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+
+	// Old refresh token cannot renew either: expired access + old refresh.
+	var firstAccessValue, firstRefreshValue string
+	for _, c := range first {
+		switch c.Name {
+		case "access_token":
+			firstAccessValue = c.Value
+		case "refresh_token":
+			firstRefreshValue = c.Value
+		}
+	}
+	require.NotEmpty(t, firstAccessValue)
+	require.NotEmpty(t, firstRefreshValue)
+	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":  userID,
+		"exp": time.Now().Add(-time.Hour).Unix(),
+	})
+	expiredString, err := expiredToken.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
+	require.NoError(t, err)
+	resp = doRequest(t, app, "GET", "/api/auth/me", "", []*http.Cookie{
+		{Name: "access_token", Value: expiredString},
+		{Name: "refresh_token", Value: firstRefreshValue},
 	})
 	assert.Equal(t, 401, resp.StatusCode)
 	resp.Body.Close()

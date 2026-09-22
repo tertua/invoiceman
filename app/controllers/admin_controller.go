@@ -103,6 +103,11 @@ func UpdateUserRole(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update user role", nil)
 	}
 	recordAudit(c, db, adminID, "user.role.update", "user", userID.String(), `{"role":"`+input.Role+`"}`)
+	// Privilege moment: rotate the admin's own CSRF token and rebind it,
+	// so a leaked token paired with the old role mix is rejected.
+	if err := rotateCSRF(c, adminID); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate csrf token", nil)
+	}
 	user.UserRole = input.Role
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": adminUserResponse(user)})
 }

@@ -9,19 +9,29 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/pkg/configs"
 )
 
 // Tokens struct to describe tokens object.
 type Tokens struct {
-	Access  string
+	Access string
+	// SID identifies the session generation: a new login mints a new SID
+	// and instantly kills the previous session (strict single-session).
+	SID     string
 	Refresh string
 }
 
 // GenerateNewTokens func for generate a new Access & Refresh tokens.
-func GenerateNewTokens(id string) (*Tokens, error) {
+// An empty sid mints a fresh session; a non-empty one reuses the session
+// (transparent refresh must not kick sibling tabs sharing the session).
+func GenerateNewTokens(id, sid string) (*Tokens, error) {
+	if sid == "" {
+		sid = uuid.NewString()
+	}
+
 	// Generate JWT Access token.
-	accessToken, err := generateNewAccessToken(id)
+	accessToken, err := generateNewAccessToken(id, sid)
 	if err != nil {
 		// Return token generation error.
 		return nil, err
@@ -36,11 +46,12 @@ func GenerateNewTokens(id string) (*Tokens, error) {
 
 	return &Tokens{
 		Access:  accessToken,
+		SID:     sid,
 		Refresh: refreshToken,
 	}, nil
 }
 
-func generateNewAccessToken(id string) (string, error) {
+func generateNewAccessToken(id, sid string) (string, error) {
 	// Set secret key and expiry from the central config.
 	cfg := configs.Get().JWT
 	secret := cfg.Secret
@@ -51,6 +62,7 @@ func generateNewAccessToken(id string) (string, error) {
 
 	// Set public claims:
 	claims["id"] = id
+	claims["sid"] = sid
 	claims["exp"] = time.Now().Add(time.Minute * time.Duration(minutesCount)).Unix()
 
 	// Create a new JWT access token with claims.

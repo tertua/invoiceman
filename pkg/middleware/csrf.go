@@ -1,13 +1,16 @@
 package middleware
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/platform/cache"
 )
 
 // CSRF double-submit protection for cookie-session mutations.
@@ -53,6 +56,12 @@ func ClearCSRFCookie(c fiber.Ctx) {
 // RequireCSRF rejects session-cookie mutations without a matching header.
 // Safe methods pass through; requests without any session cookie (API-key
 // relay, public pages) are not its concern and pass to their own auth.
+//
+// Beyond the cookie/header match, the token is cross-checked against the
+// session store binding: rotation on privilege moments (password/role
+// change) rebinds the stored token, so a leaked old token is rejected even
+// when attacker and victim pairs are self-consistent. Sessions predating
+// the binding keep the pure double-submit check.
 func RequireCSRF() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		switch c.Method() {
@@ -67,6 +76,32 @@ func RequireCSRF() fiber.Handler {
 		if cookie == "" || header == "" || cookie != header {
 			return utils.Fail(c, fiber.StatusForbidden, "csrf token missing or mismatched", nil)
 		}
+		if userID, _, ok := userIDFromAccess(accessTokenString(c)); ok {
+			if !csrfBound(userID, cookie) {
+				return utils.Fail(c, fiber.StatusForbidden, "csrf token missing or mismatched", nil)
+			}
+		}
 		return c.Next()
 	}
+}
+
+// csrfBound reports whether the presented token matches the session-store
+// binding. Unbound (legacy) sessions pass — the cookie/header match above
+// is their only check; their next transparent refresh binds them. A missing
+// or unreadable store entry fails closed: AuthRequired just proved the
+// session exists, so a miss means it died mid-request.
+func csrfBound(userID uuid.UUID, token string) bool {
+	store, err := cache.Sessions()
+	if err != nil {
+		return false
+	}
+	stored, err := store.Get(context.Background(), userID.String())
+	if err != nil {
+		return false
+	}
+	_, _, bound, ok := cache.DecodeSessionValue(stored)
+	if !ok || bound == "" {
+		return true
+	}
+	return bound == token
 }

@@ -11,6 +11,7 @@ package configs
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -58,9 +59,11 @@ type Config struct {
 
 // ServerConfig holds HTTP listen settings.
 type ServerConfig struct {
-	Host           string // SERVER_HOST
-	Port           string // SERVER_PORT
-	ReadTimeoutSec int    // SERVER_READ_TIMEOUT
+	Host           string   // SERVER_HOST
+	Port           string   // SERVER_PORT
+	ReadTimeoutSec int      // SERVER_READ_TIMEOUT
+	TrustedProxies []string // TRUSTED_PROXIES, comma-separated IPs/CIDRs
+	ProxyHeader    string   // PROXY_HEADER (default X-Forwarded-For)
 }
 
 // CORSConfig holds allowed origins for credentialed requests.
@@ -213,6 +216,8 @@ func Load() (Config, error) {
 			Host:           envOr("SERVER_HOST", "0.0.0.0"),
 			Port:           envOr("SERVER_PORT", "5000"),
 			ReadTimeoutSec: envInt("SERVER_READ_TIMEOUT", 60),
+			TrustedProxies: envList("TRUSTED_PROXIES"),
+			ProxyHeader:    envOr("PROXY_HEADER", "X-Forwarded-For"),
 		},
 		CORS: CORSConfig{Origins: envList("CORS_ORIGINS")},
 		JWT: JWTConfig{
@@ -338,6 +343,15 @@ func (c Config) Validate() error {
 	if c.Server.ReadTimeoutSec <= 0 {
 		return fmt.Errorf("invalid SERVER_READ_TIMEOUT %q: must be > 0", os.Getenv("SERVER_READ_TIMEOUT"))
 	}
+	for _, p := range c.Server.TrustedProxies {
+		if _, err := netip.ParsePrefix(p); err != nil {
+			if _, err := netip.ParseAddr(p); err != nil {
+				return fmt.Errorf("invalid TRUSTED_PROXIES entry %q: must be an IP or CIDR", p)
+			}
+		}
+	}
+	// Note: ProxyHeader needs no validation — envOr substitutes the
+	// X-Forwarded-For default for blank values, so it is never empty.
 	if c.JWT.AccessMinutes <= 0 || c.JWT.RefreshHours <= 0 {
 		return fmt.Errorf("invalid JWT lifetimes: access minutes and refresh hours must be > 0")
 	}

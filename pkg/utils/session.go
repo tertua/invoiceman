@@ -27,14 +27,17 @@ func CurrentUserID(c fiber.Ctx) (uuid.UUID, error) {
 }
 
 // IssueSession generates a new token pair and stores it in HttpOnly cookies.
+// An empty sid mints a fresh session (login/register: kills any previous
+// session for this user); a non-empty one keeps the session id so a
+// transparent refresh never kicks sibling tabs sharing the session.
 // The access cookie deliberately outlives the JWT inside it (crypto expiry
 // stays short via JWT.AccessMinutes; the cookie lives as long as the
 // refresh cookie). Browsers drop expired cookies, so without this the
 // expired token hint would vanish after 15 minutes of idle and the
 // transparent refresh in AuthRequired could never fire — forcing a
 // re-login despite the long refresh TTL.
-func IssueSession(c fiber.Ctx, userID uuid.UUID) (*Tokens, error) {
-	tokens, err := GenerateNewTokens(userID.String())
+func IssueSession(c fiber.Ctx, userID uuid.UUID, sid string) (*Tokens, error) {
+	tokens, err := GenerateNewTokens(userID.String(), sid)
 	if err != nil {
 		return nil, err
 	}

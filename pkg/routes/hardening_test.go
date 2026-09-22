@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/middleware"
 )
 
@@ -101,4 +103,45 @@ func TestAuthRateLimitExceeded(t *testing.T) {
 		`{"email":"nobody@example.com","password":"wrongpassword123"}`, nil)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
+}
+
+// TestTrustedProxyIP verifies proxy trust wiring end to end: without
+// TRUSTED_PROXIES a spoofed X-Forwarded-For is ignored (c.IP falls back to
+// the connection IP), and with the client IP trusted the header is honored.
+func TestTrustedProxyIP(t *testing.T) {
+	echoIPApp := func() *fiber.App {
+		app := fiber.New(configs.FiberConfig())
+		app.Get("/echo-ip", func(c fiber.Ctx) error {
+			return c.SendString(c.IP())
+		})
+		return app
+	}
+	getIP := func(app *fiber.App, forwardedFor string) string {
+		req := httptest.NewRequest("GET", "/echo-ip", nil)
+		if forwardedFor != "" {
+			req.Header.Set("X-Forwarded-For", forwardedFor)
+		}
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		raw, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		return string(raw)
+	}
+
+	// Untrusted (default): the spoofed header is ignored.
+	t.Setenv("TRUSTED_PROXIES", "")
+	got := getIP(echoIPApp(), "203.0.113.9")
+	assert.NotEqual(t, "203.0.113.9", got)
+
+	// Trusted: fiber's test transport presents the remote as 0.0.0.0, so
+	// trusting it makes c.IP honor the header.
+	t.Setenv("TRUSTED_PROXIES", "0.0.0.0/32")
+	got = getIP(echoIPApp(), "203.0.113.9")
+	assert.Equal(t, "203.0.113.9", got)
+
+	// Trusting an unrelated IP keeps the header ignored.
+	t.Setenv("TRUSTED_PROXIES", "198.51.100.7")
+	got = getIP(echoIPApp(), "203.0.113.9")
+	assert.NotEqual(t, "203.0.113.9", got)
 }

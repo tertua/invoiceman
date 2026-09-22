@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,37 @@ type SessionStore interface {
 // RefreshTTL returns the refresh token lifetime from the central config.
 func RefreshTTL() time.Duration {
 	return time.Hour * time.Duration(configs.Get().JWT.RefreshHours)
+}
+
+// EncodeSessionValue packs a session id, refresh token and bound CSRF token.
+// The "\n" separators are safe: refresh tokens are hex + "." + digits and
+// CSRF tokens are hex, never multiline.
+func EncodeSessionValue(sid, refresh, csrf string) string {
+	return sid + "\n" + refresh + "\n" + csrf
+}
+
+// DecodeSessionValue splits a stored session value back into its parts.
+// Legacy entries predate fields: a bare refresh string (pre-sid) yields an
+// empty sid and csrf, and a two-part value yields an empty csrf.
+func DecodeSessionValue(value string) (sid, refresh, csrf string, ok bool) {
+	parts := strings.Split(value, "\n")
+	switch len(parts) {
+	case 1:
+		if parts[0] == "" {
+			return "", "", "", false
+		}
+		return "", parts[0], "", true
+	case 2:
+		if parts[0] == "" || parts[1] == "" {
+			return "", "", "", false
+		}
+		return parts[0], parts[1], "", true
+	default:
+		if parts[0] == "" || parts[1] == "" {
+			return "", "", "", false
+		}
+		return parts[0], parts[1], parts[2], true
+	}
 }
 
 var (

@@ -35,6 +35,13 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.MailOutbox{}, "html_body")
 		},
 	},
+	{
+		Version:     3,
+		Description: "admin_claims singleton for atomic first-admin bootstrap",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropTable(&models.AdminClaim{})
+		},
+	},
 }
 
 // CurrentSchemaVersion reports the version stamp stored in the database.

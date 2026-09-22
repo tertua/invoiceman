@@ -35,13 +35,34 @@ func publicUser(u models.User) fiber.Map {
 	}
 }
 
-// saveRefreshToken stores the refresh token in the session store.
-func saveRefreshToken(userID uuid.UUID, refresh string) error {
+// saveRefreshToken stores the session (sid + refresh token + bound CSRF
+// token) in the session store. Overwriting kills any previous session:
+// strict single-session.
+func saveRefreshToken(userID uuid.UUID, sid, refresh, csrf string) error {
 	store, err := cache.Sessions()
 	if err != nil {
 		return err
 	}
-	return store.Set(context.Background(), userID.String(), refresh, cache.RefreshTTL())
+	return store.Set(context.Background(), userID.String(), cache.EncodeSessionValue(sid, refresh, csrf), cache.RefreshTTL())
+}
+
+// saveSessionCSRF rebinds the CSRF token of the live session without
+// touching its sid or refresh token (rotation on privilege moments).
+func saveSessionCSRF(userID uuid.UUID, csrf string) error {
+	store, err := cache.Sessions()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	stored, err := store.Get(ctx, userID.String())
+	if err != nil {
+		return err
+	}
+	sid, refresh, _, ok := cache.DecodeSessionValue(stored)
+	if !ok {
+		return cache.ErrSessionNotFound
+	}
+	return store.Set(ctx, userID.String(), cache.EncodeSessionValue(sid, refresh, csrf), cache.RefreshTTL())
 }
 
 // deleteRefreshToken removes the refresh token from the session store.
@@ -53,10 +74,36 @@ func deleteRefreshToken(userID uuid.UUID) error {
 	return store.Delete(context.Background(), userID.String())
 }
 
-// issueCSRF mints the double-submit token for a fresh session.
-func issueCSRF(c fiber.Ctx) error {
+// recordLoginFailure audits a failed login without leaking the email:
+// the entity id is a one-way hash, the reason stays generic.
+func recordLoginFailure(c fiber.Ctx, db *database.Queries, email, reason string, userID uuid.UUID) {
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	recordAudit(c, db, userID, "auth.login.failed", "auth", relay.HashKey(normalized), `{"reason":"`+reason+`"}`)
+}
+
+// issueCSRF mints the double-submit token for a session and writes the
+// readable cookie. The returned value must be bound to the session store
+// (saveRefreshToken/saveSessionCSRF): RequireCSRF cross-checks it, so a
+// rotated token actually invalidates the old one instead of merely
+// replacing the cookie (pure double-submit has no server state to forget).
+func issueCSRF(c fiber.Ctx) (string, error) {
 	token, err := middleware.NewCSRFToken()
 	if err != nil {
+		return "", err
+	}
+	middleware.SetCSRFCookie(c, token)
+	return token, nil
+}
+
+// rotateCSRF mints a new CSRF token for a privilege moment. The binding is
+// stored before the cookie is written, so a store failure never leaves the
+// browser cookie and the server disagreeing (every later mutation would 403).
+func rotateCSRF(c fiber.Ctx, userID uuid.UUID) error {
+	token, err := middleware.NewCSRFToken()
+	if err != nil {
+		return err
+	}
+	if err := saveSessionCSRF(userID, token); err != nil {
 		return err
 	}
 	middleware.SetCSRFCookie(c, token)
@@ -117,9 +164,7 @@ func Register(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
 	}
-	if count == 0 {
-		role = repository.AdminRoleName
-	}
+	firstUser := count == 0
 
 	user := &models.User{
 		ID:           uuid.New(),
@@ -138,22 +183,40 @@ func Register(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
 	}
 
+	// First-admin bootstrap is an atomic singleton insert: only the
+	// winner of a concurrent-register race becomes admin. Non-first
+	// registers skip the claim entirely (cheap path, no extra write).
+	if firstUser {
+		won, err := db.ClaimFirstAdmin(user.ID)
+		if err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
+		}
+		if won {
+			user.UserRole = repository.AdminRoleName
+			if err := db.UpdateUserRole(user.ID, repository.AdminRoleName); err != nil {
+				return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
+			}
+		}
+	}
+
 	// Create default settings row (ignored when it already exists).
 	settings := models.DefaultSettings(user.ID)
 	if err := db.CreateSettings(settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user settings", nil)
 	}
 
-	tokens, err := utils.IssueSession(c, user.ID)
+	tokens, err := utils.IssueSession(c, user.ID, "")
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
 	}
-	if err := saveRefreshToken(user.ID, tokens.Refresh); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
-	}
-	if err := issueCSRF(c); err != nil {
+	csrf, err := issueCSRF(c)
+	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
 	}
+	if err := saveRefreshToken(user.ID, tokens.SID, tokens.Refresh, csrf); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
+	}
+	recordAudit(c, db, user.ID, "auth.register", "user", user.ID.String(), "")
 
 	user.PasswordHash = ""
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"user": publicUser(*user)})
@@ -189,25 +252,32 @@ func Login(c fiber.Ctx) error {
 
 	user, err := db.GetUserByEmail(payload.Email)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			recordLoginFailure(c, db, payload.Email, "not_found", uuid.Nil)
+		}
 		return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
 	}
 	if !utils.ComparePasswords(user.PasswordHash, payload.Password) {
+		recordLoginFailure(c, db, payload.Email, "bad_password", user.ID)
 		return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
 	}
 	if user.UserStatus != 1 {
+		recordLoginFailure(c, db, payload.Email, "blocked", user.ID)
 		return utils.Fail(c, fiber.StatusForbidden, "account is blocked", nil)
 	}
 
-	tokens, err := utils.IssueSession(c, user.ID)
+	tokens, err := utils.IssueSession(c, user.ID, "")
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
 	}
-	if err := saveRefreshToken(user.ID, tokens.Refresh); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
-	}
-	if err := issueCSRF(c); err != nil {
+	csrf, err := issueCSRF(c)
+	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
 	}
+	if err := saveRefreshToken(user.ID, tokens.SID, tokens.Refresh, csrf); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
+	}
+	recordAudit(c, db, user.ID, "auth.login.success", "user", user.ID.String(), "")
 
 	user.PasswordHash = ""
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user)})
@@ -228,6 +298,10 @@ func Logout(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
+	// Audit is best-effort (never fails logout): no handle, no trail.
+	if db, err := database.OpenDBConnection(); err == nil {
+		recordAudit(c, db, userID, "auth.logout", "user", userID.String(), "")
+	}
 	if err := deleteRefreshToken(userID); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete session", nil)
 	}
@@ -349,6 +423,11 @@ func ChangePassword(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update password", nil)
 	}
 	recordAudit(c, db, userID, "auth.password.change", "user", userID.String(), "")
+	// Privilege moment: a leaked CSRF token must not survive a password
+	// change — rotate and rebind, so the old token is rejected server-side.
+	if err := rotateCSRF(c, userID); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate csrf token", nil)
+	}
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "password updated"})
 }
@@ -456,6 +535,12 @@ func ResetPassword(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update password", nil)
 	}
 	_ = db.DeletePasswordResetsByUser(reset.UserID)
+	// The password changed out-of-band: the old session (if any) dies here,
+	// and any stale cookies lingering in this browser are cleared too.
+	_ = deleteRefreshToken(reset.UserID)
+	utils.ClearSession(c)
+	middleware.ClearCSRFCookie(c)
+	recordAudit(c, db, reset.UserID, "auth.password.reset", "user", reset.UserID.String(), "")
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "password updated"})
 }
