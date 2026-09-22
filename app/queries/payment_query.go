@@ -1,6 +1,8 @@
 package queries
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
 	"gorm.io/gorm"
@@ -11,8 +13,9 @@ type PaymentQueries struct {
 	*gorm.DB
 }
 
-// ListPayments returns payments belonging to invoices owned by a user.
-func (q *PaymentQueries) ListPayments(userID uuid.UUID) ([]models.PaymentListRow, error) {
+// ListPayments returns one page of payments belonging to invoices owned
+// by a user.
+func (q *PaymentQueries) ListPayments(userID uuid.UUID, limit, offset int) ([]models.PaymentListRow, error) {
 	payments := []models.PaymentListRow{}
 	err := q.Table("payments").
 		Select(`payments.id AS payment_id, payments.invoice_id, invoices.invoice_number,
@@ -22,8 +25,49 @@ func (q *PaymentQueries) ListPayments(userID uuid.UUID) ([]models.PaymentListRow
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
 		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID).
 		Order("payments.paid_on DESC").Order("payments.created_at DESC").
+		Limit(limit).Offset(offset).
 		Scan(&payments).Error
 	return payments, err
+}
+
+// CountPayments returns the total payments over invoices owned by a user.
+func (q *PaymentQueries) CountPayments(userID uuid.UUID) (int64, error) {
+	var total int64
+	err := q.Table("payments").
+		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
+		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID).
+		Count(&total).Error
+	return total, err
+}
+
+// PaymentTotals holds global payment aggregates for a user.
+type PaymentTotals struct {
+	Total     float64
+	ThisMonth float64
+}
+
+// GetPaymentTotals returns all-time and current-month payment sums.
+func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, error) {
+	totals := PaymentTotals{}
+	base := q.Table("payments").
+		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
+		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID)
+	if err := base.Select("COALESCE(SUM(payments.amount), 0)").Scan(&totals.Total).Error; err != nil {
+		return totals, err
+	}
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	nextMonth := monthStart.AddDate(0, 1, 0)
+	monthTx := q.Table("payments").
+		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
+		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID).
+		Where("payments.paid_on >= ? AND payments.paid_on < ?", monthStart, nextMonth)
+	var thisMonth float64
+	if err := monthTx.Select("COALESCE(SUM(payments.amount), 0)").Scan(&thisMonth).Error; err != nil {
+		return totals, err
+	}
+	totals.ThisMonth = thisMonth
+	return totals, nil
 }
 
 // GetPayment returns a payment owned by a user.

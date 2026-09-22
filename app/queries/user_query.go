@@ -64,10 +64,10 @@ func (q *UserQueries) CountUsers() (int64, error) {
 	return count, nil
 }
 
-// ListUsers returns users without loading any related data.
-func (q *UserQueries) ListUsers() ([]models.User, error) {
+// ListUsers returns one page of users without loading any related data.
+func (q *UserQueries) ListUsers(limit, offset int) ([]models.User, error) {
 	users := make([]models.User, 0)
-	if err := q.Order("created_at ASC").Find(&users).Error; err != nil {
+	if err := q.Order("created_at ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil

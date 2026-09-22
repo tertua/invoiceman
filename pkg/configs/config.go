@@ -37,6 +37,10 @@ type Config struct {
 	Relay RelayConfig
 	Log   LogConfig
 
+	Idempotency IdempotencyConfig
+
+	Outbox OutboxConfig
+
 	Metrics MetricsConfig
 }
 
@@ -112,6 +116,17 @@ type MailConfig struct {
 // RelayConfig holds the public origin of this API for callbacks.
 type RelayConfig struct {
 	PublicURL string // INVOICEMAN_PUBLIC_URL
+}
+
+// IdempotencyConfig holds replay protection for mutating payment routes.
+type IdempotencyConfig struct {
+	TTLHours int // IDEMPOTENCY_TTL_HOURS
+}
+
+// OutboxConfig holds the background worker settings.
+type OutboxConfig struct {
+	PollSeconds int // OUTBOX_POLL_SECONDS
+	Batch       int // OUTBOX_BATCH
 }
 
 // MidtransConfig holds Midtrans relay credentials.
@@ -210,6 +225,13 @@ func Load() (Config, error) {
 		Relay: RelayConfig{
 			PublicURL: envOr("INVOICEMAN_PUBLIC_URL", "http://localhost:5000"),
 		},
+		Idempotency: IdempotencyConfig{
+			TTLHours: envInt("IDEMPOTENCY_TTL_HOURS", 24),
+		},
+		Outbox: OutboxConfig{
+			PollSeconds: envInt("OUTBOX_POLL_SECONDS", 10),
+			Batch:       envInt("OUTBOX_BATCH", 20),
+		},
 		Log: LogConfig{Level: strings.ToLower(envOr("LOG_LEVEL", "info"))},
 		Metrics: MetricsConfig{
 			Enabled: envBool("METRICS_ENABLED", true),
@@ -261,6 +283,8 @@ func (c Config) Validate() error {
 		"RATE_LIMIT_GENERAL":          c.RateLimit.General, "RATE_LIMIT_AUTH": c.RateLimit.Auth,
 		"RATE_LIMIT_PUBLIC": c.RateLimit.Public, "RATE_LIMIT_WEBHOOK": c.RateLimit.Webhook,
 		"RATE_LIMIT_GATEWAY": c.RateLimit.Gateway, "AI_TIMEOUT_SECONDS": c.AI.TimeoutSec,
+		"IDEMPOTENCY_TTL_HOURS": c.Idempotency.TTLHours,
+		"OUTBOX_POLL_SECONDS":   c.Outbox.PollSeconds, "OUTBOX_BATCH": c.Outbox.Batch,
 	} {
 		if v <= 0 {
 			return fmt.Errorf("invalid %s: must be > 0", name)

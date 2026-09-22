@@ -12,10 +12,12 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 )
 
-// ListItems returns catalog items owned by the current user.
+// ListItems returns one page of catalog items owned by the current user.
 // @Description Get catalog items of current user.
 // @Summary get catalog items
 // @Tags Items
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
@@ -29,11 +31,16 @@ func ListItems(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	items, err := db.ListItems(userID)
+	paging := utils.ParsePagination(c)
+	items, err := db.ListItems(userID, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load items", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"items": items})
+	total, err := db.CountItems(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count items", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"items": items, "meta": paging.Meta(total)})
 }
 
 // CreateItem creates a catalog item for the current user.

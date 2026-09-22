@@ -23,10 +23,12 @@ func adminUserResponse(user models.User) fiber.Map {
 	}
 }
 
-// ListUsers returns all accounts for an administrator.
+// ListUsers returns one page of accounts for an administrator.
 // @Description List registered users.
 // @Summary list users
 // @Tags Admin
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
@@ -36,15 +38,20 @@ func ListUsers(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	users, err := db.ListUsers()
+	paging := utils.ParsePagination(c)
+	users, err := db.ListUsers(paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load users", nil)
+	}
+	total, err := db.CountUsers()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count users", nil)
 	}
 	result := make([]fiber.Map, 0, len(users))
 	for _, user := range users {
 		result = append(result, adminUserResponse(user))
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"users": result})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"users": result, "meta": paging.Meta(total)})
 }
 
 // UpdateUserRole assigns a non-admin role to another account.

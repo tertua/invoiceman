@@ -22,10 +22,45 @@ var invoiceSortColumns = map[string]string{
 	"total":      "invoices.total",
 }
 
-// ListInvoices returns invoices of a user with client names and paid amounts.
-func (q *InvoiceQueries) ListInvoices(userID uuid.UUID, status, search, sort, order string) ([]models.InvoiceListRow, error) {
+// ListInvoices returns one page of invoices of a user with client names
+// and paid amounts.
+func (q *InvoiceQueries) ListInvoices(userID uuid.UUID, status, search, sort, order string, limit, offset int) ([]models.InvoiceListRow, error) {
 	invoices := []models.InvoiceListRow{}
 
+	tx := q.filteredInvoices(userID, status, search)
+
+	sortColumn := "invoices.created_at"
+	if column, ok := invoiceSortColumns[strings.ToLower(sort)]; ok {
+		sortColumn = column
+	}
+	sortOrder := "DESC"
+	if strings.ToLower(order) == "asc" {
+		sortOrder = "ASC"
+	}
+	tx = tx.Order(sortColumn + " " + sortOrder).Order("invoices.created_at DESC")
+
+	if err := tx.Limit(limit).Offset(offset).Scan(&invoices).Error; err != nil {
+		return invoices, err
+	}
+
+	return invoices, nil
+}
+
+// CountInvoices returns the total invoices matching the list filters.
+// It wraps the shared filter chain so the count can never diverge from
+// the listing.
+func (q *InvoiceQueries) CountInvoices(userID uuid.UUID, status, search string) (int64, error) {
+	var total int64
+	sub := q.filteredInvoices(userID, status, search).Select("invoices.id")
+	if err := q.Table("(?) AS invoice_ids", sub).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+// filteredInvoices builds the shared filter chain for invoice listing and
+// counting so both stay in sync.
+func (q *InvoiceQueries) filteredInvoices(userID uuid.UUID, status, search string) *gorm.DB {
 	paidSubquery := q.Model(&models.Payment{}).
 		Select("invoice_id, SUM(amount) AS paid").
 		Group("invoice_id")
@@ -57,21 +92,7 @@ func (q *InvoiceQueries) ListInvoices(userID uuid.UUID, status, search, sort, or
 		tx = tx.Where("invoices.invoice_number LIKE ? OR clients.name LIKE ?", like, like)
 	}
 
-	sortColumn := "invoices.created_at"
-	if column, ok := invoiceSortColumns[strings.ToLower(sort)]; ok {
-		sortColumn = column
-	}
-	sortOrder := "DESC"
-	if strings.ToLower(order) == "asc" {
-		sortOrder = "ASC"
-	}
-	tx = tx.Order(sortColumn + " " + sortOrder).Order("invoices.created_at DESC")
-
-	if err := tx.Scan(&invoices).Error; err != nil {
-		return invoices, err
-	}
-
-	return invoices, nil
+	return tx
 }
 
 // ClientInvoiceRow struct to describe an invoice row for client detail.

@@ -370,6 +370,15 @@ paths:
   /admin/gateway/deliveries:
     get:
       description: List relay deliveries.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -404,6 +413,15 @@ paths:
   /admin/gateway/projects:
     get:
       description: List gateway projects.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -508,6 +526,15 @@ paths:
   /admin/gateway/transactions:
     get:
       description: List relay transactions.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -522,6 +549,15 @@ paths:
   /admin/users:
     get:
       description: List registered users.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -837,6 +873,15 @@ paths:
       consumes:
       - application/json
       description: Get all clients of current user.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -989,6 +1034,14 @@ paths:
         in: query
         name: category
         type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -1124,6 +1177,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.IntentInput'
+      - description: Replay protection key (uuid per payment intent)
+        in: header
+        name: Idempotency-Key
+        type: string
       produces:
       - application/json
       responses:
@@ -1169,6 +1226,10 @@ paths:
           additionalProperties:
             type: string
           type: object
+      - description: Replay protection key (uuid per payment intent)
+        in: header
+        name: Idempotency-Key
+        type: string
       produces:
       - application/json
       responses:
@@ -1183,6 +1244,15 @@ paths:
   /gateway/transactions:
     get:
       description: List own payment intents.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -1230,6 +1300,14 @@ paths:
         in: query
         name: order
         type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -1375,6 +1453,15 @@ paths:
   /items:
     get:
       description: Get catalog items of current user.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -1465,6 +1552,15 @@ paths:
   /payments:
     get:
       description: Get payments of current user.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -1489,6 +1585,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.PaymentInput'
+      - description: Replay protection key (uuid per payment intent)
+        in: header
+        name: Idempotency-Key
+        type: string
       produces:
       - application/json
       responses:
@@ -1537,6 +1637,10 @@ paths:
           additionalProperties:
             type: string
           type: object
+      - description: Replay protection key (uuid per payment intent)
+        in: header
+        name: Idempotency-Key
+        type: string
       produces:
       - application/json
       responses:
@@ -1623,6 +1727,10 @@ paths:
         in: path
         name: token
         required: true
+        type: string
+      - description: Replay protection key (uuid per payment intent)
+        in: header
+        name: Idempotency-Key
         type: string
       produces:
       - application/json

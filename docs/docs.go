@@ -32,6 +32,20 @@ const docTemplate = `{
                     "Admin"
                 ],
                 "summary": "list relay deliveries",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -83,6 +97,20 @@ const docTemplate = `{
                     "Admin"
                 ],
                 "summary": "list gateway projects",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -239,6 +267,20 @@ const docTemplate = `{
                     "Admin"
                 ],
                 "summary": "list relay transactions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -265,6 +307,20 @@ const docTemplate = `{
                     "Admin"
                 ],
                 "summary": "list users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -762,6 +818,20 @@ const docTemplate = `{
                     "Clients"
                 ],
                 "summary": "get all clients of current user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1000,6 +1070,18 @@ const docTemplate = `{
                         "description": "Filter by category",
                         "name": "category",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1208,6 +1290,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.IntentInput"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per payment intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -1276,6 +1364,12 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per payment intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -1299,6 +1393,20 @@ const docTemplate = `{
                     "Gateway"
                 ],
                 "summary": "list own intents",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1372,6 +1480,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Sort order",
                         "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
                         "in": "query"
                     }
                 ],
@@ -1604,6 +1724,20 @@ const docTemplate = `{
                     "Items"
                 ],
                 "summary": "get catalog items",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1747,6 +1881,20 @@ const docTemplate = `{
                     "Payments"
                 ],
                 "summary": "get payments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1783,6 +1931,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.PaymentInput"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per payment intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -1826,6 +1980,12 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per payment intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -1990,6 +2150,12 @@ const docTemplate = `{
                         "name": "token",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per payment intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {

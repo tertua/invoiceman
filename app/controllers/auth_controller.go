@@ -17,7 +17,6 @@ import (
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/mail"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -335,7 +334,7 @@ func ForgotPassword(c fiber.Ctx) error {
 	}
 
 	// Always respond generically to avoid email enumeration.
-	// NOTE: email delivery is not wired yet; the token is only stored.
+	// Delivery is async: the worker sends the email, retries included.
 	if user, err := db.GetUserByEmail(payload.Email); err == nil {
 		raw := make([]byte, 32)
 		if _, err := rand.Read(raw); err == nil {
@@ -344,14 +343,14 @@ func ForgotPassword(c fiber.Ctx) error {
 			if err := db.CreatePasswordReset(user.ID, token, time.Now().Add(time.Hour)); err != nil {
 				return utils.Fail(c, fiber.StatusInternalServerError, "failed to create password reset request", nil)
 			}
-			if mailer, mailErr := mail.NewFromEnv(); mailErr == nil {
-				resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
-				body := fmt.Sprintf("Hello %s,\n\nReset your password using this link:\n%s\n\nThis link expires in one hour.", user.Name, resetURL)
-				if err := mailer.Send(user.Email, "Reset your Invoiceman password", body); err != nil {
-					logger.L().Warn("password reset email failed", "email", user.Email, "err", err)
-				}
-			} else if !errors.Is(mailErr, mail.ErrNotConfigured) {
-				logger.L().Warn("password reset email provider configuration is invalid", "err", mailErr)
+			resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
+			body := fmt.Sprintf("Hello %s,\n\nReset your password using this link:\n%s\n\nThis link expires in one hour.", user.Name, resetURL)
+			if err := db.EnqueueMail(&models.MailOutbox{
+				To:      user.Email,
+				Subject: "Reset your Invoiceman password",
+				Body:    body,
+			}); err != nil {
+				logger.L().Warn("password reset email queue failed", "email", user.Email, "err", err)
 			}
 		}
 	}

@@ -148,7 +148,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 	}, nil
 }
 
-// ListInvoices returns invoices of the current user.
+// ListInvoices returns one page of invoices of the current user.
 // @Description Get invoices of current user.
 // @Summary get invoices of current user
 // @Tags Invoices
@@ -158,6 +158,8 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 // @Param search query string false "Search by number or client"
 // @Param sort query string false "Sort column"
 // @Param order query string false "Sort order"
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
 // @Router /invoices [get]
@@ -172,15 +174,23 @@ func ListInvoices(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
+	status, search := c.Query("status"), c.Query("search")
+	paging := utils.ParsePagination(c)
 	rows, err := db.ListInvoices(
 		userID,
-		c.Query("status"),
-		c.Query("search"),
+		status,
+		search,
 		c.Query("sort"),
 		c.Query("order"),
+		paging.Limit(),
+		paging.Offset(),
 	)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoices", nil)
+	}
+	total, err := db.CountInvoices(userID, status, search)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count invoices", nil)
 	}
 
 	invoices := make([]fiber.Map, 0, len(rows))
@@ -198,7 +208,7 @@ func ListInvoices(c fiber.Ctx) error {
 		})
 	}
 
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoices": invoices})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoices": invoices, "meta": paging.Meta(total)})
 }
 
 // GetInvoice returns one invoice with items and payments.

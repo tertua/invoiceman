@@ -25,7 +25,7 @@ func PublicRoutes(a *fiber.App) {
 	// Public payment pages (shared links, higher abuse potential).
 	publicPay := middleware.PublicPayLimiter()
 	route.Get("/public/pay/:token", publicPay, controllers.GetPublicPayment)
-	route.Post("/public/pay/:token/transaction", publicPay, controllers.CreatePublicTransaction)
+	route.Post("/public/pay/:token/transaction", publicPay, middleware.Idempotency(middleware.PublicPayIdempotencyScope), controllers.CreatePublicTransaction)
 	route.Get("/public/pay/:token/status", publicPay, controllers.GetPublicPaymentStatus)
 	route.Get("/public/gateway/config", publicPay, controllers.GatewayConfig)
 

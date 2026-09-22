@@ -13,13 +13,22 @@ type ItemQueries struct {
 	*gorm.DB
 }
 
-// ListItems returns catalog items owned by a user.
-func (q *ItemQueries) ListItems(userID uuid.UUID) ([]models.Item, error) {
+// ListItems returns one page of catalog items owned by a user.
+func (q *ItemQueries) ListItems(userID uuid.UUID, limit, offset int) ([]models.Item, error) {
 	items := []models.Item{}
-	if err := q.Where("user_id = ?", userID).Order("name ASC").Find(&items).Error; err != nil {
+	if err := q.Where("user_id = ?", userID).Order("name ASC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
 		return items, err
 	}
 	return items, nil
+}
+
+// CountItems returns the total catalog items of a user.
+func (q *ItemQueries) CountItems(userID uuid.UUID) (int64, error) {
+	var total int64
+	if err := q.Model(&models.Item{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 // GetItem returns one catalog item owned by a user.

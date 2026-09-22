@@ -92,6 +92,7 @@ func resolveGateway(requested, projectDefault string) string {
 // @Produce json
 // @Param request body models.IntentInput true "Intent payload"
 // @Success 201 {object} map[string]interface{}
+// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /gateway/intents [post]
 func CreateIntent(c fiber.Ctx) error {
 	project, err := utils.CurrentServiceProject(c)
@@ -205,11 +206,13 @@ func GetIntent(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, intentResponse(txn))
 }
 
-// ListMyTransactions returns recent intents for the calling project.
+// ListMyTransactions returns one page of recent intents for the calling project.
 // @Description List own payment intents.
 // @Summary list own intents
 // @Tags Gateway
 // @Produce json
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Router /gateway/transactions [get]
 func ListMyTransactions(c fiber.Ctx) error {
@@ -221,15 +224,20 @@ func ListMyTransactions(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	rows, err := db.ListTransactionsByProject(project.Slug, 100)
+	paging := utils.ParsePagination(c)
+	rows, err := db.ListTransactionsByProject(project.Slug, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load transactions", nil)
+	}
+	total, err := db.CountTransactionsByProject(project.Slug)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count transactions", nil)
 	}
 	out := make([]fiber.Map, 0, len(rows))
 	for _, t := range rows {
 		out = append(out, intentResponse(t))
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"transactions": out})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"transactions": out, "meta": paging.Meta(total)})
 }
 
 // GatewayConfig returns public browser configuration for the active gateway.
@@ -261,6 +269,7 @@ func GatewayConfig(c fiber.Ctx) error {
 // @Produce json
 // @Param request body map[string]string true "Invoice ID"
 // @Success 201 {object} map[string]interface{}
+// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /gateway/invoice-intents [post]
 func CreateInvoiceIntent(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -419,11 +428,13 @@ func CreateProject(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"project": projectResponse(*p, true, apiKey)})
 }
 
-// ListProjects returns all downstream projects for admins.
+// ListProjects returns one page of downstream projects for admins.
 // @Description List gateway projects.
 // @Summary list gateway projects
 // @Tags Admin
 // @Produce json
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects [get]
 func ListProjects(c fiber.Ctx) error {
@@ -431,15 +442,20 @@ func ListProjects(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	rows, err := db.ListProjects()
+	paging := utils.ParsePagination(c)
+	rows, err := db.ListProjects(paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load projects", nil)
+	}
+	total, err := db.CountProjects()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count projects", nil)
 	}
 	out := make([]fiber.Map, 0, len(rows))
 	for _, p := range rows {
 		out = append(out, projectResponse(p, true, ""))
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"projects": out})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"projects": out, "meta": paging.Meta(total)})
 }
 
 // UpdateProject edits project metadata.
@@ -558,11 +574,13 @@ func RotateProjectSecret(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, "")})
 }
 
-// ListAllTransactions returns recent relay transactions for admins.
+// ListAllTransactions returns one page of relay transactions for admins.
 // @Description List relay transactions.
 // @Summary list relay transactions
 // @Tags Admin
 // @Produce json
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/transactions [get]
 func ListAllTransactions(c fiber.Ctx) error {
@@ -570,13 +588,18 @@ func ListAllTransactions(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	rows, err := db.ListAllTransactions(100)
+	paging := utils.ParsePagination(c)
+	rows, err := db.ListAllTransactions(paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load transactions", nil)
+	}
+	total, err := db.CountAllTransactions()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count transactions", nil)
 	}
 	out := make([]fiber.Map, 0, len(rows))
 	for _, t := range rows {
 		out = append(out, intentResponse(t))
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"transactions": out})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"transactions": out, "meta": paging.Meta(total)})
 }

@@ -1,0 +1,108 @@
+package routes
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// doRequestWithHeaders is doRequest plus extra headers (e.g. Idempotency-Key).
+func doRequestWithHeaders(t *testing.T, app *fiber.App, method, route, body string, cookies []*http.Cookie, headers map[string]string) *http.Response {
+	t.Helper()
+
+	req := httptest.NewRequest(method, route, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+	require.NoError(t, err)
+	return resp
+}
+
+func readBody(t *testing.T, resp *http.Response) (int, map[string]interface{}, http.Header) {
+	t.Helper()
+	defer resp.Body.Close()
+	data := map[string]interface{}{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&data))
+	return resp.StatusCode, data, resp.Header
+}
+
+// TestPaymentIdempotency covers replay, mismatch rejection and opt-in.
+func TestPaymentIdempotency(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Idem User","email":"idem@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Idem Co"}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"client_id": "`+clientID+`",
+		"status": "sent",
+		"issue_date": "2026-09-01",
+		"due_date": "2026-09-30",
+		"currency": "USD",
+		"items": [{"description": "Work", "quantity": 1, "rate": 100}]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+
+	payload := fmt.Sprintf(`{"invoiceId":"%s","amount":40,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
+	key := "test-key-idempotency-1"
+
+	// First execution creates the payment.
+	resp = doRequestWithHeaders(t, app, "POST", "/api/payments", payload, cookies,
+		map[string]string{"Idempotency-Key": key})
+	status, first, headers := readBody(t, resp)
+	require.Equal(t, 201, status)
+	assert.Empty(t, headers.Get("Idempotent-Replayed"))
+	firstID := first["payment"].(map[string]interface{})["id"].(string)
+	require.NotEmpty(t, firstID)
+
+	// Retry with the same key replays the stored response, no second row.
+	resp = doRequestWithHeaders(t, app, "POST", "/api/payments", payload, cookies,
+		map[string]string{"Idempotency-Key": key})
+	status, second, headers := readBody(t, resp)
+	require.Equal(t, 201, status)
+	assert.Equal(t, "true", headers.Get("Idempotent-Replayed"))
+	assert.Equal(t, firstID, second["payment"].(map[string]interface{})["id"])
+
+	resp = doRequest(t, app, "GET", "/api/payments", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	list := decodeBody(t, resp)
+	assert.Len(t, list["payments"], 1)
+
+	// Same key with a different payload is rejected.
+	other := fmt.Sprintf(`{"invoiceId":"%s","amount":50,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
+	resp = doRequestWithHeaders(t, app, "POST", "/api/payments", other, cookies,
+		map[string]string{"Idempotency-Key": key})
+	status, mismatched, _ := readBody(t, resp)
+	require.Equal(t, 422, status)
+	assert.Contains(t, mismatched["error"].(map[string]interface{})["message"], "idempotency key")
+
+	// Without a key the endpoint behaves as before (second payment).
+	resp = doRequest(t, app, "POST", "/api/payments", payload, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "GET", "/api/payments", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Len(t, decodeBody(t, resp)["payments"], 2)
+}

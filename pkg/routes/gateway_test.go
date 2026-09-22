@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/outbox"
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
@@ -148,7 +150,10 @@ func TestGatewayRelayFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	webhookBody := decodeBody(t, resp)
 	assert.Equal(t, true, webhookBody["success"])
-	assert.Equal(t, true, webhookBody["relayed"])
+	assert.Equal(t, true, webhookBody["queued"])
+
+	// The background worker forwards asynchronously.
+	outbox.New().ProcessOnce(context.Background())
 
 	// Downstream received exactly one signed forward.
 	receiver.mu.Lock()

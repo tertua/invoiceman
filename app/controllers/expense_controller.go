@@ -24,12 +24,16 @@ func expenseResponse(expense models.Expense) fiber.Map {
 	}
 }
 
-// ListExpenses returns expenses, categories, and totals for the current user.
+// ListExpenses returns one page of expenses plus global totals.
+// Totals and categories always cover the whole category filter, not just
+// the current page.
 // @Description Get expenses of current user.
 // @Summary get expenses
 // @Tags Expenses
 // @Produce json
 // @Param category query string false "Filter by category"
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
 // @Router /expenses [get]
@@ -42,33 +46,27 @@ func ListExpenses(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	all, err := db.ListExpenses(userID)
+	category := c.Query("category")
+	paging := utils.ParsePagination(c)
+	page, err := db.ListExpenses(userID, category, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expenses", nil)
 	}
-
-	category := c.Query("category")
-	categories := make([]string, 0)
-	seen := make(map[string]struct{})
-	for _, expense := range all {
-		if _, ok := seen[expense.Category]; !ok {
-			seen[expense.Category] = struct{}{}
-			categories = append(categories, expense.Category)
-		}
+	total, err := db.CountExpenses(userID, category)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count expenses", nil)
+	}
+	totals, err := db.GetExpenseTotals(userID, category)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense totals", nil)
+	}
+	categories, err := db.ExpenseCategories(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense categories", nil)
 	}
 
-	now := time.Now()
-	total := 0.0
-	thisMonth := 0.0
-	expenses := make([]fiber.Map, 0, len(all))
-	for _, expense := range all {
-		if category != "" && category != "all" && expense.Category != category {
-			continue
-		}
-		total += expense.Amount
-		if expense.ExpenseDate.Year() == now.Year() && expense.ExpenseDate.Month() == now.Month() {
-			thisMonth += expense.Amount
-		}
+	expenses := make([]fiber.Map, 0, len(page))
+	for _, expense := range page {
 		expenses = append(expenses, expenseResponse(expense))
 	}
 
@@ -76,9 +74,10 @@ func ListExpenses(c fiber.Ctx) error {
 		"expenses":   expenses,
 		"categories": categories,
 		"totals": fiber.Map{
-			"total":     total,
-			"thisMonth": thisMonth,
+			"total":     totals.Total,
+			"thisMonth": totals.ThisMonth,
 		},
+		"meta": paging.Meta(total),
 	})
 }
 

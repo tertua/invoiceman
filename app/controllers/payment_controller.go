@@ -42,10 +42,12 @@ func paymentResponse(row models.PaymentListRow) fiber.Map {
 	}
 }
 
-// ListPayments returns payments and totals for the current user.
+// ListPayments returns one page of payments plus global totals.
 // @Description Get payments of current user.
 // @Summary get payments
 // @Tags Payments
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
@@ -59,27 +61,30 @@ func ListPayments(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	rows, err := db.ListPayments(userID)
+	paging := utils.ParsePagination(c)
+	rows, err := db.ListPayments(userID, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payments", nil)
 	}
-	now := time.Now()
-	total := 0.0
-	thisMonth := 0.0
+	total, err := db.CountPayments(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count payments", nil)
+	}
+	totals, err := db.GetPaymentTotals(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment totals", nil)
+	}
 	payments := make([]fiber.Map, 0, len(rows))
 	for _, row := range rows {
-		total += row.Amount
-		if row.PaidOn != nil && row.PaidOn.Year() == now.Year() && row.PaidOn.Month() == now.Month() {
-			thisMonth += row.Amount
-		}
 		payments = append(payments, paymentResponse(row))
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{
 		"payments": payments,
 		"totals": fiber.Map{
-			"total":     total,
-			"thisMonth": thisMonth,
+			"total":     totals.Total,
+			"thisMonth": totals.ThisMonth,
 		},
+		"meta": paging.Meta(total),
 	})
 }
 
@@ -92,6 +97,7 @@ func ListPayments(c fiber.Ctx) error {
 // @Param request body models.PaymentInput true "Payment payload"
 // @Success 201 {object} map[string]interface{}
 // @Security ApiKeyAuth
+// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /payments [post]
 func CreatePayment(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -200,6 +206,7 @@ func DeletePayment(c fiber.Ctx) error {
 // @Param request body map[string]string true "Invoice ID"
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
+// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /payments/online [post]
 func CreateOnlineLink(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -326,19 +333,23 @@ func SendOnlineLink(c fiber.Ctx) error {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
 		}
 	}
-	mailer, err := mail.NewFromEnv()
-	if errors.Is(err, mail.ErrNotConfigured) {
+	// Fail fast when mail is not configured (501 contract), then queue
+	// for async delivery by the worker.
+	if _, err := mail.NewFromEnv(); errors.Is(err, mail.ErrNotConfigured) {
 		return utils.Fail(c, fiber.StatusNotImplemented, "email provider is not configured", nil)
-	}
-	if err != nil {
+	} else if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "email provider configuration is invalid", nil)
 	}
 	url := publicURL("/pay/" + link.Token)
 	body := fmt.Sprintf("Hello,\n\nPlease use the following link to pay invoice %s:\n%s\n\nThank you.", invoice.InvoiceNumber, url)
-	if err := mailer.Send(input.Email, "Payment link for invoice "+invoice.InvoiceNumber, body); err != nil {
-		return utils.Fail(c, fiber.StatusBadGateway, "failed to send payment link email", nil)
+	if err := db.EnqueueMail(&models.MailOutbox{
+		To:      input.Email,
+		Subject: "Payment link for invoice " + invoice.InvoiceNumber,
+		Body:    body,
+	}); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to queue payment link email", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "payment link sent"})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "payment link queued", "queued": true})
 }
 
 func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map, error) {
@@ -403,6 +414,7 @@ func GetPublicPayment(c fiber.Ctx) error {
 // @Produce json
 // @Param token path string true "Payment token"
 // @Success 200 {object} map[string]interface{}
+// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /public/pay/{token}/transaction [post]
 func CreatePublicTransaction(c fiber.Ctx) error {
 	db, err := database.OpenDBConnection()

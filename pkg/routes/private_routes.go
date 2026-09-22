@@ -47,11 +47,11 @@ func PrivateRoutes(a *fiber.App) {
 	route.Patch("/expenses/:id", controllers.UpdateExpense)
 	route.Delete("/expenses/:id", controllers.DeleteExpense)
 
-	// Payment routes:
+	// Payment routes (mutating payment routes replay on Idempotency-Key).
 	route.Get("/payments", controllers.ListPayments)
-	route.Post("/payments", controllers.CreatePayment)
+	route.Post("/payments", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreatePayment)
 	route.Delete("/payments/:id", controllers.DeletePayment)
-	route.Post("/payments/online", controllers.CreateOnlineLink)
+	route.Post("/payments/online", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateOnlineLink)
 	route.Post("/payments/online/send", controllers.SendOnlineLink)
 
 	// Reports routes:
@@ -68,7 +68,9 @@ func PrivateRoutes(a *fiber.App) {
 	route.Post("/ai/write-note", middleware.WithAITimeout(controllers.WriteNote))
 
 	// Local invoice Snap intents (session user, no service key needed).
-	route.Post("/gateway/invoice-intents", middleware.WithAITimeout(controllers.CreateInvoiceIntent))
+	route.Post("/gateway/invoice-intents",
+		middleware.Idempotency(middleware.SessionIdempotencyScope),
+		middleware.WithAITimeout(controllers.CreateInvoiceIntent))
 
 	admin := a.Group("/api/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireRoles("admin"))
 	admin.Get("/users", controllers.ListUsers)

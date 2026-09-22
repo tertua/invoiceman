@@ -178,31 +178,15 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		Payload:     string(payload),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
-		Attempt:     1,
+		Status:      "pending",
 	}
 	delivery.Signature = relay.SignPayload(payload, project.WebhookSecret)
-	result, ferr := relay.Forward(c.Context(), project.WebhookURL, project.Slug, "evt_"+eventID, payload, project.WebhookSecret)
-	if ferr != nil {
-		retryAt := time.Now().Add(5 * time.Minute)
-		delivery.Status = "failed"
-		delivery.RespBody = truncateErr(ferr.Error())
-		delivery.NextRetryAt = &retryAt
-		_ = db.CreateDelivery(delivery)
-		// Return success to Midtrans (we persist + retry ourselves);
-		// the downstream retry is tracked in webhook_deliveries.
-		return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true, "relayed": false})
+	if err := db.CreateDelivery(delivery); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to queue delivery", nil)
 	}
-	delivery.RespCode = result.StatusCode
-	delivery.RespBody = result.Body
-	if result.StatusCode >= 200 && result.StatusCode < 300 {
-		delivery.Status = "delivered"
-	} else {
-		retryAt := time.Now().Add(5 * time.Minute)
-		delivery.Status = "failed"
-		delivery.NextRetryAt = &retryAt
-	}
-	_ = db.CreateDelivery(delivery)
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true, "relayed": delivery.Status == "delivered"})
+	// The background worker forwards and retries; the provider gets a fast
+	// acknowledgement and downstream state is tracked in webhook_deliveries.
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true, "queued": true})
 }
 
 func truncateErr(s string) string {
@@ -260,11 +244,13 @@ func settleLocalInvoice(db database.Queries, txn models.GatewayTransaction, gros
 	})
 }
 
-// ListDeliveries returns recent relay deliveries for admins.
+// ListDeliveries returns one page of recent relay deliveries for admins.
 // @Description List relay deliveries.
 // @Summary list relay deliveries
 // @Tags Admin
 // @Produce json
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/deliveries [get]
 func ListDeliveries(c fiber.Ctx) error {
@@ -272,11 +258,16 @@ func ListDeliveries(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	rows, err := db.ListRecentDeliveries(100)
+	paging := utils.ParsePagination(c)
+	rows, err := db.ListRecentDeliveries(paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load deliveries", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"deliveries": deliveryResponses(rows)})
+	total, err := db.CountDeliveries()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count deliveries", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"deliveries": deliveryResponses(rows), "meta": paging.Meta(total)})
 }
 
 // ListMyDeliveries returns deliveries for one order owned by the calling project.

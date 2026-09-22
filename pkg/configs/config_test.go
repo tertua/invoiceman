@@ -20,6 +20,9 @@ func TestLoadDefaults(t *testing.T) {
 	assert.False(t, cfg.Redis.Enabled())
 	assert.True(t, cfg.Metrics.Enabled)
 	assert.Equal(t, "info", cfg.Log.Level)
+	assert.Equal(t, 24, cfg.Idempotency.TTLHours)
+	assert.Equal(t, 10, cfg.Outbox.PollSeconds)
+	assert.Equal(t, 20, cfg.Outbox.Batch)
 }
 
 // TestLoadOverrides verifies env values win over defaults.

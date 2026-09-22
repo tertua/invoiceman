@@ -13,12 +13,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// ListClients returns all clients of the current user.
+// ListClients returns one page of clients of the current user.
 // @Description Get all clients of current user.
 // @Summary get all clients of current user
 // @Tags Clients
 // @Accept json
 // @Produce json
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Security ApiKeyAuth
 // @Router /clients [get]
@@ -33,12 +35,17 @@ func ListClients(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	clients, err := db.ListClients(userID)
+	paging := utils.ParsePagination(c)
+	clients, err := db.ListClients(userID, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load clients", nil)
 	}
+	total, err := db.CountClients(userID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count clients", nil)
+	}
 
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"clients": clients})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"clients": clients, "meta": paging.Meta(total)})
 }
 
 // GetClient returns one client with invoices and stats.

@@ -13,8 +13,8 @@ type ClientQueries struct {
 	*gorm.DB
 }
 
-// ListClients returns all clients of a user with billing aggregates.
-func (q *ClientQueries) ListClients(userID uuid.UUID) ([]models.ClientListRow, error) {
+// ListClients returns one page of clients of a user with billing aggregates.
+func (q *ClientQueries) ListClients(userID uuid.UUID, limit, offset int) ([]models.ClientListRow, error) {
 	clients := []models.ClientListRow{}
 
 	paidSubquery := q.Model(&models.Payment{}).
@@ -35,11 +35,21 @@ func (q *ClientQueries) ListClients(userID uuid.UUID) ([]models.ClientListRow, e
 		Joins("LEFT JOIN (?) AS pay ON pay.client_id = c.id", paidSubquery).
 		Where("c.user_id = ?", userID).
 		Order("c.created_at DESC").
+		Limit(limit).Offset(offset).
 		Scan(&clients).Error; err != nil {
 		return clients, err
 	}
 
 	return clients, nil
+}
+
+// CountClients returns the total clients of a user for pagination meta.
+func (q *ClientQueries) CountClients(userID uuid.UUID) (int64, error) {
+	var total int64
+	if err := q.Model(&models.Client{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 // GetClient returns one client of a user by ID.

@@ -13,7 +13,7 @@ import (
 // from the API key header (see GatewayAuth).
 func GatewayRoutes(a *fiber.App) {
 	gateway := a.Group("/api/gateway", middleware.GatewayLimiter(), middleware.GatewayAuth())
-	gateway.Post("/intents", controllers.CreateIntent)
+	gateway.Post("/intents", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateIntent)
 	gateway.Get("/intents/:order_id", controllers.GetIntent)
 	gateway.Get("/transactions", controllers.ListMyTransactions)
 	gateway.Get("/deliveries", controllers.ListMyDeliveries)
