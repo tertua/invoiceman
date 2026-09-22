@@ -9,7 +9,7 @@ import (
 // PrivateRoutes func for describe group of private routes.
 func PrivateRoutes(a *fiber.App) {
 	// Create routes group matching the frontend apiClient baseURL ("/api").
-	route := a.Group("/api", middleware.AuthRequired())
+	route := a.Group("/api", middleware.GeneralLimiter(), middleware.AuthRequired())
 
 	// Auth session routes:
 	route.Get("/auth/me", controllers.Me)                     // get current session user
@@ -61,16 +61,16 @@ func PrivateRoutes(a *fiber.App) {
 	route.Get("/settings", controllers.GetSettings)
 	route.Patch("/settings", middleware.RequireRoles("admin", "user"), controllers.UpdateSettings)
 
-	// AI routes:
-	route.Post("/ai/receipt-parse", controllers.ReceiptParse)
-	route.Post("/ai/business-summary", controllers.BusinessSummary)
-	route.Post("/ai/payment-reminder", controllers.PaymentReminder)
-	route.Post("/ai/write-note", controllers.WriteNote)
+	// AI routes (slower upstream calls get a per-request timeout).
+	route.Post("/ai/receipt-parse", middleware.WithAITimeout(controllers.ReceiptParse))
+	route.Post("/ai/business-summary", middleware.WithAITimeout(controllers.BusinessSummary))
+	route.Post("/ai/payment-reminder", middleware.WithAITimeout(controllers.PaymentReminder))
+	route.Post("/ai/write-note", middleware.WithAITimeout(controllers.WriteNote))
 
 	// Local invoice Snap intents (session user, no service key needed).
-	route.Post("/gateway/invoice-intents", controllers.CreateInvoiceIntent)
+	route.Post("/gateway/invoice-intents", middleware.WithAITimeout(controllers.CreateInvoiceIntent))
 
-	admin := a.Group("/api/admin", middleware.AuthRequired(), middleware.RequireRoles("admin"))
+	admin := a.Group("/api/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireRoles("admin"))
 	admin.Get("/users", controllers.ListUsers)
 	admin.Patch("/users/:id/role", controllers.UpdateUserRole)
 }

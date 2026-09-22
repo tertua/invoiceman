@@ -4,9 +4,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 )
+
+// shutdownTimeout bounds graceful shutdown so containers (SIGTERM from
+// Docker/K8s) never hang forever on draining connections.
+const shutdownTimeout = 10 * time.Second
 
 // StartServerWithGracefulShutdown function for starting server with a graceful shutdown.
 func StartServerWithGracefulShutdown(a *fiber.App) {
@@ -14,12 +20,13 @@ func StartServerWithGracefulShutdown(a *fiber.App) {
 	idleConnsClosed := make(chan struct{})
 
 	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt) // Catch OS signals.
-		<-sigint
+		signals := make(chan os.Signal, 1)
+		// SIGINT for local Ctrl+C, SIGTERM for Docker/K8s stop.
+		signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+		<-signals
 
-		// Received an interrupt signal, shutdown.
-		if err := a.Shutdown(); err != nil {
+		// Received a shutdown signal, drain with a bounded timeout.
+		if err := a.ShutdownWithTimeout(shutdownTimeout); err != nil {
 			// Error from closing listeners, or context timeout:
 			log.Printf("Oops... Server is not shutting down! Reason: %v", err)
 		}

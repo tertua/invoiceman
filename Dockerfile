@@ -21,5 +21,9 @@ FROM scratch
 # Copy binary and config files from /build to root folder of scratch container.
 COPY --from=builder ["/build/apiserver", "/build/.env", "/"]
 
+# Probes (see pkg/routes/health_routes.go). The orchestrator, not the app,
+# decides restart/unready based on these.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD ["/apiserver", "-healthcheck"]
+
 # Command to run when starting the container.
 ENTRYPOINT ["/apiserver"]

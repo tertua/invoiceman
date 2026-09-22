@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/middleware"
@@ -32,6 +34,12 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	// Docker HEALTHCHECK (scratch image has no wget/curl): exit 0 when
+	// /healthz answers 200, exit 1 otherwise.
+	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
+		os.Exit(healthcheck())
+	}
+
 	// Define Fiber config.
 	config := configs.FiberConfig()
 
@@ -51,6 +59,7 @@ func main() {
 	gateway.Register(nowpayments.Gateway{})
 
 	// Routes.
+	routes.HealthRoutes(app)  // Liveness/readiness probes (public, before auth).
 	routes.SwaggerRoute(app)  // Register a route for API Docs (Swagger).
 	routes.PublicRoutes(app)  // Register a public routes for app.
 	routes.GatewayRoutes(app) // Register service relay routes (API key, before sessions).
@@ -63,4 +72,22 @@ func main() {
 	} else {
 		utils.StartServerWithGracefulShutdown(app)
 	}
+}
+
+// healthcheck probes /healthz on the local port for Docker HEALTHCHECK.
+func healthcheck() int {
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "5000"
+	}
+	client := http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get("http://127.0.0.1:" + port + "/healthz")
+	if err != nil {
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 1
+	}
+	return 0
 }
