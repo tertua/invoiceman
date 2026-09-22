@@ -1,0 +1,33 @@
+# Build context for Dockerfile.dev (all-in-one API + SPA).
+# BuildKit picks this up automatically for `-f Dockerfile.dev`, so web/
+# SOURCES stay in context (unlike the API-only .dockerignore) while host
+# node_modules and stale dist never enter the image.
+Dockerfile
+Dockerfile.dev
+.dockerignore
+Dockerfile.dev.dockerignore
+.editorconfig
+.gitignore
+.env*
+Makefile
+LICENSE
+**/*.md
+**/*_test.go
+*.out
+*.test
+coverage.*
+*.db*
+*.db-shm
+*.db-wal
+
+# Folders
+.git/
+.github/
+.vscode/
+node_modules/
+web/node_modules/
+web/dist/
+build/
+dist/
+tmp/
+data/

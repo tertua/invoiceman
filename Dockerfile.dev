@@ -1,0 +1,38 @@
+# Dev/all-in-one image: API + embedded Vite SPA in a single container.
+# Production default stays split (Dockerfile = API-only, FE hosted
+# separately); use this when one container is simpler (VPS, demo).
+#
+# Build (BuildKit; Dockerfile.dev.dockerignore keeps web/ sources in context):
+#   docker build -f Dockerfile.dev -t invoiceman:dev .
+# Run:   docker run --rm -p 5000:5000 --env-file .env invoiceman:dev
+# Then open http://localhost:5000 (SPA) — /api/* is served same-origin,
+# so no CORS or vite proxy is needed.
+
+FROM node:24-alpine AS frontend
+WORKDIR /fe
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+FROM golang:1.27-alpine AS builder
+LABEL maintainer="Candro Aleandro <admin@tanet.eu.org> (https://tanet.eu.org)"
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# dist is built in the frontend stage and copied straight into the runtime
+# image; the Go build never needs it (no go:embed).
+ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+RUN go build -ldflags="-s -w" -o apiserver .
+
+FROM scratch
+COPY --from=builder ["/build/apiserver", "/"]
+COPY --from=frontend ["/fe/dist", "/spa"]
+COPY --from=builder ["/build/VERSION", "/VERSION"]
+
+ENV SERVE_SPA_DIR=/spa
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD ["/apiserver", "-healthcheck"]
+
+ENTRYPOINT ["/apiserver"]

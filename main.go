@@ -145,6 +145,7 @@ func main() {
 	routes.SwaggerRoute(app)                        // Register a route for API Docs (Swagger).
 	routes.RegisterAPI(app, routes.APIV1Prefix)     // Current prefix first (see versioning.go ordering).
 	routes.RegisterAPI(app, routes.APILegacyPrefix) // Legacy prefix (deprecation headers).
+	routes.MountSPA(app, cfg.SPA.Dir)               // Optional embedded SPA (empty = API-only).
 	routes.NotFoundRoute(app)                       // Register route for 404 Error.
 
 	// One-line startup summary (secrets never logged).

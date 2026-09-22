@@ -32,6 +32,7 @@ type Config struct {
 	AI        AIConfig
 	Mail      MailConfig
 	Auth      AuthConfig
+	SPA       SPAConfig
 
 	Midtrans    MidtransConfig
 	NOWPayments NOWPaymentsConfig
@@ -122,6 +123,11 @@ type AIConfig struct {
 // AuthConfig holds public auth toggles.
 type AuthConfig struct {
 	AllowRegistration bool // ALLOW_REGISTRATION
+}
+
+// SPAConfig holds the optional embedded-frontend settings.
+type SPAConfig struct {
+	Dir string // SERVE_SPA_DIR: empty = API-only (default)
 }
 
 // MailConfig holds SMTP settings.
@@ -259,6 +265,9 @@ func Load() (Config, error) {
 		},
 		Auth: AuthConfig{
 			AllowRegistration: envBool("ALLOW_REGISTRATION", true),
+		},
+		SPA: SPAConfig{
+			Dir: strings.TrimSpace(os.Getenv("SERVE_SPA_DIR")),
 		},
 		Mail: MailConfig{
 			SMTPHost:     strings.TrimSpace(os.Getenv("SMTP_HOST")),
