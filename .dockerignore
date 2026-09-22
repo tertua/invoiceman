@@ -1,4 +1,5 @@
-# Files
+# Files (kept out of the Go build context; the image only needs the
+# apiserver binary plus the root .env copied by the Dockerfile)
 .dockerignore
 .editorconfig
 .gitignore
@@ -9,8 +10,27 @@ LICENSE
 **/*.md
 **/*_test.go
 *.out
+*.test
+coverage.*
+*.db*
+*.db-shm
+*.db-wal
 
 # Folders
 .git/
 .github/
+.vscode/
 build/
+dist/
+tmp/
+
+# Frontend: the Go image never serves the SPA source (282M+ node_modules).
+# The SPA is built and hosted separately; see web/ and make web.check.
+web/
+
+# Local runtime data: dev SQLite DB and local upload storage must never be
+# baked into the image. Production gets a fresh volume/mount instead.
+data/
+
+# NOTE: the root .env itself must stay includable — the Dockerfile copies
+# /build/.env into the scratch image (create it from .env.example first).
