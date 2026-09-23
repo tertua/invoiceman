@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Wallet,
@@ -22,6 +22,7 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { useReports } from "@/hooks/useReports";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
+import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/hooks/useSettings";
 import { formatMoney, formatDate } from "@/lib/utils";
 const DashboardCharts = lazy(() => import("@/components/dashboard/DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
@@ -103,12 +104,39 @@ export default function Dashboard() {
 }
 
 /* ─────────────────── AI summary ─────────────────── */
+// The last generated summary survives menu switches and reloads via
+// localStorage, scoped per user and language; regenerating overwrites it.
+const SUMMARY_KEY_PREFIX = "invoiceman:ai-summary:";
+
+function summaryKey(userId, lang) {
+  return `${SUMMARY_KEY_PREFIX}${userId || "anon"}:${lang === "id" ? "id" : "en"}`;
+}
+
+function loadCachedSummary(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    return typeof parsed?.summary === "string" ? parsed.summary : "";
+  } catch {
+    return "";
+  }
+}
+
 function AISummaryCard({ stats }) {
-  const { t } = useLang();
-  const [summary, setSummary] = useState("");
+  const { t, lang } = useLang();
+  const { user } = useAuth();
+  const key = summaryKey(user?.id, lang);
+  const [summary, setSummary] = useState(() => loadCachedSummary(key));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [unavailable, setUnavailable] = useState(false);
+
+  // Pick up the cache for the active user/language (e.g. after switching
+  // language or account without a full reload).
+  useEffect(() => {
+    setSummary(loadCachedSummary(key));
+  }, [key]);
 
   async function generate() {
     setLoading(true);
@@ -117,6 +145,11 @@ function AISummaryCard({ stats }) {
     try {
       const res = await aiApi.businessSummary();
       setSummary(res.summary);
+      try {
+        localStorage.setItem(key, JSON.stringify({ summary: res.summary, at: Date.now() }));
+      } catch {
+        /* private mode / quota — in-memory summary still shows */
+      }
     } catch (e) {
       setUnavailable(isAiUnavailable(e));
       if (e.status !== 401) setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("dash.generateFailed"));
