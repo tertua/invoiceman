@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -32,6 +32,7 @@ import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
 import { paymentsApi } from "@/api/payments";
 import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
+import { useAuth } from "@/context/AuthContext";
 import { formatMoney, formatDate, cn } from "@/lib/utils";
 
 export default function InvoiceDetail() {
@@ -437,14 +438,44 @@ const TONES = [
   { key: "final", labelKey: "invDetail.toneFinal" },
 ];
 
+// The last generated draft survives menu switches and reloads via
+// localStorage, scoped per user, invoice, tone and language; regenerating
+// overwrites it.
+const REMINDER_KEY_PREFIX = "invoiceman:ai-reminder:";
+
+function reminderKey(userId, invoiceId, tone, lang) {
+  return `${REMINDER_KEY_PREFIX}${userId || "anon"}:${invoiceId}:${tone}:${lang === "id" ? "id" : "en"}`;
+}
+
+function loadCachedDraft(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.draft?.subject === "string" && typeof parsed?.draft?.body === "string") {
+      return parsed.draft;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function PaymentReminderCard({ invoiceId }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const { user } = useAuth();
   const [tone, setTone] = useState("friendly");
-  const [draft, setDraft] = useState(null);
+  const key = reminderKey(user?.id, invoiceId, tone, lang);
+  const [draft, setDraft] = useState(() => loadCachedDraft(key));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [unavailable, setUnavailable] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Pick up the cache for the active user/invoice/tone/language.
+  useEffect(() => {
+    setDraft(loadCachedDraft(key));
+  }, [key]);
 
   async function generate() {
     setLoading(true);
@@ -453,6 +484,11 @@ function PaymentReminderCard({ invoiceId }) {
     try {
       const res = await aiApi.paymentReminder(invoiceId, tone);
       setDraft(res.draft);
+      try {
+        localStorage.setItem(key, JSON.stringify({ draft: res.draft, at: Date.now() }));
+      } catch {
+        /* private mode / quota — in-memory draft still shows */
+      }
     } catch (e) {
       setUnavailable(isAiUnavailable(e));
       if (e.status !== 401) setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("invDetail.generateFailed"));
