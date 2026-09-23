@@ -54,13 +54,13 @@ func currencyDirective(code string) string {
 	return "All money amounts are in " + code + ". Write them in that currency's conventional format and never default to US dollars. "
 }
 
-// writeNoteInstruction keeps descriptions as prose but forces terms into a
-// numbered-only list so the invoice field stays scannable.
+// writeNoteInstruction turns the notes field into one short wise saying about
+// money, bills, or debt, and forces terms into a numbered-only list.
 func writeNoteInstruction(kind string) string {
 	if kind == "terms" {
 		return "Write polished invoice payment terms as only a numbered list, one term per line like \"1. ...\". No title, intro, or closing sentence. Keep each term concise and suitable for a professional invoice. "
 	}
-	return "Write a polished invoice " + kind + " in plain text. Keep it concise and suitable for a professional invoice. "
+	return "Write one short, original wise saying about money, bills, or debt (1-2 sentences max), suitable as a friendly note on a professional invoice. Do not summarize the invoice and do not mention specific items, amounts, or client details. Use the user prompt only as an optional theme hint. Plain text only, no title, list, or quotation-mark wrapper. "
 }
 
 func aiError(c fiber.Ctx, err error) error {

@@ -91,11 +91,11 @@ export default function InvoiceEditor() {
         tax_rate: Number(settings.tax_rate) || 0,
         discount: 0,
         notes: "",
-        terms: t("invEditor.termsDefault"),
+        terms: "",
         items: [blankItem()],
       });
     }
-  }, [isEdit, existing, settings, form, preselectClient, t]);
+  }, [isEdit, existing, settings, form, preselectClient]);
 
   const totals = useMemo(() => {
     if (!form) return { subtotal: 0, taxAmount: 0, total: 0 };

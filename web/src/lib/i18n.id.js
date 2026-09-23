@@ -457,7 +457,6 @@ export const id = {
     "invEditor.taxPct": "Pajak %",
     "invEditor.discountSymbol": "Diskon ({symbol})",
     "invEditor.taxLine": "Pajak ({n}%)",
-    "invEditor.termsDefault": "Pembayaran jatuh tempo dalam 30 hari.",
 
     /* ============================ clients ============================ */
     "clients.title": "Klien",

@@ -34,17 +34,17 @@ func TestLanguageDirective(t *testing.T) {
 	}
 }
 
-// writeNoteInstruction forces terms into a numbered-only list.
+// writeNoteInstruction turns notes into a wise saying and terms into a numbered-only list.
 func TestWriteNoteInstruction(t *testing.T) {
 	terms := writeNoteInstruction("terms")
 	if !strings.Contains(terms, "numbered list") || !strings.Contains(terms, "1.") {
 		t.Errorf("terms instruction must require a numbered list: %q", terms)
 	}
-	if strings.Contains(terms, "plain text") {
-		t.Errorf("terms instruction must not fall back to prose: %q", terms)
+	if strings.Contains(terms, "wise saying") {
+		t.Errorf("terms instruction must not use the notes style: %q", terms)
 	}
-	if got := writeNoteInstruction("description"); !strings.Contains(got, "plain text") {
-		t.Errorf("description instruction must stay prose: %q", got)
+	if got := writeNoteInstruction("description"); !strings.Contains(got, "wise saying") || !strings.Contains(got, "Do not summarize") {
+		t.Errorf("description instruction must request a wise saying, not a summary: %q", got)
 	}
 }
 

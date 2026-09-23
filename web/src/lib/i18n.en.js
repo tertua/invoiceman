@@ -457,7 +457,6 @@ export const en = {
     "invEditor.taxPct": "Tax %",
     "invEditor.discountSymbol": "Discount ({symbol})",
     "invEditor.taxLine": "Tax ({n}%)",
-    "invEditor.termsDefault": "Payment due within 30 days.",
 
     /* ============================ clients ============================ */
     "clients.title": "Clients",
