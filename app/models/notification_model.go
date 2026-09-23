@@ -13,6 +13,7 @@ const (
 	NotifEventInvoiceCreated       = "invoice.created"
 	NotifEventInvoiceStatusUpdated = "invoice.status_updated"
 	NotifEventPaymentCreated       = "payment.created"
+	NotifEventPaymentVoided        = "payment.voided"
 	NotifEventTest                 = "notification.test"
 )
 
@@ -22,6 +23,7 @@ var NotifAllowedEvents = []string{
 	NotifEventInvoiceCreated,
 	NotifEventInvoiceStatusUpdated,
 	NotifEventPaymentCreated,
+	NotifEventPaymentVoided,
 }
 
 // Notification delivery statuses. Rows are written by controllers and

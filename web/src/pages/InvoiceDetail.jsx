@@ -29,6 +29,7 @@ import {
 import { useSettings } from "@/hooks/useSettings";
 import { usePaymentMutations } from "@/hooks/usePayments";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
+import { VoidPaymentModal } from "@/components/payments/VoidPaymentModal";
 import { paymentsApi } from "@/api/payments";
 import { aiApi, isAiUnavailable, isAiFailure, isAiRateLimited } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
@@ -283,12 +284,14 @@ function PaymentCard({ invoice }) {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareErr, setShareErr] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [voidTarget, setVoidTarget] = useState(null);
   const canShareOnline = balance > 0 && invoice.effective_status !== "draft" && currency === "IDR";
   const shareUrl = shareLink ? new URL(shareLink.url, window.location.origin).href : "";
 
-  async function onDelete(p) {
-    if (!window.confirm(t("payments.confirmDelete", { amount: formatMoney(p.amount, currency) }))) return;
-    await remove.mutateAsync(p.id);
+  async function onVoid(reason) {
+    if (!voidTarget) return;
+    await remove.mutateAsync({ id: voidTarget.id, reason });
+    setVoidTarget(null);
   }
 
   async function onShare() {
@@ -383,9 +386,9 @@ function PaymentCard({ invoice }) {
               </div>
               <div className="text-sm font-semibold text-[var(--success)] tabular">{formatMoney(p.amount, currency)}</div>
               <button type="button"
-                onClick={() => onDelete(p)}
+                onClick={() => setVoidTarget(p)}
                 className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
-                aria-label={t("common.delete")}
+                aria-label={t("payments.voidTitle")}
               >
                 <Trash2 size={12} />
               </button>
@@ -401,6 +404,13 @@ function PaymentCard({ invoice }) {
         invoiceNumber={invoice.invoice_number}
         amount={balance}
         defaultEmail={invoice.client_email || ""}
+      />
+      <VoidPaymentModal
+        open={!!voidTarget}
+        onClose={() => setVoidTarget(null)}
+        payment={voidTarget}
+        currency={currency}
+        onVoid={onVoid}
       />
     </Card>
   );

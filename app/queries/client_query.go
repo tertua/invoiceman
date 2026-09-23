@@ -21,7 +21,7 @@ func (q *ClientQueries) ListClients(userID uuid.UUID, limit, offset int) ([]mode
 	paidSubquery := q.Model(&models.Payment{}).
 		Select("invoices.client_id AS client_id, SUM(payments.amount) AS paid").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND invoices.status = ?", userID, models.InvoiceStatusSent).
+		Where("invoices.user_id = ? AND invoices.status = ? AND payments.voided_at IS NULL", userID, models.InvoiceStatusSent).
 		Group("invoices.client_id")
 
 	billedSubquery := q.Model(&models.Invoice{}).

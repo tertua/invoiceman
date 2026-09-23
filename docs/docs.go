@@ -2574,14 +2574,17 @@ const docTemplate = `{
                         "SessionCookie": []
                     }
                 ],
-                "description": "Delete a payment.",
+                "description": "Void a payment.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Payments"
                 ],
-                "summary": "delete payment",
+                "summary": "void payment",
                 "parameters": [
                     {
                         "type": "string",
@@ -2589,13 +2592,34 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Void reason (required, also accepted as JSON body {reason})",
+                        "name": "reason",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Void payload (alternative to query)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaymentVoidInput"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per void intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "ok",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -3331,6 +3355,18 @@ const docTemplate = `{
                 }
             }
         },
+        "models.PaymentVoidInput": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
         "models.Register": {
             "type": "object",
             "required": [
@@ -3526,7 +3562,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api",
 	Schemes:          []string{},
 	Title:            "Invoiceman API",
-	Description:      "Invoiceman API. Two prefixes serve the same routes: /api/v1\n(current, used by the SPA) and /api (legacy, deprecated —\nresponses carry a Sunset header). Unless tagged otherwise,\nendpoints speak JSON with this envelope. Success: the data\nkeys directly, e.g. {\"expense\": {...}} or\n{\"invoices\": [...], \"meta\": {\"page\": 1, \"per_page\": 20, \"total\": 42}}.\nList endpoints accept ?page (default 1) and ?per_page\n(default 20, max 100) and always return a meta object.\nErrors: {\"error\": {\"message\": \"...\", \"details\": {...}}} with a\nstable English message (translated client-side via i18n api.*\nkeys). DELETE and logout answer 204 with no body.\n\nAuth — three independent schemes, never mixed:\n1. SessionCookie (most endpoints): login/register set\nHttpOnly access_token + refresh_token cookies. Send cookies\nwith every request (fetch: credentials:include). An expired\naccess token is refreshed transparently from the refresh\ncookie. A Bearer access token in the Authorization header\nworks as a fallback where cookies are unavailable.\n2. CSRF double-submit (session-cookie POST/PATCH/DELETE only):\nlogin/register also set a readable csrf_token cookie — echo\nit back as the X-CSRF-Token header or the mutation is\nrejected with 403. Public GETs and API-key calls are exempt.\n3. ApiKeyAuth (service relay /gateway/* only): pass the\nproject API key as the Authorization header; cookie sessions\nare never accepted there.\nMutations that create money movement accept an Idempotency-Key\nheader (one UUID per intent); replays return the original\nresult instead of duplicating. Login/register/forgot-password\nare behind Cloudflare Turnstile when a secret is configured\n(captcha token required) and rate-limited; AI endpoints answer\n501 without GEMINI_API_KEY.",
+	Description:      "Invoiceman API. Two prefixes serve the same routes: /api/v1\n(current, used by the SPA) and /api (legacy, deprecated —\nresponses carry a Sunset header). Unless tagged otherwise,\nendpoints speak JSON with this envelope. Success: the data\nkeys directly, e.g. {\"expense\": {...}} or\n{\"invoices\": [...], \"meta\": {\"page\": 1, \"per_page\": 20, \"total\": 42}}.\nList endpoints accept ?page (default 1) and ?per_page\n(default 20, max 100) and always return a meta object.\nErrors: {\"error\": {\"message\": \"...\", \"details\": {...}}} with a\nstable English message (translated client-side via i18n api.*\nkeys). Logout answers 204 with no body; most DELETEs do too,\nexcept DELETE /payments/:id which voids and answers 200.\n\nAuth — three independent schemes, never mixed:\n1. SessionCookie (most endpoints): login/register set\nHttpOnly access_token + refresh_token cookies. Send cookies\nwith every request (fetch: credentials:include). An expired\naccess token is refreshed transparently from the refresh\ncookie. A Bearer access token in the Authorization header\nworks as a fallback where cookies are unavailable.\n2. CSRF double-submit (session-cookie POST/PATCH/DELETE only):\nlogin/register also set a readable csrf_token cookie — echo\nit back as the X-CSRF-Token header or the mutation is\nrejected with 403. Public GETs and API-key calls are exempt.\n3. ApiKeyAuth (service relay /gateway/* only): pass the\nproject API key as the Authorization header; cookie sessions\nare never accepted there.\nMutations that create money movement accept an Idempotency-Key\nheader (one UUID per intent); replays return the original\nresult instead of duplicating. Login/register/forgot-password\nare behind Cloudflare Turnstile when a secret is configured\n(captcha token required) and rate-limited; AI endpoints answer\n501 without GEMINI_API_KEY.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

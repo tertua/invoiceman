@@ -165,7 +165,7 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 		}
 
 		var paid float64
-		if err := tx.Model(&models.Payment{}).Where("invoice_id = ?", invoice.ID).
+		if err := tx.Model(&models.Payment{}).Where("invoice_id = ? AND voided_at IS NULL", invoice.ID).
 			Select("COALESCE(SUM(amount), 0)").Scan(&paid).Error; err != nil {
 			return err
 		}

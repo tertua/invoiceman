@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
+import { VoidPaymentModal } from "@/components/payments/VoidPaymentModal";
 import { usePayments, usePaymentMutations } from "@/hooks/usePayments";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
@@ -18,12 +19,14 @@ export default function Payments() {
   const { data, isLoading, error } = usePayments();
   const { remove } = usePaymentMutations();
   const [modalOpen, setModalOpen] = useState(false);
+  const [voidTarget, setVoidTarget] = useState(null);
 
   const payments = data?.payments || [];
 
-  async function onDelete(p) {
-    if (!window.confirm(t("payments.confirmDelete", { amount: formatMoney(p.amount, p.invoice_currency) }))) return;
-    await remove.mutateAsync(p.id);
+  async function onVoid(reason) {
+    if (!voidTarget) return;
+    await remove.mutateAsync({ id: voidTarget.id, reason });
+    setVoidTarget(null);
   }
 
   return (
@@ -71,7 +74,7 @@ export default function Payments() {
                   {p.method ? <Badge tone="neutral">{p.method}</Badge> : <span className="text-xs text-[var(--ink-muted)]">—</span>}
                 </div>
                 <div className="text-sm font-semibold text-[var(--success)] tabular text-right">{formatMoney(p.amount, p.invoice_currency)}</div>
-                <button type="button" onClick={() => onDelete(p)} className="justify-self-end h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--surface-2)] hover:text-[var(--danger)]">
+                <button type="button" onClick={() => setVoidTarget(p)} aria-label={t("payments.voidTitle")} className="justify-self-end h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--surface-2)] hover:text-[var(--danger)]">
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -81,6 +84,13 @@ export default function Payments() {
       )}
 
       <RecordPaymentModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <VoidPaymentModal
+        open={!!voidTarget}
+        onClose={() => setVoidTarget(null)}
+        payment={voidTarget}
+        currency={voidTarget?.invoice_currency}
+        onVoid={onVoid}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/mail"
+	"gorm.io/gorm"
 )
 
 func newPaymentToken() (string, error) {
@@ -168,16 +170,22 @@ func CreatePayment(c fiber.Ctx) error {
 	}})
 }
 
-// DeletePayment deletes a payment owned by the current user.
-// @Description Delete a payment.
-// @Summary delete payment
+// VoidPayment voids a payment owned by the current user instead of deleting
+// it. The row stays for audit but is excluded from every balance, list and
+// aggregate query, so it disappears from the frontend.
+// @Description Void a payment.
+// @Summary void payment
 // @Tags Payments
+// @Accept json
 // @Produce json
 // @Param id path string true "Payment ID"
-// @Success 204 {string} status "ok"
+// @Param reason query string false "Void reason (required, also accepted as JSON body {reason})"
+// @Param request body models.PaymentVoidInput false "Void payload (alternative to query)"
+// @Success 200 {object} map[string]interface{}
 // @Security SessionCookie
+// @Param Idempotency-Key header string false "Replay protection key (uuid per void intent)"
 // @Router /payments/{id} [delete]
-func DeletePayment(c fiber.Ctx) error {
+func VoidPayment(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
@@ -190,18 +198,56 @@ func DeletePayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	if _, err := db.GetPayment(userID, id); err != nil {
+	payment, err := db.GetPayment(userID, id)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "payment not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment", nil)
 	}
-	if err := db.DeletePayment(userID, id); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete payment", nil)
+	if payment.VoidedAt != nil {
+		return utils.Fail(c, fiber.StatusConflict, "payment is already voided", nil)
 	}
-	recordAudit(c, db, userID, "payment.delete", "payment", id.String(), "")
+	// Gateway-settled payments are provider ledger entries: voiding them
+	// here would silently diverge from the gateway's record.
+	if payment.GatewayOrderID != nil && strings.TrimSpace(*payment.GatewayOrderID) != "" {
+		return utils.Fail(c, fiber.StatusUnprocessableEntity, "gateway payment cannot be voided", nil)
+	}
+	reason := strings.TrimSpace(c.Query("reason"))
+	if reason == "" && len(c.Body()) > 0 {
+		input := &models.PaymentVoidInput{}
+		if err := c.Bind().Body(input); err != nil {
+			return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+		}
+		reason = strings.TrimSpace(input.Reason)
+	}
+	if reason == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "void reason is required", nil)
+	}
+	if err := utils.NewValidator().Var(reason, "lte=500"); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "void reason is too long", nil)
+	}
+	if err := db.VoidPayment(userID, id, reason); err != nil {
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, gorm.ErrRecordNotFound) {
+			return utils.Fail(c, fiber.StatusConflict, "payment is already voided", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to void payment", nil)
+	}
+	meta, _ := json.Marshal(fiber.Map{
+		"invoice_id": payment.InvoiceID.String(),
+		"amount":     payment.Amount,
+		"reason":     reason,
+	})
+	recordAudit(c, db, userID, "payment.void", "payment", id.String(), string(meta))
+	voidData := paymentNotifData(db, payment)
+	voidData["void_reason"] = reason
+	enqueueNotification(db, userID, models.NotifEventPaymentVoided, "", voidData)
 	invalidateAggregates(c, userID)
-	return c.SendStatus(fiber.StatusNoContent)
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"payment": fiber.Map{
+		"id":         payment.ID,
+		"invoice_id": payment.InvoiceID,
+		"voided":     true,
+	}})
 }
 
 // CreateOnlineLink creates a public payment link without contacting a gateway.

@@ -16,6 +16,11 @@ type PaymentInput struct {
 	Notes     string  `json:"notes"`
 }
 
+// PaymentVoidInput describes a void request for a recorded payment.
+type PaymentVoidInput struct {
+	Reason string `json:"reason" validate:"required,lte=500"`
+}
+
 // OnlineLinkEmailInput describes a request to email a public payment link.
 type OnlineLinkEmailInput struct {
 	InvoiceID string `json:"invoiceId" validate:"required,uuid4"`

@@ -41,7 +41,8 @@ import (
 // @description (default 20, max 100) and always return a meta object.
 // @description Errors: {"error": {"message": "...", "details": {...}}} with a
 // @description stable English message (translated client-side via i18n api.*
-// @description keys). DELETE and logout answer 204 with no body.
+// @description keys). Logout answers 204 with no body; most DELETEs do too,
+// @description except DELETE /payments/:id which voids and answers 200.
 // @description
 // @description Auth — three independent schemes, never mixed:
 // @description 1. SessionCookie (most endpoints): login/register set

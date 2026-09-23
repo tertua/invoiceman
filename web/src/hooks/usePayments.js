@@ -18,6 +18,6 @@ export function usePaymentMutations() {
   };
   return {
     create: useMutation({ mutationFn: paymentsApi.create, onSuccess: invalidate }),
-    remove: useMutation({ mutationFn: paymentsApi.remove, onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: ({ id, reason }) => paymentsApi.remove(id, reason), onSuccess: invalidate }),
   };
 }

@@ -18,7 +18,7 @@ import {
   useUpdateNotificationEndpoint,
 } from "@/hooks/useNotifications";
 
-const EVENT_KEYS = ["invoice.created", "invoice.status_updated", "payment.created"];
+const EVENT_KEYS = ["invoice.created", "invoice.status_updated", "payment.created", "payment.voided"];
 
 function SecretNotice({ endpoint, onClose }) {
   const { t } = useLang();

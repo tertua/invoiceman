@@ -13,8 +13,9 @@ type PaymentQueries struct {
 	*gorm.DB
 }
 
-// ListPayments returns one page of payments belonging to invoices owned
-// by a user.
+// ListPayments returns one page of non-voided payments belonging to
+// invoices owned by a user. Voided rows stay in the table for audit but
+// are invisible here.
 func (q *PaymentQueries) ListPayments(userID uuid.UUID, limit, offset int) ([]models.PaymentListRow, error) {
 	payments := []models.PaymentListRow{}
 	err := q.Table("payments").
@@ -23,19 +24,20 @@ func (q *PaymentQueries) ListPayments(userID uuid.UUID, limit, offset int) ([]mo
 			payments.amount, payments.method, payments.paid_on, payments.txn_id, payments.notes`).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
-		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID).
+		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
 		Order("payments.paid_on DESC").Order("payments.created_at DESC").
 		Limit(limit).Offset(offset).
 		Scan(&payments).Error
 	return payments, err
 }
 
-// CountPayments returns the total payments over invoices owned by a user.
+// CountPayments returns the total non-voided payments over invoices owned
+// by a user.
 func (q *PaymentQueries) CountPayments(userID uuid.UUID) (int64, error) {
 	var total int64
 	err := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID).
+		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
 		Count(&total).Error
 	return total, err
 }
@@ -46,12 +48,13 @@ type PaymentTotals struct {
 	ThisMonth float64
 }
 
-// GetPaymentTotals returns all-time and current-month payment sums.
+// GetPaymentTotals returns all-time and current-month sums over
+// non-voided payments.
 func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, error) {
 	totals := PaymentTotals{}
 	base := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID)
+		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID)
 	if err := base.Select("COALESCE(SUM(payments.amount), 0)").Scan(&totals.Total).Error; err != nil {
 		return totals, err
 	}
@@ -60,7 +63,7 @@ func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, erro
 	nextMonth := monthStart.AddDate(0, 1, 0)
 	monthTx := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.user_id = ? AND invoices.user_id = ?", userID, userID).
+		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
 		Where("payments.paid_on >= ? AND payments.paid_on < ?", monthStart, nextMonth)
 	var thisMonth float64
 	if err := monthTx.Select("COALESCE(SUM(payments.amount), 0)").Scan(&thisMonth).Error; err != nil {
@@ -86,10 +89,24 @@ func (q *PaymentQueries) CreatePayment(payment *models.Payment) error {
 	})
 }
 
-// DeletePayment deletes a payment owned by a user.
-func (q *PaymentQueries) DeletePayment(userID, id uuid.UUID) error {
+// VoidPayment marks a payment void instead of deleting it. The row stays
+// for audit but is excluded from every balance, list and aggregate query.
+// Only the first void wins: already-voided rows affect zero rows.
+func (q *PaymentQueries) VoidPayment(userID, id uuid.UUID, reason string) error {
 	return DoRetry(func() error {
-		return q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Payment{}).Error
+		res := q.Model(&models.Payment{}).
+			Where("id = ? AND user_id = ? AND voided_at IS NULL", id, userID).
+			Updates(map[string]interface{}{
+				"voided_at":   time.Now(),
+				"void_reason": reason,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
 	})
 }
 

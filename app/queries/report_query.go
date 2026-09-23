@@ -27,7 +27,7 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 		return report, err
 	}
 	var payments []models.Payment
-	if err := q.Where("user_id = ?", userID).Find(&payments).Error; err != nil {
+	if err := q.Where("user_id = ? AND voided_at IS NULL", userID).Find(&payments).Error; err != nil {
 		return report, err
 	}
 	var expenses []models.Expense

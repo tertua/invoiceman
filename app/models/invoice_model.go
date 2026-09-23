@@ -51,6 +51,8 @@ type InvoiceItem struct {
 }
 
 // Payment struct to describe a payment recorded against an invoice.
+// Voided payments are never hard-deleted: VoidedAt/VoidReason mark the
+// row excluded from every balance, list and aggregate query.
 type Payment struct {
 	ID             uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id" validate:"required,uuid"`
 	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
@@ -61,6 +63,8 @@ type Payment struct {
 	PaidOn         *time.Time `db:"paid_on" json:"paid_on"`
 	TxnID          string     `db:"txn_id" json:"txn_id" validate:"lte=255"`
 	GatewayOrderID *string    `gorm:"uniqueIndex" db:"gateway_order_id" json:"-"`
+	VoidedAt       *time.Time `db:"voided_at" json:"voided_at,omitempty"`
+	VoidReason     string     `gorm:"size:500" db:"void_reason" json:"void_reason,omitempty" validate:"lte=500"`
 	Notes          string     `db:"notes" json:"notes"`
 }
 

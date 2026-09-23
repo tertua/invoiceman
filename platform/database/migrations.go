@@ -59,6 +59,16 @@ var migrations = []Migration{
 			return db.Migrator().DropTable(&models.NotificationEndpoint{})
 		},
 	},
+	{
+		Version:     6,
+		Description: "payment void columns (voided_at + void_reason)",
+		Down: func(db *gorm.DB) error {
+			if err := db.Migrator().DropColumn(&models.Payment{}, "voided_at"); err != nil {
+				return err
+			}
+			return db.Migrator().DropColumn(&models.Payment{}, "void_reason")
+		},
+	},
 }
 
 // CurrentSchemaVersion reports the version stamp stored in the database.

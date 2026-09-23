@@ -635,7 +635,7 @@ func TestExpenseFlow(t *testing.T) {
 	resp.Body.Close()
 }
 
-// TestPaymentFlow covers recording, listing, balance validation, and deleting payments.
+// TestPaymentFlow covers recording, listing, balance validation, and voiding payments.
 func TestPaymentFlow(t *testing.T) {
 	app := newTestApp()
 
@@ -688,8 +688,34 @@ func TestPaymentFlow(t *testing.T) {
 	assert.Equal(t, float64(40), detail["paid_amount"])
 	assert.Equal(t, "sent", detail["effective_status"])
 
+	// Void requires a reason.
 	resp = doRequest(t, app, "DELETE", "/api/payments/"+paymentID, "", cookies)
-	assert.Equal(t, 204, resp.StatusCode)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "DELETE", "/api/payments/"+paymentID+"?reason=duplicate", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	voided := decodeBody(t, resp)["payment"].(map[string]interface{})
+	assert.Equal(t, true, voided["voided"])
+	resp.Body.Close()
+
+	// A voided payment disappears from list, totals and invoice balances.
+	resp = doRequest(t, app, "GET", "/api/payments", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	body = decodeBody(t, resp)
+	assert.Empty(t, body["payments"])
+	assert.Equal(t, float64(0), body["totals"].(map[string]interface{})["total"])
+
+	resp = doRequest(t, app, "GET", "/api/invoices/"+invoiceID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	detail = decodeBody(t, resp)["invoice"].(map[string]interface{})
+	assert.Equal(t, float64(0), detail["paid_amount"])
+	assert.Empty(t, detail["payments"])
+	assert.Equal(t, "sent", detail["effective_status"])
+
+	// Double void is rejected.
+	resp = doRequest(t, app, "DELETE", "/api/payments/"+paymentID+"?reason=duplicate", "", cookies)
+	assert.Equal(t, 409, resp.StatusCode)
 	resp.Body.Close()
 }
 

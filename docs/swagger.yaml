@@ -266,6 +266,14 @@ definitions:
     - invoiceId
     - tone
     type: object
+  models.PaymentVoidInput:
+    properties:
+      reason:
+        maxLength: 500
+        type: string
+    required:
+    - reason
+    type: object
   models.Register:
     properties:
       email:
@@ -402,7 +410,8 @@ info:
     (default 20, max 100) and always return a meta object.
     Errors: {"error": {"message": "...", "details": {...}}} with a
     stable English message (translated client-side via i18n api.*
-    keys). DELETE and logout answer 204 with no body.
+    keys). Logout answers 204 with no body; most DELETEs do too,
+    except DELETE /payments/:id which voids and answers 200.
 
     Auth — three independent schemes, never mixed:
     1. SessionCookie (most endpoints): login/register set
@@ -2003,23 +2012,39 @@ paths:
       - Payments
   /payments/{id}:
     delete:
-      description: Delete a payment.
+      consumes:
+      - application/json
+      description: Void a payment.
       parameters:
       - description: Payment ID
         in: path
         name: id
         required: true
         type: string
+      - description: Void reason (required, also accepted as JSON body {reason})
+        in: query
+        name: reason
+        type: string
+      - description: Void payload (alternative to query)
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/models.PaymentVoidInput'
+      - description: Replay protection key (uuid per void intent)
+        in: header
+        name: Idempotency-Key
+        type: string
       produces:
       - application/json
       responses:
-        "204":
-          description: ok
+        "200":
+          description: OK
           schema:
-            type: string
+            additionalProperties: true
+            type: object
       security:
       - SessionCookie: []
-      summary: delete payment
+      summary: void payment
       tags:
       - Payments
   /payments/online:

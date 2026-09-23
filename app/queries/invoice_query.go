@@ -63,6 +63,7 @@ func (q *InvoiceQueries) CountInvoices(userID uuid.UUID, status, search string) 
 func (q *InvoiceQueries) filteredInvoices(userID uuid.UUID, status, search string) *gorm.DB {
 	paidSubquery := q.Model(&models.Payment{}).
 		Select("invoice_id, SUM(amount) AS paid").
+		Where("voided_at IS NULL").
 		Group("invoice_id")
 
 	tx := q.Table("invoices").
@@ -143,23 +144,24 @@ func (q *InvoiceQueries) GetInvoiceItems(invoiceID uuid.UUID) ([]models.InvoiceI
 	return items, nil
 }
 
-// GetInvoicePayments returns payments recorded against an invoice.
+// GetInvoicePayments returns non-voided payments recorded against an
+// invoice. Voided rows stay in the table for audit but are invisible here.
 func (q *InvoiceQueries) GetInvoicePayments(invoiceID uuid.UUID) ([]models.Payment, error) {
 	payments := []models.Payment{}
 
-	if err := q.Where("invoice_id = ?", invoiceID).Order("created_at ASC").Find(&payments).Error; err != nil {
+	if err := q.Where("invoice_id = ? AND voided_at IS NULL", invoiceID).Order("created_at ASC").Find(&payments).Error; err != nil {
 		return payments, err
 	}
 
 	return payments, nil
 }
 
-// PaidAmount returns the total paid amount for an invoice.
+// PaidAmount returns the total non-voided paid amount for an invoice.
 func (q *InvoiceQueries) PaidAmount(invoiceID uuid.UUID) (float64, error) {
 	var paid float64
 
 	if err := q.Model(&models.Payment{}).
-		Where("invoice_id = ?", invoiceID).
+		Where("invoice_id = ? AND voided_at IS NULL", invoiceID).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&paid).Error; err != nil {
 		return 0, err

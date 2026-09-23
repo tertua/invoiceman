@@ -42,7 +42,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	paidInvoiceQuery := q.Model(&models.Payment{}).
 		Select("invoice_id, SUM(amount) AS paid").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ?", userID)
+		Where("invoices.user_id = ? AND payments.voided_at IS NULL", userID)
 	if currency != "" {
 		paidInvoiceQuery = paidInvoiceQuery.Where("invoices.currency = ?", currency)
 	}
@@ -65,7 +65,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	var paidThisMonth float64
 	paidQuery := q.Model(&models.Payment{}).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.created_at >= ?", userID, monthStart)
+		Where("invoices.user_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", userID, monthStart)
 	if currency != "" {
 		paidQuery = paidQuery.Where("invoices.currency = ?", currency)
 	}
@@ -107,7 +107,7 @@ func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) (
 	revenueQuery := q.Model(&models.Payment{}).
 		Select("payments.created_at AS created_at, payments.amount AS amount").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.created_at >= ?", userID, oldest)
+		Where("invoices.user_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", userID, oldest)
 	if currency != "" {
 		revenueQuery = revenueQuery.Where("invoices.currency = ?", currency)
 	}
@@ -154,6 +154,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 
 	paidSubquery := q.Model(&models.Payment{}).
 		Select("invoice_id, SUM(amount) AS paid").
+		Where("voided_at IS NULL").
 		Group("invoice_id")
 
 	var rows []recentInvoiceRow

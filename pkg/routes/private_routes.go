@@ -60,7 +60,7 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	// Payment routes (mutating payment routes replay on Idempotency-Key).
 	route.Get("/payments", controllers.ListPayments)
 	route.Post("/payments", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreatePayment)
-	route.Delete("/payments/:id", controllers.DeletePayment)
+	route.Delete("/payments/:id", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.VoidPayment)
 	route.Post("/payments/online", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateOnlineLink)
 	route.Post("/payments/online/send", controllers.SendOnlineLink)
 
