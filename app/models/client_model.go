@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // Client describes a client.
@@ -34,13 +33,13 @@ type ClientInput struct {
 // ClientListRow struct to describe a client row with billing aggregates.
 type ClientListRow struct {
 	Client
-	TotalBilled decimal.Decimal `db:"total_billed" json:"total_billed"`
-	Outstanding decimal.Decimal `db:"outstanding" json:"outstanding"`
+	TotalBilled Money `db:"total_billed" json:"total_billed"`
+	Outstanding Money `db:"outstanding" json:"outstanding"`
 }
 
 // ClientStats struct to describe client detail statistics.
 type ClientStats struct {
 	Count       int             `json:"count"`
-	TotalBilled decimal.Decimal `json:"totalBilled"`
-	Outstanding decimal.Decimal `json:"outstanding"`
+	TotalBilled Money `json:"totalBilled"`
+	Outstanding Money `json:"outstanding"`
 }

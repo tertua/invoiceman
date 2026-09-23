@@ -4,13 +4,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // PaymentInput describes a recorded payment.
 type PaymentInput struct {
 	InvoiceID string          `json:"invoiceId" validate:"required,uuid4"`
-	Amount    decimal.Decimal `json:"amount"`
+	Amount    Money `json:"amount"`
 	Method    string          `json:"method" validate:"required,lte=50"`
 	PaidOn    string          `json:"paid_on" validate:"required"`
 	TxnID     string          `json:"txn_id" validate:"lte=255"`
@@ -35,7 +34,7 @@ type PaymentListRow struct {
 	InvoiceNumber   string          `db:"invoice_number"`
 	ClientName      string          `db:"client_name"`
 	InvoiceCurrency string          `db:"invoice_currency"`
-	Amount          decimal.Decimal `gorm:"type:decimal(19,4)" db:"amount"`
+	Amount          Money `gorm:"type:decimal(19,4)" db:"amount"`
 	Method          string          `db:"method"`
 	PaidOn          *time.Time      `db:"paid_on"`
 	TxnID           string          `db:"txn_id"`

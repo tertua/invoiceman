@@ -125,7 +125,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
     setSaving(true);
     setErr("");
     try {
-      await create.mutateAsync({ ...form, amount: Number(form.amount) });
+      await create.mutateAsync({ ...form, amount: form.amount });
       onClose();
     } catch (ex) {
       if (ex.status !== 401) setErr(ex.message || t("payments.saveFailed"));

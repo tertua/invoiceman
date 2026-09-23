@@ -131,7 +131,7 @@ function ItemModal({ open, item, onClose }) {
     setSaving(true);
     setErr("");
     try {
-      const payload = { ...form, rate: Number(form.rate) || 0 };
+      const payload = { ...form, rate: form.rate || 0 };
       if (isEdit) await update.mutateAsync({ id: item.id, payload });
       else await create.mutateAsync(payload);
       onClose();

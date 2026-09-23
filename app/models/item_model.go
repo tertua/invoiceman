@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // Item is a reusable catalog item.
@@ -15,7 +14,7 @@ type Item struct {
 	UserID      uuid.UUID       `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
 	Name        string          `db:"name" json:"name" validate:"required,lte=255"`
 	Description string          `db:"description" json:"description" validate:"lte=1000"`
-	Rate        decimal.Decimal `gorm:"type:decimal(19,4)" db:"rate" json:"rate"`
+	Rate        Money `gorm:"type:decimal(19,4)" db:"rate" json:"rate"`
 	Unit        string          `db:"unit" json:"unit" validate:"lte=50"`
 }
 
@@ -23,6 +22,6 @@ type Item struct {
 type ItemInput struct {
 	Name        string          `json:"name" validate:"required,lte=255"`
 	Description string          `json:"description" validate:"lte=1000"`
-	Rate        decimal.Decimal `json:"rate"`
+	Rate        Money `json:"rate"`
 	Unit        string          `json:"unit" validate:"lte=50"`
 }

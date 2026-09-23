@@ -69,14 +69,14 @@ export default function InvoiceEditor() {
           due_date: toDateInput(existing.due_date) || "",
           currency: existing.currency,
           tax_rate: Number(existing.tax_rate) || 0,
-          discount: Number(existing.discount) || 0,
+          discount: existing.discount || 0,
           notes: existing.notes || "",
           terms: existing.terms || "",
           items: existing.items?.length
             ? existing.items.map((it) => ({
                 description: it.description,
-                quantity: Number(it.quantity),
-                rate: Number(it.rate),
+                quantity: it.quantity,
+                rate: it.rate,
               }))
             : [blankItem()],
         });
@@ -151,10 +151,9 @@ export default function InvoiceEditor() {
   const addItem = () => setForm((f) => ({ ...f, items: [...f.items, blankItem()] }));
   const addCatalogItem = (it) =>
     setForm((f) => {
-      const line = { description: it.name, quantity: 1, rate: Number(it.rate) || 0 };
-      // Replace a leading blank row, otherwise append.
+      const line = { description: it.name, quantity: 1, rate: it.rate || 0 };
       const items = [...f.items];
-      const blankIdx = items.findIndex((x) => !x.description.trim() && !Number(x.rate));
+      const blankIdx = items.findIndex((x) => !x.description.trim() && !decimal(x.rate).isPositive());
       if (blankIdx >= 0) items[blankIdx] = line;
       else items.push(line);
       return { ...f, items };
@@ -178,7 +177,7 @@ export default function InvoiceEditor() {
       due_date: form.due_date || undefined,
       issue_date: form.issue_date || undefined,
       items: form.items
-        .filter((it) => it.description.trim() || Number(it.rate) > 0)
+        .filter((it) => it.description.trim() || decimal(it.rate).greaterThan(0))
         .map((it) => ({
           description: it.description,
           quantity: Number(it.quantity) || 0,

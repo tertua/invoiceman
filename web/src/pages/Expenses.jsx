@@ -218,7 +218,7 @@ function ExpenseModal({ open, expense, onClose }) {
     setSaving(true);
     setErr("");
     try {
-      const payload = { ...form, amount: Number(form.amount) || 0 };
+      const payload = { ...form, amount: form.amount || 0 };
       if (isEdit) await update.mutateAsync({ id: expense.id, payload });
       else await create.mutateAsync(payload);
       onClose();
@@ -230,7 +230,7 @@ function ExpenseModal({ open, expense, onClose }) {
   }
 
   const selectClass = "h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
-  const prefilled = open && !isEdit && (form.vendor || Number(form.amount) > 0);
+  const prefilled = open && !isEdit && (form.vendor || Number.parseFloat(form.amount) > 0);
 
   async function onReceiptPick(e) {
     const file = e.target.files?.[0];

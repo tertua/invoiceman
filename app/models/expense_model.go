@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // Expense is a business expense.
@@ -16,7 +15,7 @@ type Expense struct {
 	Vendor      string          `db:"vendor" json:"vendor" validate:"lte=255"`
 	Category    string          `db:"category" json:"category" validate:"required,lte=100"`
 	ExpenseDate time.Time       `db:"expense_date" json:"expense_date"`
-	Amount      decimal.Decimal `gorm:"type:decimal(19,4)" db:"amount" json:"amount"`
+	Amount      Money `gorm:"type:decimal(19,4)" db:"amount" json:"amount"`
 	Currency    string          `db:"currency" json:"currency" validate:"required,lte=3"`
 	Notes       string          `db:"notes" json:"notes"`
 	// ReceiptURL is the storage key of the uploaded receipt (private,
@@ -29,7 +28,7 @@ type ExpenseInput struct {
 	Vendor      string          `json:"vendor" validate:"lte=255"`
 	Category    string          `json:"category" validate:"required,lte=100"`
 	ExpenseDate string          `json:"expense_date" validate:"required"`
-	Amount      decimal.Decimal `json:"amount"`
+	Amount      Money `json:"amount"`
 	Currency    string          `json:"currency" validate:"omitempty,lte=3"`
 	Notes       string          `json:"notes"`
 }
