@@ -10,13 +10,20 @@ func NewValidator() *validator.Validate {
 	// Create a new validator for a Book model.
 	validate := validator.New()
 
-	// Custom validation for uuid.UUID fields.
+	// Custom validation for UUID fields: valid when the value parses as a
+	// UUID (a custom func must report true for valid input). uuid.UUID is
+	// a [16]byte array, so reflect String() would yield "<uuid.UUID Value>"
+	// instead of the ID — extract it via type assertion first; plain
+	// strings (e.g. client-supplied IDs) validate from their content.
 	_ = validate.RegisterValidation("uuid", func(fl validator.FieldLevel) bool {
-		field := fl.Field().String()
-		if _, err := uuid.Parse(field); err != nil {
-			return true
+		if fl.Field().CanInterface() {
+			if id, ok := fl.Field().Interface().(uuid.UUID); ok {
+				_, err := uuid.Parse(id.String())
+				return err == nil
+			}
 		}
-		return false
+		_, err := uuid.Parse(fl.Field().String())
+		return err == nil
 	})
 
 	return validate
