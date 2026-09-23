@@ -696,6 +696,11 @@ paths:
   /ai/business-summary:
     post:
       description: Generate an AI business summary.
+      parameters:
+      - description: 'Answer language: en or id (default en)'
+        in: header
+        name: X-Locale
+        type: string
       produces:
       - application/json
       responses:
@@ -721,6 +726,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.PaymentReminderInput'
+      - description: 'Answer language: en or id (default en)'
+        in: header
+        name: X-Locale
+        type: string
       produces:
       - application/json
       responses:
@@ -770,6 +779,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.WriteNoteInput'
+      - description: 'Answer language: en or id (default en)'
+        in: header
+        name: X-Locale
+        type: string
       produces:
       - application/json
       responses:

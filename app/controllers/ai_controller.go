@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/ai"
 	"github.com/tertua/invoiceman/platform/database"
@@ -17,10 +18,49 @@ import (
 
 const maxReceiptSize = 10 << 20
 
+// aiLocale resolves the answer language from the X-Locale header sent by
+// the SPA (its localStorage language). Only en/id are supported; anything
+// missing or unknown falls back to en so a bad header never breaks generation.
+func aiLocale(c fiber.Ctx) string {
+	return resolveLocale(c.Get("X-Locale"))
+}
+
+func resolveLocale(header string) string {
+	if strings.EqualFold(strings.TrimSpace(header), "id") {
+		return "id"
+	}
+	return "en"
+}
+
+// languageDirective pins the answer language explicitly in both directions:
+// bare money data would otherwise pull the answer toward English.
+func languageDirective(lang string) string {
+	if lang == "id" {
+		return "Respond entirely in Bahasa Indonesia. "
+	}
+	return "Respond entirely in English. "
+}
+
+// currencyDirective binds money formatting to an ISO code so the model never
+// defaults bare numbers to US dollars.
+func currencyDirective(code string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code == "" {
+		return ""
+	}
+	if code == "IDR" {
+		return "All money amounts are in Indonesian rupiah (IDR). Write them Indonesian style (for example Rp160.000 with dots as thousand separators) and never use $. "
+	}
+	return "All money amounts are in " + code + ". Write them in that currency's conventional format and never default to US dollars. "
+}
+
 func aiError(c fiber.Ctx, err error) error {
 	if errors.Is(err, ai.ErrNotConfigured) {
 		return utils.Fail(c, fiber.StatusNotImplemented, "AI provider is not configured", nil)
 	}
+	// Logged server-side only; the client keeps the generic message so no
+	// provider details leak to the browser.
+	logger.L().Warn("AI provider request failed", "err", err)
 	return utils.Fail(c, fiber.StatusBadGateway, "AI provider request failed", nil)
 }
 
@@ -81,6 +121,7 @@ func ReceiptParse(c fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Security SessionCookie
+// @Param X-Locale header string false "Answer language: en or id (default en)"
 // @Router /ai/business-summary [post]
 func BusinessSummary(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -99,8 +140,14 @@ func BusinessSummary(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load business data", nil)
 	}
+	// Best-effort: without a currency the model defaults bare numbers to $.
+	currency := ""
+	if settings, serr := db.GetSettings(userID); serr == nil {
+		currency = settings.Currency
+	}
+	lang := aiLocale(c)
 	input, _ := json.Marshal(fiber.Map{"stats": stats, "totals": report.Totals, "statusBreakdown": report.StatusBreakdown})
-	result, err := ai.NewGeminiClient().Generate(context.Background(), "Write a concise, actionable business health summary in 2-4 sentences based on this JSON. Do not invent facts. JSON: "+string(input))
+	result, err := ai.NewGeminiClient().Generate(context.Background(), languageDirective(lang)+currencyDirective(currency)+"Write a concise, actionable business health summary in 2-4 sentences based on this JSON. Do not invent facts. JSON: "+string(input))
 	if err != nil {
 		return aiError(c, err)
 	}
@@ -116,6 +163,7 @@ func BusinessSummary(c fiber.Ctx) error {
 // @Param request body models.PaymentReminderInput true "Reminder payload"
 // @Success 200 {object} map[string]interface{}
 // @Security SessionCookie
+// @Param X-Locale header string false "Answer language: en or id (default en)"
 // @Router /ai/payment-reminder [post]
 func PaymentReminder(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
@@ -137,7 +185,8 @@ func PaymentReminder(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	if _, err := db.GetInvoice(userID, invoiceID); err != nil {
+	invoice, err := db.GetInvoice(userID, invoiceID)
+	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
 	detail, err := invoiceDetail(*db, userID, invoiceID)
@@ -145,7 +194,8 @@ func PaymentReminder(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
 	payload, _ := json.Marshal(detail)
-	result, err := ai.NewGeminiClient().GenerateJSON(context.Background(), "Create a payment reminder email as JSON with subject and body fields. Tone: "+input.Tone+". Be professional and concise. Invoice data: "+string(payload))
+	lang := aiLocale(c)
+	result, err := ai.NewGeminiClient().GenerateJSON(context.Background(), languageDirective(lang)+currencyDirective(invoice.Currency)+"Create a payment reminder email as JSON with subject and body fields. Tone: "+input.Tone+". Be professional and concise. Invoice data: "+string(payload))
 	if err != nil {
 		return aiError(c, err)
 	}
@@ -165,6 +215,7 @@ func PaymentReminder(c fiber.Ctx) error {
 // @Param request body models.WriteNoteInput true "Note payload"
 // @Success 200 {object} map[string]interface{}
 // @Security SessionCookie
+// @Param X-Locale header string false "Answer language: en or id (default en)"
 // @Router /ai/write-note [post]
 func WriteNote(c fiber.Ctx) error {
 	if _, err := utils.CurrentUserID(c); err != nil {
@@ -178,7 +229,7 @@ func WriteNote(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 	payload, _ := json.Marshal(input)
-	result, err := ai.NewGeminiClient().Generate(context.Background(), "Write a polished invoice "+input.Kind+" in plain text. Keep it concise and suitable for a professional invoice. Use this JSON context: "+string(payload))
+	result, err := ai.NewGeminiClient().Generate(context.Background(), languageDirective(aiLocale(c))+"Write a polished invoice "+input.Kind+" in plain text. Keep it concise and suitable for a professional invoice. Use this JSON context: "+string(payload))
 	if err != nil {
 		return aiError(c, err)
 	}

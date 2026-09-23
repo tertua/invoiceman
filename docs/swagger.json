@@ -467,6 +467,14 @@
                     "AI"
                 ],
                 "summary": "generate business summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Answer language: en or id (default en)",
+                        "name": "X-Locale",
+                        "in": "header"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -505,6 +513,12 @@
                         "schema": {
                             "$ref": "#/definitions/models.PaymentReminderInput"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Answer language: en or id (default en)",
+                        "name": "X-Locale",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -583,6 +597,12 @@
                         "schema": {
                             "$ref": "#/definitions/models.WriteNoteInput"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Answer language: en or id (default en)",
+                        "name": "X-Locale",
+                        "in": "header"
                     }
                 ],
                 "responses": {

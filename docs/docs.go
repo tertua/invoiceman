@@ -474,6 +474,14 @@ const docTemplate = `{
                     "AI"
                 ],
                 "summary": "generate business summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Answer language: en or id (default en)",
+                        "name": "X-Locale",
+                        "in": "header"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -512,6 +520,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.PaymentReminderInput"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Answer language: en or id (default en)",
+                        "name": "X-Locale",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -590,6 +604,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.WriteNoteInput"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Answer language: en or id (default en)",
+                        "name": "X-Locale",
+                        "in": "header"
                     }
                 ],
                 "responses": {

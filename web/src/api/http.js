@@ -56,8 +56,21 @@ apiClient.interceptors.request.use((config) => {
     config.headers = config.headers ?? {};
     config.headers["X-CSRF-Token"] = token;
   }
+  // UI language for endpoints that generate text (AI): same localStorage
+  // key LangContext persists, allowlisted so a stale value can't leak through.
+  config.headers = config.headers ?? {};
+  config.headers["X-Locale"] = appLocale();
   return config;
 });
+
+// Mirrors LangContext's persisted language ("arr-lang").
+function appLocale() {
+  try {
+    return localStorage.getItem("arr-lang") === "id" ? "id" : "en";
+  } catch {
+    return "en";
+  }
+}
 
 apiClient.interceptors.response.use(
   (res) => res,
