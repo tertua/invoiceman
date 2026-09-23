@@ -821,7 +821,7 @@ export const translations = {
     "common.discount": "Diskon",
     "common.tax": "Pajak",
     "common.notes": "Catatan",
-    "common.terms": "Ketentuan",
+    "common.terms": "Syarat dan Ketentuan",
     "common.description": "Deskripsi",
     "common.qty": "Jml",
     "common.rate": "Tarif",
