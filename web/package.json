@@ -11,6 +11,7 @@
     "check:bundles:strict": "BUNDLE_BUDGET=strict node scripts/check-bundles.mjs",
     "sync:version": "node ../scripts/sync-version.mjs",
     "check:map": "node ../scripts/check-module-map.mjs",
+    "check:size": "node ../scripts/check-file-size.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

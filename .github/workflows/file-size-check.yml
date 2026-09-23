@@ -1,0 +1,28 @@
+name: File Size Check
+
+on:
+  push:
+    paths:
+      - "scripts/check-file-size.mjs"
+      - "scripts/file-size-baseline.json"
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "web/src/**"
+      - ".github/workflows/file-size-check.yml"
+  pull_request:
+    paths:
+      - "scripts/check-file-size.mjs"
+      - "scripts/file-size-baseline.json"
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "web/src/**"
+      - ".github/workflows/file-size-check.yml"
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm --prefix web run check:size

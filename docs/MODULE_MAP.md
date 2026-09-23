@@ -21,7 +21,7 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 | Invoices | `invoice_controller.go` | `invoice_model.go` | private | `api/invoices.js`, `hooks/useInvoices.js` | `Invoices.jsx`, `InvoiceDetail.jsx`, `InvoiceEditor.jsx`, `components/invoice/InvoiceDocument.jsx` + `InvoicePdfDownload*.jsx` | share-payment-link button on `InvoiceDetail.jsx` |
 | Expenses + receipts | `expense_controller.go` | `expense_model.go` (`receipt_url`) | private (`/expenses/:id/receipt`) | `api/expenses.js`, `hooks/useExpenses.js` | `Expenses.jsx` | `platform/storage` (local/S3, `logos/` public, `receipts/` private) |
 | Payments + links | `payment_controller.go` | `payment_model.go`, `payment_link_model.go` | private + public pay + webhooks | `api/payments.js`, `api/publicPay.js`, `hooks/usePayments.js` | `Payments.jsx`, `PublicPay.jsx` | `platform/mail` payment-link template, links are IDR-only, drafts blocked |
-| Gateway relay | `gateway_controller.go`, `gateway_webhook_controller.go` | `gateway_project_model.go`, `gateway_transaction_model.go` | `gateway_routes.go` (`GatewayAuth`, API key) | `api/gateway.js`, `hooks/useGatewayAdmin.js` | `AdminGateway.jsx` | `platform/gateway` (provider iface), `platform/relay`, `platform/midtrans`, `platform/nowpayments` |
+| Gateway relay | `gateway_intent_controller.go`, `gateway_project_controller.go`, `gateway_shared.go`, `gateway_webhook_controller.go` | `gateway_project_model.go`, `gateway_transaction_model.go` | `gateway_routes.go` (`GatewayAuth`, API key) | `api/gateway.js`, `hooks/useGatewayAdmin.js` | `AdminGateway.jsx` | `platform/gateway` (provider iface), `platform/relay`, `platform/midtrans`, `platform/nowpayments` |
 | Dashboard | `dashboard_controller.go` | `dashboard_model.go` | private | `api/dashboard.js`, `hooks/useDashboard.js` | `Dashboard.jsx`, `components/dashboard/DashboardCharts.jsx` | — |
 | Reports | `report_controller.go` | `report_model.go` | private | `api/reports.js`, `hooks/useReports.js` | `Reports.jsx`, `components/reports/ReportsCharts.jsx` | — |
 | Settings + logo | `settings_controller.go` | `settings_model.go` | private (`/settings/logo`) | `api/settings.js`, `hooks/useSettings.js` | `Settings.jsx` | logo via `platform/storage` (public) |
@@ -44,7 +44,10 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 ## Flow tests (behavior contracts)
 
 `pkg/routes/routes_test.go` (`TestMain`, in-memory DB) plus:
-`flow_test.go`, `public_routes_test.go`, `private_routes_test.go`,
+`flow_helpers_test.go` (shared `newTestApp`/`doRequest`/`decodeBody`),
+`flow_auth_test.go`, `flow_client_invoice_test.go`, `flow_catalog_test.go`,
+`flow_expense_test.go`, `flow_payment_test.go`, `flow_report_test.go`,
+`flow_misc_test.go`, `public_routes_test.go`, `private_routes_test.go`,
 `gateway_test.go`, `security_test.go`, `hardening_test.go`,
 `versioning_test.go`, `pagination_test.go`, `idempotency_test.go`,
 `metrics_test.go`, `storage_test.go`. Test data fixtures live in

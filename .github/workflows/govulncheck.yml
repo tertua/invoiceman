@@ -1,0 +1,37 @@
+name: Govulncheck
+
+# New CVEs can affect unchanged code, so this runs on three triggers:
+# push/PR touching Go code (catches bad upgrades before merge) and weekly
+# on schedule (catches newly published CVEs against existing go.mod).
+on:
+  push:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "main.go"
+      - ".github/workflows/govulncheck.yml"
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "app/**"
+      - "pkg/**"
+      - "platform/**"
+      - "main.go"
+      - ".github/workflows/govulncheck.yml"
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+
+jobs:
+  vuln:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run: govulncheck ./...

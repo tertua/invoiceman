@@ -2,6 +2,15 @@
 
 For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when owner files or domain wiring change (`npm --prefix web run check:map` is enforced in CI).
 
+## File size limits (enforced, not advisory)
+
+One file = one responsibility. `npm --prefix web run check:size` fails CI when a file grows past its recorded size.
+
+- New files must fit the budget: controllers ≤400, queries ≤300, models ≤200, route tests ≤400, pages ≤250, components ≤250, hooks/api ≤150, per-language i18n ≤900 lines.
+- Never append to a file near its limit — split it first, the way the repo already does: controllers by route area (`gateway_*_controller.go`), pages by extracting `components/*` cards (`InvoiceDetail.jsx` split), flow tests by domain (`flow_*_test.go`), i18n by language (`i18n.en.js`/`i18n.id.js`).
+- After an intentional split, lower that file's entry in `scripts/file-size-baseline.json` (never raise it).
+- `docs/docs.go` is generated and exempt.
+
 ## Architecture and contracts
 
 - `main.go` wires the Fiber API, migrations, gateways, background worker, and optional SPA; `web/src/main.jsx` is the React/Vite entrypoint. Follow the request path and domain rows in `docs/MODULE_MAP.md` before changing a feature.
@@ -17,7 +26,7 @@ For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when 
 ## Development and verification
 
 - Go toolchain is pinned to 1.27.1 (`go.mod`). `go test ./...` runs the default suite without external services; focus a route flow with `go test ./pkg/routes -run TestName -v`. Flow tests use in-memory SQLite. PostgreSQL and Redis integration tests are opt-in via `INVOICEMAN_TEST_PG_DSN` (empty scratch DB) and `INVOICEMAN_TEST_REDIS_ADDR`.
-- `make test` runs clean, gocritic, gosec, golangci-lint, then coverage tests. `make build` depends on `make test`; `make run` runs `swag init`, builds, then starts the API. Lint scope is intentional: `.golangci.yml` excludes vendored/test noise and the `critic` target lists packages explicitly with `hugeParam,rangeValCopy` disabled — don't revert to bare `./...`.
+- `make test` runs clean, gocritic, gosec, golangci-lint, then coverage tests. After any `go.mod`/`go.sum` change, run `govulncheck ./...` before committing (CI also runs it on push/PR plus weekly on schedule). `make build` depends on `make test`; `make run` runs `swag init`, builds, then starts the API. Lint scope is intentional: `.golangci.yml` excludes vendored/test noise and the `critic` target lists packages explicitly with `hugeParam,rangeValCopy` disabled — don't revert to bare `./...`.
 - Swagger annotations changed: run `swag init`; generated `docs/` files are committed.
 - Frontend CI uses Node 22: `npm ci`, then `npm --prefix web run lint`, `npm --prefix web run build`, and `npm --prefix web run check:bundles:strict`. `make web.check` runs these frontend checks.
 - `VERSION` is canonical; after changing it run `npm --prefix web run sync:version` to sync `web/package.json`.
@@ -26,4 +35,4 @@ For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when 
 
 - Axios imports belong only in `web/src/api/http.js`. Vite aliases `@` to `web/src` and proxies `/api` and `/uploads` to `localhost:5000` on port 5173.
 - Keep `@react-pdf/renderer` imports in `InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`; keep `recharts` in the Dashboard, Client, and Reports chart components. Bundle limits are checked by `check:bundles:strict`.
-- User-visible strings belong in `web/src/lib/i18n.js` for both `en` and `id`, not hardcoded in components.
+- User-visible strings belong in `web/src/lib/i18n.en.js` (`en`) and `web/src/lib/i18n.id.js` (`id`) — `web/src/lib/i18n.js` is only the re-export entrypoint — not hardcoded in components.
