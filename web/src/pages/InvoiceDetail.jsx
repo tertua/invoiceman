@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Pencil,
@@ -25,6 +26,7 @@ import {
   useInvoice,
   useSetInvoiceStatus,
   useDeleteInvoice,
+  invoiceKey,
 } from "@/hooks/useInvoices";
 import { useSettings } from "@/hooks/useSettings";
 import { usePaymentMutations } from "@/hooks/usePayments";
@@ -59,11 +61,23 @@ export default function InvoiceDetail() {
 
   const st = invoice.effective_status;
   const isPaid = st === "paid";
+  const total = Number(invoice.total) || 0;
+  const paidAmount = Number(invoice.paid_amount) || 0;
+  // Money-paid (real cash covering total) is fully locked; a manually-marked
+  // paid invoice with no money can still be reopened via status.
+  const isMoneyPaid = isPaid && total > 0 && paidAmount >= total;
+  const canEdit = !isPaid;
+  const canDelete = !isPaid;
+  const lockStatus = isMoneyPaid;
 
   async function onDelete() {
     if (!window.confirm(t("invDetail.confirmDelete", { number: invoice.invoice_number }))) return;
-    await del.mutateAsync(id);
-    nav("/invoices");
+    try {
+      await del.mutateAsync(id);
+      nav("/invoices");
+    } catch {
+      // Backend rejects paid deletes (422); the locked banner already explains.
+    }
   }
 
   return (
@@ -92,9 +106,19 @@ export default function InvoiceDetail() {
 
         <div className="flex items-center gap-2 flex-wrap">
           <InvoicePdfDownload invoice={invoice} settings={settings} lang={lang} label="PDF" />
+          {canEdit ? (
           <Button variant="outline" onClick={() => nav(`/invoices/${id}/edit`)}>
             <Pencil size={15} /> {t("common.edit")}
           </Button>
+          ) : (
+          <span
+            title={t("invDetail.paidLocked")}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-semibold border border-[var(--border)] text-[var(--ink-muted)] opacity-60 cursor-not-allowed"
+          >
+            <Pencil size={15} /> {t("common.edit")}
+          </span>
+          )}
+          {canDelete ? (
           <Button
             variant="ghost"
             onClick={onDelete}
@@ -102,10 +126,21 @@ export default function InvoiceDetail() {
           >
             <Trash2 size={15} />
           </Button>
+          ) : null}
         </div>
       </div>
 
+      {isPaid && (
+        <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+          <div className="text-xs font-semibold text-[var(--ink)]">{t("invDetail.paidLocked")}</div>
+          <p className="text-xs text-[var(--ink-muted)] mt-0.5">
+            {isMoneyPaid ? t("invDetail.paidLockedDesc") : t("invDetail.manuallyPaidDesc")}
+          </p>
+        </div>
+      )}
+
       {/* status controls */}
+      {lockStatus ? null : (
       <div className="flex items-center gap-2 mb-6 flex-wrap">
         <span className="text-xs text-[var(--ink-muted)] mr-1">{t("invDetail.markAs")}</span>
         <StatusButton
@@ -122,6 +157,7 @@ export default function InvoiceDetail() {
         />
         {setStatus.isPending && <Loader2 size={14} className="animate-spin text-[var(--ink-muted)]" />}
       </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Invoice preview */}
@@ -270,6 +306,7 @@ function TotalLine({ label, value }) {
 
 function PaymentCard({ invoice }) {
   const { t } = useLang();
+  const qc = useQueryClient();
   const { remove } = usePaymentMutations();
   const [modalOpen, setModalOpen] = useState(false);
   const currency = invoice.currency;
@@ -278,15 +315,30 @@ function PaymentCard({ invoice }) {
   const balance = Number(invoice.balance) || 0;
   const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
   const payments = invoice.payments || [];
+  const isPaid = invoice.effective_status === "paid";
 
-  // Shareable public link (POST /payments/online is get-or-create).
-  const [shareLink, setShareLink] = useState(null);
+  // Payment link is persisted on the invoice (BE returns payment_link when
+  // one exists), so it survives reloads. POST /payments/online stays
+  // get-or-create: it returns the existing link when already created.
+  const [shareLink, setShareLink] = useState(() => invoice.payment_link || null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareErr, setShareErr] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [voidTarget, setVoidTarget] = useState(null);
+  const [email, setEmail] = useState(invoice.client_email || "");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [sendErr, setSendErr] = useState("");
   const canShareOnline = balance > 0 && invoice.effective_status !== "draft" && currency === "IDR";
+  const showIdrHint = balance > 0 && invoice.effective_status !== "draft" && currency !== "IDR" && !shareLink;
   const shareUrl = shareLink ? new URL(shareLink.url, window.location.origin).href : "";
+
+  useEffect(() => {
+    if (invoice.payment_link) setShareLink(invoice.payment_link);
+  }, [invoice.payment_link]);
+  useEffect(() => {
+    setEmail(invoice.client_email || "");
+  }, [invoice.client_email]);
 
   async function onVoid(reason) {
     if (!voidTarget) return;
@@ -301,10 +353,26 @@ function PaymentCard({ invoice }) {
     try {
       const res = await paymentsApi.createOnlineLink(invoice.id);
       setShareLink(res);
+      qc.invalidateQueries({ queryKey: invoiceKey(invoice.id) });
     } catch (e) {
       if (e.status !== 401) setShareErr(e.message || t("payments.saveFailed"));
     } finally {
       setShareLoading(false);
+    }
+  }
+
+  async function onSendLink() {
+    if (sending || !email.trim() || !shareLink) return;
+    setSending(true);
+    setSendErr("");
+    setSent(false);
+    try {
+      await paymentsApi.sendOnlineLink(invoice.id, email.trim());
+      setSent(true);
+    } catch (e) {
+      if (e.status !== 401) setSendErr(e.message || t("payments.saveFailed"));
+    } finally {
+      setSending(false);
     }
   }
 
@@ -358,9 +426,19 @@ function PaymentCard({ invoice }) {
           {t("payments.shareLink")}
         </Button>
       )}
+      {showIdrHint && (
+        <p className="text-xs text-[var(--ink-muted)] mb-3">{t("payments.onlineOnlyIdr")}</p>
+      )}
       {shareErr && !shareLink && <p className="text-xs text-[var(--danger)] mb-3">{shareErr}</p>}
       {shareLink && (
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 mb-4">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 mb-4">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-[11px] font-semibold text-[var(--ink-muted)]">{t("payments.onlineTitle")}</span>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isPaid ? "bg-[var(--ink-muted)]/15 text-[var(--ink-muted)]" : "bg-[var(--success)]/12 text-[var(--success)]"}`}>
+              {isPaid ? t("payments.onlineInactive") : t("payments.onlineActive")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
           <span className="flex-1 min-w-0 text-xs text-[var(--ink)] truncate">{shareUrl}</span>
           <button type="button" onClick={copyShareLink} aria-label={t("payments.onlineCopy")}
             className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)]">
@@ -371,6 +449,27 @@ function PaymentCard({ invoice }) {
             className="shrink-0 inline-flex items-center text-[var(--ink-muted)] hover:text-[var(--ink)]">
             <ExternalLink size={13} />
           </a>
+          </div>
+          <p className="text-[10px] text-[var(--ink-muted)] mt-1.5">{t("payments.onlinePersisted")}</p>
+          {!isPaid && (
+          <div className="mt-2 pt-2 border-t border-[var(--border)]">
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("payments.onlineEmailPlaceholder")}
+                className="flex-1 min-w-0 h-8 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]/50"
+              />
+              <Button variant="soft" size="sm" onClick={onSendLink} disabled={sending || !email.trim()}>
+                {sending ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
+                {sending ? t("payments.onlineSending") : t("payments.onlineSend")}
+              </Button>
+            </div>
+            {sent && <p className="text-[11px] text-[var(--success)] mt-1.5">{t("payments.onlineSent")}</p>}
+            {sendErr && <p className="text-[11px] text-[var(--danger)] mt-1.5">{sendErr}</p>}
+          </div>
+          )}
         </div>
       )}
 

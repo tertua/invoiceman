@@ -123,11 +123,19 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		}
 	}
 
+	// Expose the existing public payment link (if any) so the SPA can
+	// render it persistently instead of keeping it in transient state.
+	var paymentLink fiber.Map
+	if link, err := db.GetPaymentLinkForInvoice(id, userID); err == nil {
+		paymentLink = fiber.Map{"token": link.Token, "url": "/pay/" + link.Token}
+	}
+
 	return fiber.Map{
 		"id":               invoice.ID,
 		"invoice_number":   invoice.InvoiceNumber,
 		"status":           invoice.Status,
 		"effective_status": models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid),
+		"payment_link":     paymentLink,
 		"client_id":        invoice.ClientID,
 		"client_name":      clientName,
 		"client_company":   clientCompany,
@@ -147,6 +155,14 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		"paid_amount":      paid,
 		"balance":          invoice.Total - paid,
 	}, nil
+}
+
+// isPaidLocked reports whether an invoice is effectively paid and must be
+// treated as immutable. Paid means stored status paid OR payments covering
+// the total. Content edits and deletes are blocked; reopening a money-paid
+// invoice requires voiding payments first.
+func isPaidLocked(status string, dueDate *time.Time, total, paid float64) bool {
+	return models.ResolveEffectiveStatus(status, dueDate, total, paid) == models.InvoiceStatusPaid
 }
 
 // ListInvoices returns one page of invoices of the current user.
@@ -350,6 +366,16 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
+	// Paid invoices are immutable: editing totals/items after payment would
+	// silently desync balance, status and the public payment link.
+	if paid, err := db.PaidAmount(id); err == nil {
+		if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) {
+			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is already paid", nil)
+		}
+	} else {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
+	}
+
 	invoice, items, err := buildInvoice(userID, input)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, err.Error(), nil)
@@ -417,11 +443,25 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	if _, err := db.GetInvoice(userID, id); err != nil {
+	existing, err := db.GetInvoice(userID, id)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+	}
+
+	// Reopening a money-paid invoice must go through voiding payments so
+	// balances stay consistent. A manually-marked paid invoice with no
+	// money attached may still be reopened to sent/draft.
+	if paid, err := db.PaidAmount(id); err == nil {
+		if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) &&
+			input.Status != models.InvoiceStatusPaid &&
+			existing.Total > 0 && paid >= existing.Total {
+			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is already paid", nil)
+		}
+	} else {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
 
 	if err := db.UpdateInvoiceStatus(userID, id, input.Status); err != nil {
@@ -465,11 +505,22 @@ func DeleteInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	if _, err := db.GetInvoice(userID, id); err != nil {
+	existing, err := db.GetInvoice(userID, id)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+	}
+
+	// Keep the audit trail intact: paid invoices are voided/reopened, never
+	// hard-deleted.
+	if paid, err := db.PaidAmount(id); err == nil {
+		if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) {
+			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is already paid", nil)
+		}
+	} else {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
 
 	if err := db.DeleteInvoice(userID, id); err != nil {

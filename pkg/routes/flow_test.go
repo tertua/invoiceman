@@ -864,6 +864,68 @@ func TestPublicPaymentFlow(t *testing.T) {
 	resp.Body.Close()
 }
 
+// TestPaidInvoiceLocked covers the paid immutability contract: content
+// edits, status downgrades and deletes are rejected once payments cover
+// the total, while the public payment link stays in the DB.
+func TestPaidInvoiceLocked(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Paid Lock User","email":"paidlock@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+	today := time.Now().Format("2006-01-02")
+
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"status":"sent",
+		"issue_date":"`+today+`",
+		"due_date":"`+today+`",
+		"currency":"IDR",
+		"items":[{"description":"Locked service","quantity":1,"rate":50000}]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+invoiceID+`","amount":50000,"method":"Cash","paid_on":"`+today+`"
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+
+	// Detail reports paid and still exposes the persisted link.
+	resp = doRequest(t, app, "GET", "/api/invoices/"+invoiceID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	detail := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	assert.Equal(t, "paid", detail["effective_status"])
+	assert.NotNil(t, detail["payment_link"])
+
+	// Content edit is rejected.
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID, `{
+		"status":"sent",
+		"issue_date":"`+today+`",
+		"due_date":"`+today+`",
+		"currency":"IDR",
+		"items":[{"description":"Changed","quantity":1,"rate":1}]
+	}`, cookies)
+	assert.Equal(t, 422, resp.StatusCode)
+	resp.Body.Close()
+
+	// Status downgrade without voiding is rejected.
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+"/status", `{"status":"sent"}`, cookies)
+	assert.Equal(t, 422, resp.StatusCode)
+	resp.Body.Close()
+
+	// Paid invoices are never hard-deleted.
+	resp = doRequest(t, app, "DELETE", "/api/invoices/"+invoiceID, "", cookies)
+	assert.Equal(t, 422, resp.StatusCode)
+	resp.Body.Close()
+}
+
 // TestAIContractFlow covers auth, validation, and unconfigured-provider behavior.
 func TestAIContractFlow(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "")

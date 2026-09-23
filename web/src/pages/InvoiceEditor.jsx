@@ -117,6 +117,27 @@ export default function InvoiceEditor() {
       </div>
     );
   }
+  // Paid invoices are immutable: block the whole editor instead of letting
+  // the backend reject the save. Matches the locked banner on detail.
+  if (isEdit && existing?.effective_status === "paid") {
+    const moneyPaid =
+      Number(existing.total) > 0 && Number(existing.paid_amount) >= Number(existing.total);
+    return (
+      <div className="max-w-[640px]">
+        <Card padding="lg" className="text-center">
+          <CardTitle className="mb-2">{t("invDetail.paidLocked")}</CardTitle>
+          <p className="text-sm text-[var(--ink-muted)] mb-5">
+            {moneyPaid ? t("invDetail.paidLockedDesc") : t("invDetail.manuallyPaidDesc")}
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="outline" onClick={() => nav(`/invoices/${id}`)}>
+              {t("common.back")}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const setItem = (i, patch) =>
