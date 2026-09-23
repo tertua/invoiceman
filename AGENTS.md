@@ -1,36 +1,29 @@
-# AGENTS.md
+# Repository instructions
 
-## Start Here
+`opencode.json` loads this file. For domain ownership, read `docs/MODULE_MAP.md` first; its CI check requires owner files and references to stay mapped.
 
-- Read `docs/MODULE_MAP.md` before searching for an owner file. It maps each domain's request path and CI checks that all owner files and references stay current.
-- The repo is a Go 1.27 Fiber API at the root and a Vite/React SPA in `web/`; entrypoints are `main.go` and `web/src/main.jsx`.
-- `opencode.json` loads this file as the repository instruction source.
+## Structure and contracts
 
-## Architecture And Contracts
+- Go 1.27 Fiber API entrypoint: `main.go`; React/Vite SPA entrypoint: `web/src/main.jsx`. Request flow and domain owners are mapped in `docs/MODULE_MAP.md`.
+- Keep SQL/GORM domain queries in `app/queries`, not controllers. Raw SQL is permitted only in `platform/database` (enforced by `.github/workflows/dialect-check.yml`); support both SQLite and PostgreSQL.
+- Schema upgrades use GORM `AutoMigrate` at startup; rollback steps are registered in `platform/database/migrations.go`. New rollback steps must use backend-agnostic GORM migrator calls and only undo their own version's additions.
+- Authentication identity is set by middleware: use `utils.CurrentUserID` / `utils.CurrentServiceProject`, not custom token parsing. Session-cookie mutations require the CSRF double-submit header; money-moving mutations require an `Idempotency-Key`.
+- Route registration order is significant: register `/api/v1` before legacy `/api`, and within each prefix register public, gateway, then private routes. Gateway routes use API-key auth, not session cookies.
+- Add payment providers by implementing `platform/gateway.Gateway` and registering it in `main.go`.
+- Keep API success fields direct via `utils.OK`; errors use `utils.Fail`'s `error.message`/`details` shape. Backend messages are stable English for client-side translation; DELETE/logout return 204. Dates use `YYYY-MM-DD` and `pkg/utils/date.go`.
+- Empty `SQL_DSN` selects auto-created SQLite (`SQLITE_PATH`, default `./data/invoiceman.db`); only PostgreSQL DSNs are supported. Empty `REDIS_HOST` selects in-memory stores; configured Redis selects shared stores. Default tests need neither service; optional integration tests use `INVOICEMAN_TEST_PG_DSN` and `INVOICEMAN_TEST_REDIS_ADDR`.
+- `.env` is autoloaded for local runs. Docker images contain the binary (the embedded-SPA variant is `Dockerfile.dev`); inject secrets at runtime, never into the image.
 
-- Request flow is `web/src/pages` -> `web/src/hooks` -> `web/src/api` -> `pkg/routes`/middleware -> `app/controllers` -> `app/queries` -> `platform`/`pkg`. Keep GORM/SQL detail in `app/queries`, not controllers.
-- Controllers obtain the DB through `database.OpenDBConnection()` and request identity through `utils.CurrentUserID` / `utils.CurrentServiceProject`; do not re-parse JWTs or API keys there.
-- New payment/gateway providers implement `platform/gateway.Gateway` and are registered in `main.go`.
-- Register API prefixes in this order: `/api/v1` before legacy `/api`; within each prefix, public routes, gateway routes, then private routes. Gateway routes use API-key `GatewayAuth`, not cookie sessions.
-- Success responses expose data keys directly through `utils.OK`; failures use `{"error":{"message","details"}}` through `utils.Fail`. DELETE and logout return `204` with no body. Backend messages are stable English; the SPA translates API keys.
-- Auth mutations using session cookies require the CSRF double-submit header. Money-moving mutations require an `Idempotency-Key`.
-- Empty `SQL_DSN` uses auto-created SQLite at `SQLITE_PATH` (default `./data/invoiceman.db`); only `postgres://`/`postgresql://` DSNs are supported. Schema is GORM `AutoMigrate` at startup; do not add migration files or raw SQL outside `platform/database`.
-- Empty `REDIS_HOST` selects in-memory sessions, rate limits, and aggregate cache; setting it selects Redis. Features must work with either backend. Optional PG/Redis integration tests use `INVOICEMAN_TEST_PG_DSN` and `INVOICEMAN_TEST_REDIS_ADDR`; the default suite needs neither service.
-- `.env` is autoloaded for local runs. The Docker image contains only the binary, so inject secrets at runtime; never bake `.env` into an image.
-- Dates use `YYYY-MM-DD` and the helpers in `pkg/utils/date.go`. AI routes return `501` without `GEMINI_API_KEY`; online payment links are IDR-only and drafts cannot create them.
+## Commands and generated files
 
-## Commands
+- Backend: `go test ./...`; focus a test with `go test ./pkg/routes/ -run TestName -v`. `make test` runs clean, gocritic, gosec, golangci-lint, and coverage tests; `make build` depends on `make test`. `make run` runs `swag init`, builds, then serves on port 5000.
+- Swagger annotations/controllers changed: run `swag init`; generated `docs/` files are committed.
+- Frontend (Node 22 in CI): `npm ci` then `npm --prefix web run lint` and `npm --prefix web run build`. `make web.check` additionally runs strict bundle-budget checks (after build).
+- When adding/renaming domain owner files, update `docs/MODULE_MAP.md` and run `npm --prefix web run check:map` (CI enforces it).
+- `VERSION` is canonical; after changing it run `npm --prefix web run sync:version` to update `web/package.json`.
 
-- `go test ./...` runs the default backend suite with in-memory SQLite; focus route behavior with `go test ./pkg/routes/ -run TestName -v`.
-- `make test` runs clean, `gocritic`, `gosec`, `golangci-lint`, and covered tests. `make build` depends on it. `make run` runs `swag init`, builds, and serves on port 5000.
-- After changing Swagger annotations/controllers, run `swag init`; generated files under `docs/` are committed.
-- Frontend: from `web/`, run `npm ci`, then `npm run lint`, `npm run build`; `make web.check` runs lint, build, and strict bundle checks.
-- Run `npm --prefix web run check:map` after adding or renaming mapped owner files. Run `npm --prefix web run check:bundles` for advisory checks; strict mode requires a build first.
-- `VERSION` is the version source of truth. Change it, then run `npm --prefix web run sync:version`; never edit `web/package.json`'s version directly.
+## Frontend boundaries
 
-## Frontend Constraints
-
-- Axios is imported only by `web/src/api/http.js`; it normalizes failures to `{status, message, details}`. `@` aliases `web/src`; Vite dev server runs on 5173 and proxies `/api` and `/uploads` to `localhost:5000`.
-- Keep `@react-pdf/renderer` imports only in `InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`; keep `recharts` imports only in `DashboardCharts.jsx`, `ClientCharts.jsx`, and `ReportsCharts.jsx`. Bundle budgets live in `web/bundle-baseline.json`.
-- Shared format helpers in `web/src/lib/utils.js` must not throw. User-visible strings belong in `web/src/lib/i18n.js` (`en` and `id`), not hardcoded in components.
-- Use two-space indentation for frontend/config and tabs for Go. Behavior changes should extend the matching flow test in `pkg/routes/*_test.go`, especially for public, webhook, auth, and payment endpoints.
+- Axios imports belong only in `web/src/api/http.js`; Vite aliases `@` to `web/src` and proxies `/api` and `/uploads` to `localhost:5000` on port 5173.
+- Keep `@react-pdf/renderer` imports in `InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`; `recharts` imports in `DashboardCharts.jsx`, `ClientCharts.jsx`, and `ReportsCharts.jsx`. Bundle budgets are in `web/bundle-baseline.json`.
+- User-visible strings belong in `web/src/lib/i18n.js` (`en` and `id`), not hardcoded in components.
