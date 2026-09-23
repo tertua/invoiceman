@@ -195,6 +195,105 @@ func TestGatewayRelayFlow(t *testing.T) {
 	resp.Body.Close()
 }
 
+func TestGatewayStatusFlow(t *testing.T) {
+	t.Setenv("MIDTRANS_SERVER_KEY", "test-status-key")
+	t.Setenv("NOWPAYMENTS_API_KEY", "")
+	app := newTestApp()
+
+	// NOTE: newTestApp only registers the legacy prefix; v1 coverage lives
+	// in versioning_test.go via RegisterAPI.
+	resp := doGatewayRequest(t, app, "GET", "/api/public/gateway/status", "", nil, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	body := decodeBody(t, resp)
+	raw, _ := json.Marshal(body)
+	// No secret material may leak through the status endpoint.
+	assert.NotContains(t, string(raw), "test-status-key")
+	gateways, ok := body["gateways"].([]interface{})
+	require.True(t, ok, "expected gateways array, got %v", body)
+	byName := map[string]map[string]interface{}{}
+	for _, g := range gateways {
+		m := g.(map[string]interface{})
+		byName[m["name"].(string)] = m
+	}
+	require.Contains(t, byName, "midtrans")
+	require.Contains(t, byName, "nowpayments")
+	assert.Equal(t, true, byName["midtrans"]["configured"])
+	assert.Equal(t, false, byName["nowpayments"]["configured"])
+	resp.Body.Close()
+
+	// With a sandbox key, NOWPayments reports configured + sandbox.
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-status-np-key")
+	t.Setenv("NOWPAYMENTS_SANDBOX", "true")
+	resp = doGatewayRequest(t, app, "GET", "/api/public/gateway/status", "", nil, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	body = decodeBody(t, resp)
+	raw, _ = json.Marshal(body)
+	assert.NotContains(t, string(raw), "test-status-np-key")
+	for _, g := range body["gateways"].([]interface{}) {
+		m := g.(map[string]interface{})
+		if m["name"] == "nowpayments" {
+			assert.Equal(t, true, m["configured"])
+			assert.Equal(t, true, m["sandbox"])
+		}
+	}
+	resp.Body.Close()
+}
+
+func TestNowpaymentsIntentValidation(t *testing.T) {
+	// Mock NOWPayments invoice endpoint.
+	npServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"inv_np_1","invoice_url":"https://nowpayments.io/payment/?iid=np1"}`))
+	}))
+	defer npServer.Close()
+
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-intent-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", npServer.URL+"/v1")
+	t.Setenv("NOWPAYMENTS_SANDBOX", "true")
+
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"NP Admin","email":"np-admin@example.com","password":"secret123"}`, nil)
+	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"np-admin@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	adminID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
+	resp.Body.Close()
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	require.NoError(t, db.UpdateUserRole(uuid.MustParse(adminID), "admin"))
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"np-admin@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	adminCookies := resp.Cookies()
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "POST", "/api/admin/gateway/projects",
+		`{"slug":"np-shop","name":"NP Shop","webhook_url":"https://np-shop.example/hook","default_gateway":"nowpayments"}`, adminCookies)
+	require.Equal(t, 201, resp.StatusCode)
+	apiKey := decodeBody(t, resp)["project"].(map[string]interface{})["api_key"].(string)
+	require.NotEmpty(t, apiKey)
+	headers := map[string]string{"X-Api-Key": apiKey}
+
+	// Minor-only amounts are rejected for NOWPayments (minor/major ambiguity).
+	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
+		`{"external_order_id":"np_minor_only","gateway":"nowpayments","amount_idr":50000}`, headers, nil)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	// Decimal-priced intents create a hosted invoice.
+	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
+		`{"external_order_id":"np_usd_1","gateway":"nowpayments","amount_decimal":"25.50","currency":"USD"}`, headers, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	intent := decodeBody(t, resp)
+	assert.Equal(t, "nowpayments", intent["gateway"])
+	assert.Equal(t, "https://nowpayments.io/payment/?iid=np1", intent["payment_url"])
+	resp.Body.Close()
+}
+
 func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "local-settlement-server-key")
 	app := newTestApp()

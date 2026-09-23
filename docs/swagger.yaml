@@ -2078,6 +2078,20 @@ paths:
       summary: send payment link email
       tags:
       - Payments
+  /public/gateway/status:
+    get:
+      description: Get public payment gateway availability.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: get gateway status
+      tags:
+      - Gateway
   /public/pay/{token}:
     get:
       description: Get a public payment invoice.

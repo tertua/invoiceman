@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -126,6 +128,12 @@ func CreateIntent(c fiber.Ctx) error {
 	gw, err := gateway.Get(gatewayName)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
+	}
+	// NOWPayments invoices are priced from amount_decimal (fiat major units).
+	// AmountMinor-only requests are rejected here so a minor value can never
+	// be misread as major units (e.g. 100000 minor as "100000 USD").
+	if gatewayName == "nowpayments" && strings.TrimSpace(input.AmountDecimal) == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for nowpayments", nil)
 	}
 	orderID, err := relayOrderID(project.Slug, input.ExternalOrderID)
 	if err != nil {
@@ -257,6 +265,40 @@ func GatewayConfig(c fiber.Ctx) error {
 		"is_production": cfg.IsProd,
 		"configured":    cfg.ServerKey != "",
 	})
+}
+
+// GatewayStatus returns public per-gateway availability for admins and
+// downstream services. Only booleans are exposed here, never keys or
+// secrets, so this endpoint is safe to call without authentication.
+// @Description Get public payment gateway availability.
+// @Summary get gateway status
+// @Tags Gateway
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /public/gateway/status [get]
+func GatewayStatus(c fiber.Ctx) error {
+	cfg := configs.Get()
+	names := gateway.Names()
+	sort.Strings(names)
+	out := make([]fiber.Map, 0, len(names))
+	for _, name := range names {
+		status := fiber.Map{"name": name}
+		switch name {
+		case "midtrans":
+			status["configured"] = cfg.Midtrans.ServerKey != ""
+			status["sandbox"] = !cfg.Midtrans.IsProd
+		case "nowpayments":
+			status["configured"] = cfg.NOWPayments.APIKey != ""
+			status["sandbox"] = cfg.NOWPayments.Sandbox
+		default:
+			// Provider-specific config is unknown here; report it as
+			// available and let intent creation surface real errors.
+			status["configured"] = true
+			status["sandbox"] = false
+		}
+		out = append(out, status)
+	}
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"gateways": out})
 }
 
 // CreateInvoiceIntent creates a Snap transaction for a local invoice.

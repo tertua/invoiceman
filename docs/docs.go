@@ -2601,6 +2601,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/gateway/status": {
+            "get": {
+                "description": "Get public payment gateway availability.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "get gateway status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/public/pay/{token}": {
             "get": {
                 "description": "Get a public payment invoice.",

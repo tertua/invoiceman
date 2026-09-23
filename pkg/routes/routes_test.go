@@ -7,6 +7,7 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/invoiceman/platform/nowpayments"
 )
 
 // TestMain runs route tests against in-memory SQLite with an in-memory
@@ -27,6 +28,7 @@ func TestMain(m *testing.M) {
 
 	// Register gateways for tests (main.go does this in production).
 	gateway.Register(midtrans.Gateway{})
+	gateway.Register(nowpayments.Gateway{})
 
 	os.Exit(m.Run())
 }

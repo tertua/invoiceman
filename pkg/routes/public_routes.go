@@ -33,6 +33,7 @@ func PublicRoutesAt(a *fiber.App, prefix string) {
 	route.Post("/public/pay/:token/transaction", publicPay, middleware.Idempotency(middleware.PublicPayIdempotencyScope), controllers.CreatePublicTransaction)
 	route.Get("/public/pay/:token/status", publicPay, controllers.GetPublicPaymentStatus)
 	route.Get("/public/gateway/config", publicPay, controllers.GatewayConfig)
+	route.Get("/public/gateway/status", publicPay, controllers.GatewayStatus)
 
 	route.Get("/config", controllers.AppConfig) // public branding for the SPA
 
