@@ -842,8 +842,12 @@ func TestPublicPaymentFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	publicData := decodeBody(t, resp)
 	assert.True(t, publicData["can_pay"].(bool))
-	assert.Equal(t, invoiceID, publicData["invoice"].(map[string]interface{})["id"].(string))
+	pubInvoice := publicData["invoice"].(map[string]interface{})
+	assert.Equal(t, invoiceID, pubInvoice["id"].(string))
 	assert.Equal(t, "midtrans", publicData["gateway"].(map[string]interface{})["name"])
+	assert.NotContains(t, pubInvoice, "client_id")
+	assert.NotContains(t, pubInvoice, "client_email")
+	assert.NotContains(t, pubInvoice, "payment_link")
 
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
 	require.Equal(t, 501, resp.StatusCode)

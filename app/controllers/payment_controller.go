@@ -435,6 +435,21 @@ func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map,
 	if err != nil {
 		return nil, err
 	}
+	delete(detail, "client_id")
+	delete(detail, "client_email")
+	delete(detail, "payment_link")
+	if raw, ok := detail["payments"].([]fiber.Map); ok {
+		clean := make([]fiber.Map, 0, len(raw))
+		for _, p := range raw {
+			clean = append(clean, fiber.Map{
+				"id":      p["id"],
+				"amount":  p["amount"],
+				"paid_on": p["paid_on"],
+				"method":  p["method"],
+			})
+		}
+		detail["payments"] = clean
+	}
 	return fiber.Map{
 		"invoice": detail,
 		"branding": fiber.Map{
