@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run web.check
+.PHONY: clean critic security lint test build run web.check dev-be dev-fe
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -27,6 +27,14 @@ build: test
 
 run: swag build
 	$(BUILD_DIR)/$(APP_NAME)
+
+# Local dev processes (see AGENTS.md "Local dev run"). Binaries and logs
+# live under /tmp/opencode (pre-approved scratch dir, never the repo root).
+dev-be:
+	go build -o /tmp/opencode/invoiceman . && /tmp/opencode/invoiceman
+
+dev-fe:
+	npm --prefix web run dev -- --host 0.0.0.0
 
 web.check:
 	npm --prefix web run lint

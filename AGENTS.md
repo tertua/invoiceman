@@ -31,6 +31,12 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI when a
 - Frontend CI uses Node 22: `npm ci`, then `npm --prefix web run lint`, `npm --prefix web run build`, and `npm --prefix web run check:bundles:strict`. `make web.check` runs these frontend checks.
 - `VERSION` is canonical; after changing it run `npm --prefix web run sync:version` to sync `web/package.json`.
 
+## Local dev run (this machine)
+
+- BE: `make dev-be` (builds to `/tmp/opencode/invoiceman`, serves `:5000`). Health: `curl localhost:5000/healthz`. Restart after BE code changes: rebuild, `pkill -f /tmp/opencode/invoiceman`, start again.
+- FE: `make dev-fe` (vite dev on `:5173`, proxies `/api`+`/uploads` to BE). Hot-reloads; no restart needed after FE changes.
+- Scratch binaries/logs go ONLY to `/tmp/opencode/` (pre-approved); never the repo root or bare `/tmp`.
+
 ## Frontend constraints
 
 - Axios imports belong only in `web/src/api/http.js`. Vite aliases `@` to `web/src` and proxies `/api` and `/uploads` to `localhost:5000` on port 5173.
