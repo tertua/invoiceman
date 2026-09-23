@@ -524,8 +524,13 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "payment gateway is not registered", nil)
 	}
-	orderID := "INV-" + strings.ReplaceAll(invoice.InvoiceNumber, " ", "") + "-" + link.Token[:8]
+	orderID := localOrderID(invoice.InvoiceNumber, link.Token[:8])
 	if existing, err := db.GetTransaction(orderID); err == nil {
+		return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": existing.SnapToken, "redirect_url": existing.RedirectURL, "order_id": existing.OrderID})
+	}
+	// Backward compat: reuse the pre-rename INV- intent for the same
+	// invoice+link instead of opening a duplicate at the gateway.
+	if existing, err := db.GetTransaction(legacyLocalOrderID(invoice.InvoiceNumber, link.Token[:8])); err == nil {
 		return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": existing.SnapToken, "redirect_url": existing.RedirectURL, "order_id": existing.OrderID})
 	}
 	amountIDR := int64(balance + 0.5)

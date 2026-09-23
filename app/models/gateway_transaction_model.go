@@ -18,7 +18,8 @@ const (
 
 // GatewayTransaction is the central record for one payment intent.
 // OrderID is the global Midtrans order id (EXT-<slug>-<external>-<rand>
-// for relayed projects, INV-<short>-<rand> for local invoices).
+// for relayed projects, PAY-<invoice>-<rand> for local invoices;
+// pre-rename local rows use the legacy INV- prefix).
 // ExternalOrderID preserves the downstream id (e.g. one-api topup_*)
 // so downstream services can match without migrating their schema.
 type GatewayTransaction struct {

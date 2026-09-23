@@ -57,6 +57,20 @@ func relayOrderID(slug, external string) (string, error) {
 	return "EXT-" + slug + "-" + sanitizeExternal(external) + "-" + suffix, nil
 }
 
+// localOrderID builds the gateway order id for a local invoice. The PAY-
+// prefix keeps it distinct from the user-configurable invoice number prefix
+// (default INV-), avoiding stutter like INV-INV-000042.
+func localOrderID(invoiceNumber, suffix string) string {
+	return "PAY-" + strings.ReplaceAll(invoiceNumber, " ", "") + "-" + suffix
+}
+
+// legacyLocalOrderID is the pre-rename order id format (INV- prefix). It is
+// only used to reuse intents created before the rename instead of
+// duplicating them at the gateway.
+func legacyLocalOrderID(invoiceNumber, suffix string) string {
+	return "INV-" + strings.ReplaceAll(invoiceNumber, " ", "") + "-" + suffix
+}
+
 func intentResponse(t models.GatewayTransaction) fiber.Map {
 	return fiber.Map{
 		"order_id":          t.OrderID,
@@ -357,7 +371,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create order", nil)
 	}
-	orderID := "INV-" + strings.ReplaceAll(invoice.InvoiceNumber, " ", "") + "-" + suffix
+	orderID := localOrderID(invoice.InvoiceNumber, suffix)
 	amountIDR := int64(balance + 0.5)
 	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{
 		OrderID:     orderID,
