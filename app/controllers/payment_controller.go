@@ -156,6 +156,7 @@ func CreatePayment(c fiber.Ctx) error {
 	recordAudit(c, db, userID, "payment.create", "payment", payment.ID.String(),
 		`{"invoice_id":"`+invoiceID.String()+`","amount":`+strconv.FormatFloat(input.Amount, 'f', -1, 64)+`}`)
 	invalidateAggregates(c, userID)
+	enqueueNotification(db, userID, models.NotifEventPaymentCreated, "", paymentNotifData(db, *payment))
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": fiber.Map{
 		"id":         payment.ID,
 		"invoice_id": payment.InvoiceID,

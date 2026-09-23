@@ -16,19 +16,20 @@ import (
 
 // Queries struct for collect all app queries.
 type Queries struct {
-	*queries.UserQueries        // load queries from User model
-	*queries.ClientQueries      // load queries from Client model
-	*queries.InvoiceQueries     // load queries from Invoice model
-	*queries.ItemQueries        // load queries from Item model
-	*queries.ExpenseQueries     // load queries from Expense model
-	*queries.PaymentQueries     // load queries from Payment model
-	*queries.GatewayQueries     // load queries for central payment relay
-	*queries.ReportQueries      // load queries for Reports aggregates
-	*queries.SettingsQueries    // load queries from Settings model
-	*queries.DashboardQueries   // load queries for Dashboard aggregates
-	*queries.IdempotencyQueries // load queries for idempotency keys
-	*queries.MailOutboxQueries  // load queries for mail outbox
-	*queries.AuditQueries       // load queries for audit trail
+	*queries.UserQueries         // load queries from User model
+	*queries.ClientQueries       // load queries from Client model
+	*queries.InvoiceQueries      // load queries from Invoice model
+	*queries.ItemQueries         // load queries from Item model
+	*queries.ExpenseQueries      // load queries from Expense model
+	*queries.PaymentQueries      // load queries from Payment model
+	*queries.GatewayQueries      // load queries for central payment relay
+	*queries.ReportQueries       // load queries for Reports aggregates
+	*queries.SettingsQueries     // load queries from Settings model
+	*queries.DashboardQueries    // load queries for Dashboard aggregates
+	*queries.IdempotencyQueries  // load queries for idempotency keys
+	*queries.MailOutboxQueries   // load queries for mail outbox
+	*queries.NotificationQueries // load queries for notification webhooks
+	*queries.AuditQueries        // load queries for audit trail
 }
 
 var (
@@ -54,25 +55,26 @@ func OpenDBConnection() (*Queries, error) {
 
 	return &Queries{
 		// Set queries from models:
-		UserQueries:        &queries.UserQueries{DB: db},        // from User model
-		ClientQueries:      &queries.ClientQueries{DB: db},      // from Client model
-		InvoiceQueries:     &queries.InvoiceQueries{DB: db},     // from Invoice model
-		ItemQueries:        &queries.ItemQueries{DB: db},        // from Item model
-		ExpenseQueries:     &queries.ExpenseQueries{DB: db},     // from Expense model
-		PaymentQueries:     &queries.PaymentQueries{DB: db},     // from Payment model
-		GatewayQueries:     &queries.GatewayQueries{DB: db},     // for central payment relay
-		ReportQueries:      &queries.ReportQueries{DB: db},      // for Reports aggregates
-		SettingsQueries:    &queries.SettingsQueries{DB: db},    // from Settings model
-		DashboardQueries:   &queries.DashboardQueries{DB: db},   // for Dashboard aggregates
-		IdempotencyQueries: &queries.IdempotencyQueries{DB: db}, // for idempotency keys
-		MailOutboxQueries:  &queries.MailOutboxQueries{DB: db},  // for mail outbox
-		AuditQueries:       &queries.AuditQueries{DB: db},       // for audit trail
+		UserQueries:         &queries.UserQueries{DB: db},         // from User model
+		ClientQueries:       &queries.ClientQueries{DB: db},       // from Client model
+		InvoiceQueries:      &queries.InvoiceQueries{DB: db},      // from Invoice model
+		ItemQueries:         &queries.ItemQueries{DB: db},         // from Item model
+		ExpenseQueries:      &queries.ExpenseQueries{DB: db},      // from Expense model
+		PaymentQueries:      &queries.PaymentQueries{DB: db},      // from Payment model
+		GatewayQueries:      &queries.GatewayQueries{DB: db},      // for central payment relay
+		ReportQueries:       &queries.ReportQueries{DB: db},       // for Reports aggregates
+		SettingsQueries:     &queries.SettingsQueries{DB: db},     // from Settings model
+		DashboardQueries:    &queries.DashboardQueries{DB: db},    // for Dashboard aggregates
+		IdempotencyQueries:  &queries.IdempotencyQueries{DB: db},  // for idempotency keys
+		MailOutboxQueries:   &queries.MailOutboxQueries{DB: db},   // for mail outbox
+		NotificationQueries: &queries.NotificationQueries{DB: db}, // for notification webhooks
+		AuditQueries:        &queries.AuditQueries{DB: db},        // for audit trail
 	}, nil
 }
 
 // SchemaVersion is the current schema revision. Bump it by 1 every time a
 // model changes so the version guard below can detect newer databases.
-const SchemaVersion = 4
+const SchemaVersion = 5
 
 // Migrate creates or updates tables from models, then enforces the schema
 // version guard (forward-only upgrades; newer DB than binary is fatal).
@@ -99,6 +101,8 @@ func Migrate() error {
 		&models.PasswordReset{},
 		&models.IdempotencyKey{},
 		&models.MailOutbox{},
+		&models.NotificationEndpoint{},
+		&models.NotificationDelivery{},
 		&models.SchemaMigration{},
 		&models.AuditLog{},
 		&models.AdminClaim{},

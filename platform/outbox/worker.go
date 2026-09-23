@@ -64,6 +64,12 @@ var SendMail = func(to, subject, textBody, htmlBody string) error {
 	return mailer.SendHTML(to, subject, textBody, htmlBody)
 }
 
+// ForwardNotification POSTs one notification payload. It is a variable so
+// tests can capture forwards without an HTTP server.
+var ForwardNotification = func(ctx context.Context, targetURL, eventID string, payload []byte, secret string) (*relay.ForwardResult, error) {
+	return relay.Forward(ctx, targetURL, "local", eventID, payload, secret)
+}
+
 // Worker polls due jobs until its context is cancelled.
 type Worker struct {
 	poll  time.Duration
@@ -122,11 +128,12 @@ func (w *Worker) Stop() {
 	}
 }
 
-// ProcessOnce runs one tick: mail, deliveries, then idempotency purge.
+// ProcessOnce runs one tick: mail, deliveries, notifications, purge.
 // Exported for tests and admin-triggered drains.
 func (w *Worker) ProcessOnce(ctx context.Context) {
 	w.processMail(ctx)
 	w.processDeliveries(ctx)
+	w.processNotifications(ctx)
 	w.purgeIdempotency()
 }
 
@@ -244,6 +251,60 @@ func failDelivery(db *database.Queries, id uuid.UUID, attempt int, retry *time.T
 	if err := db.FailDelivery(id, status, attempt, retry, msg, now); err != nil {
 		logger.L().Warn("outbox failed to record delivery failure", "err", err)
 	}
+}
+
+// processNotifications forwards due user webhook events (n8n, GOWA
+// bridges). Secrets are resolved per endpoint at send time so rotated
+// secrets apply to already-queued rows.
+func (w *Worker) processNotifications(ctx context.Context) {
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		logger.L().Warn("outbox notification tick skipped, database unavailable", "err", err)
+		return
+	}
+	now := time.Now()
+	rows, err := db.DueNotifications(now, w.batch)
+	if err != nil {
+		logger.L().Warn("outbox notification tick failed", "err", err)
+		return
+	}
+	for _, d := range rows {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		w.forwardOneNotification(db, d, now)
+	}
+}
+
+func (w *Worker) forwardOneNotification(db *database.Queries, d models.NotificationDelivery, now time.Time) {
+	claimed, err := db.ClaimNotification(d.ID, now)
+	if err != nil || !claimed {
+		return
+	}
+	endpoint, err := db.GetEndpoint(d.UserID, d.EndpointID)
+	if err != nil {
+		retry := nextRetryAt(d.Attempt+1, now)
+		_ = db.MarkNotificationFailed(d.ID, d.Attempt+1, retry, 0, "endpoint not found", now)
+		return
+	}
+	payload := []byte(d.Payload)
+	d.Attempt++
+	result, ferr := ForwardNotification(context.Background(), d.TargetURL, "evt_retry_"+d.ID.String(), payload, endpoint.Secret)
+	if ferr != nil {
+		retry := nextRetryAt(d.Attempt, now)
+		_ = db.MarkNotificationFailed(d.ID, d.Attempt, retry, 0, truncateErr(ferr.Error()), now)
+		logger.L().Warn("outbox notification failed", "delivery_id", d.ID.String(), "event_type", d.EventType, "attempt", d.Attempt, "err", ferr)
+		return
+	}
+	if result.StatusCode >= 200 && result.StatusCode < 300 {
+		_ = db.MarkNotificationSent(d.ID, result.StatusCode, truncateBody(result.Body), now)
+		logger.L().Info("outbox notification sent", "delivery_id", d.ID.String(), "event_type", d.EventType, "attempt", d.Attempt)
+		return
+	}
+	retry := nextRetryAt(d.Attempt, now)
+	_ = db.MarkNotificationFailed(d.ID, d.Attempt, retry, result.StatusCode, truncateBody(result.Body), now)
 }
 
 func (w *Worker) purgeIdempotency() {

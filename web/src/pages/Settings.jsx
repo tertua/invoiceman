@@ -12,6 +12,7 @@ import { useToast } from "@/context/UIContext";
 import { QueryError } from "@/components/ui/QueryError";
 import { authApi } from "@/api/auth";
 import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
+import NotificationsTab from "@/components/settings/NotificationsTab";
 import { CURRENCIES, cn } from "@/lib/utils";
 
 function FieldLabel({ children }) {
@@ -427,6 +428,7 @@ export default function Settings() {
           <TabsTrigger value="profile">{t("settings.tabAccount")}</TabsTrigger>
           <TabsTrigger value="appearance">{t("settings.tabAppearance")}</TabsTrigger>
           <TabsTrigger value="password">{t("settings.tabPassword")}</TabsTrigger>
+          <TabsTrigger value="notifications">{t("settings.tabNotifications")}</TabsTrigger>
         </TabsList>
 
         <div className="mt-6">
@@ -444,6 +446,9 @@ export default function Settings() {
           </TabsContent>
           <TabsContent value="password">
             <PasswordSection />
+          </TabsContent>
+          <TabsContent value="notifications">
+            <NotificationsTab />
           </TabsContent>
         </div>
       </Tabs>

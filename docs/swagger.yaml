@@ -34,6 +34,17 @@ definitions:
     required:
     - name
     type: object
+  models.CreateEndpointInput:
+    properties:
+      events:
+        maxLength: 255
+        type: string
+      target_url:
+        maxLength: 1024
+        type: string
+    required:
+    - target_url
+    type: object
   models.CreateProjectInput:
     properties:
       default_gateway:
@@ -322,6 +333,17 @@ definitions:
     required:
     - currency
     - invoice_prefix
+    type: object
+  models.UpdateEndpointInput:
+    properties:
+      events:
+        maxLength: 255
+        type: string
+      is_active:
+        type: boolean
+      target_url:
+        maxLength: 1024
+        type: string
     type: object
   models.UpdateProfile:
     properties:
@@ -1737,6 +1759,195 @@ paths:
       summary: update catalog item
       tags:
       - Items
+  /notifications/deliveries:
+    get:
+      description: List notification deliveries.
+      parameters:
+      - description: Filter by event type
+        in: query
+        name: event_type
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: list notification deliveries
+      tags:
+      - Notifications
+  /notifications/deliveries/{id}/retry:
+    post:
+      description: Retry a notification delivery.
+      parameters:
+      - description: Delivery ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: retry notification delivery
+      tags:
+      - Notifications
+  /notifications/endpoints:
+    get:
+      description: List notification webhook endpoints.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: list notification endpoints
+      tags:
+      - Notifications
+    post:
+      consumes:
+      - application/json
+      description: Register a notification webhook endpoint.
+      parameters:
+      - description: Endpoint payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateEndpointInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: create notification endpoint
+      tags:
+      - Notifications
+  /notifications/endpoints/{id}:
+    delete:
+      description: Delete a notification webhook endpoint.
+      parameters:
+      - description: Endpoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ok
+          schema:
+            type: string
+      security:
+      - SessionCookie: []
+      summary: delete notification endpoint
+      tags:
+      - Notifications
+    patch:
+      consumes:
+      - application/json
+      description: Update a notification webhook endpoint.
+      parameters:
+      - description: Endpoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Endpoint payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateEndpointInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: update notification endpoint
+      tags:
+      - Notifications
+  /notifications/endpoints/{id}/rotate-secret:
+    post:
+      description: Rotate a notification endpoint secret.
+      parameters:
+      - description: Endpoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: rotate endpoint secret
+      tags:
+      - Notifications
+  /notifications/endpoints/{id}/test:
+    post:
+      description: Send a test notification.
+      parameters:
+      - description: Endpoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: test notification endpoint
+      tags:
+      - Notifications
   /payments:
     get:
       description: Get payments of current user.

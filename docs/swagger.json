@@ -2087,6 +2087,306 @@
                 }
             }
         },
+        "/notifications/deliveries": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "List notification deliveries.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "list notification deliveries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by event type",
+                        "name": "event_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 20, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/deliveries/{id}/retry": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Retry a notification delivery.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "retry notification delivery",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Delivery ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/endpoints": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "List notification webhook endpoints.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "list notification endpoints",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Register a notification webhook endpoint.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "create notification endpoint",
+                "parameters": [
+                    {
+                        "description": "Endpoint payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEndpointInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/endpoints/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Delete a notification webhook endpoint.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "delete notification endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Update a notification webhook endpoint.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "update notification endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Endpoint payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateEndpointInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/endpoints/{id}/rotate-secret": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Rotate a notification endpoint secret.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "rotate endpoint secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/endpoints/{id}/test": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Send a test notification.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "test notification endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/payments": {
             "get": {
                 "security": [
@@ -2673,6 +2973,22 @@
                 }
             }
         },
+        "models.CreateEndpointInput": {
+            "type": "object",
+            "required": [
+                "target_url"
+            ],
+            "properties": {
+                "events": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "target_url": {
+                    "type": "string",
+                    "maxLength": 1024
+                }
+            }
+        },
         "models.CreateProjectInput": {
             "type": "object",
             "required": [
@@ -3079,6 +3395,22 @@
                 "tax_rate": {
                     "type": "number",
                     "minimum": 0
+                }
+            }
+        },
+        "models.UpdateEndpointInput": {
+            "type": "object",
+            "properties": {
+                "events": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "target_url": {
+                    "type": "string",
+                    "maxLength": 1024
                 }
             }
         },

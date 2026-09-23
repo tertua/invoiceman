@@ -176,6 +176,80 @@ func TestDeliveryFailureRetries(t *testing.T) {
 	require.NotNil(t, deliveries[0].NextRetryAt)
 }
 
+// TestNotificationForwarded verifies a pending notification reaches the
+// endpoint with its secret and is marked delivered.
+func TestNotificationForwarded(t *testing.T) {
+	var mu sync.Mutex
+	var gotSecret string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		mu.Lock()
+		gotSecret = r.Header.Get("X-Relay-Signature")
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	db := testDB(t)
+	uid := uuid.New()
+	endpoint := &models.NotificationEndpoint{
+		UserID: uid, TargetURL: server.URL,
+		Secret: "whsec_notif", IsActive: true,
+	}
+	require.NoError(t, db.CreateEndpoint(endpoint))
+	require.NoError(t, db.EnqueueDelivery(&models.NotificationDelivery{
+		UserID: uid, EndpointID: endpoint.ID,
+		EventID:   "evt_notif_" + uuid.NewString()[:8],
+		EventType: models.NotifEventInvoiceCreated,
+		TargetURL: server.URL,
+		Payload:   `{"type":"invoice.created"}`,
+	}))
+
+	New().ProcessOnce(context.Background())
+
+	mu.Lock()
+	assert.NotEmpty(t, gotSecret, "forward must sign with the endpoint secret")
+	mu.Unlock()
+
+	rows, err := db.DueNotifications(time.Now(), 10)
+	require.NoError(t, err)
+	assert.Empty(t, rows, "delivered notifications must leave the due queue")
+}
+
+// TestNotificationFailureRetries verifies an unreachable endpoint reschedules.
+func TestNotificationFailureRetries(t *testing.T) {
+	db := testDB(t)
+	uid := uuid.New()
+	endpoint := &models.NotificationEndpoint{
+		UserID: uid, TargetURL: "http://127.0.0.1:1/",
+		Secret: "whsec_notif", IsActive: true,
+	}
+	require.NoError(t, db.CreateEndpoint(endpoint))
+	d := &models.NotificationDelivery{
+		UserID: uid, EndpointID: endpoint.ID,
+		EventID:   "evt_notif_fail_" + uuid.NewString()[:8],
+		EventType: models.NotifEventPaymentCreated,
+		TargetURL: "http://127.0.0.1:1/",
+		Payload:   `{"type":"payment.created"}`,
+	}
+	require.NoError(t, db.EnqueueDelivery(d))
+
+	New().ProcessOnce(context.Background())
+
+	due, err := db.DueNotifications(time.Now().Add(time.Hour), 10)
+	require.NoError(t, err)
+	found := false
+	for _, r := range due {
+		if r.ID == d.ID {
+			found = true
+			assert.Equal(t, models.NotifStatusFailed, r.Status)
+			assert.Equal(t, 1, r.Attempt)
+			require.NotNil(t, r.NextRetryAt)
+		}
+	}
+	assert.True(t, found, "failed notification must reschedule")
+}
+
 // TestPurgeIdempotency verifies expired keys are cleaned on each tick.
 func TestPurgeIdempotency(t *testing.T) {
 	db := testDB(t)

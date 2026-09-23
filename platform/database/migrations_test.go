@@ -36,6 +36,12 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	if !db.Migrator().HasColumn(&models.Payment{}, "gateway_order_id") {
 		t.Fatal("expected gateway_order_id column after migrate")
 	}
+	if !db.Migrator().HasTable(&models.NotificationEndpoint{}) {
+		t.Fatal("expected notification_endpoints table after migrate")
+	}
+	if !db.Migrator().HasTable(&models.NotificationDelivery{}) {
+		t.Fatal("expected notification_deliveries table after migrate")
+	}
 
 	ver, err := MigrateDownTo(1)
 	if err != nil {
@@ -55,6 +61,12 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	}
 	if db.Migrator().HasColumn(&models.Payment{}, "gateway_order_id") {
 		t.Error("expected gateway_order_id column dropped after rollback")
+	}
+	if db.Migrator().HasTable(&models.NotificationEndpoint{}) {
+		t.Error("expected notification_endpoints table dropped after rollback")
+	}
+	if db.Migrator().HasTable(&models.NotificationDelivery{}) {
+		t.Error("expected notification_deliveries table dropped after rollback")
 	}
 	if stamp, err := CurrentSchemaVersion(); err != nil || stamp != 1 {
 		t.Fatalf("expected stamp 1 after rollback, got %d (%v)", stamp, err)
@@ -79,6 +91,12 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	}
 	if !db.Migrator().HasColumn(&models.Payment{}, "gateway_order_id") {
 		t.Error("expected gateway_order_id column restored after re-migrate")
+	}
+	if !db.Migrator().HasTable(&models.NotificationEndpoint{}) {
+		t.Error("expected notification_endpoints table restored after re-migrate")
+	}
+	if !db.Migrator().HasTable(&models.NotificationDelivery{}) {
+		t.Error("expected notification_deliveries table restored after re-migrate")
 	}
 	if stamp, err := CurrentSchemaVersion(); err != nil || stamp != SchemaVersion {
 		t.Fatalf("expected stamp %d after re-migrate, got %d (%v)", SchemaVersion, stamp, err)

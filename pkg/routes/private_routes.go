@@ -72,6 +72,16 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Patch("/settings", middleware.RequireRoles("admin", "user"), controllers.UpdateSettings)
 	route.Post("/settings/logo", controllers.UploadLogo)
 
+	// Notification webhook routes (user-owned targets, e.g. n8n):
+	route.Get("/notifications/endpoints", controllers.ListEndpoints)
+	route.Post("/notifications/endpoints", controllers.CreateEndpoint)
+	route.Patch("/notifications/endpoints/:id", controllers.UpdateEndpoint)
+	route.Delete("/notifications/endpoints/:id", controllers.DeleteEndpoint)
+	route.Post("/notifications/endpoints/:id/rotate-secret", controllers.RotateEndpointSecret)
+	route.Post("/notifications/endpoints/:id/test", controllers.TestEndpoint)
+	route.Get("/notifications/deliveries", controllers.ListNotificationDeliveries)
+	route.Post("/notifications/deliveries/:id/retry", controllers.RetryNotificationDelivery)
+
 	// AI routes (slower upstream calls get a per-request timeout).
 	route.Post("/ai/receipt-parse", middleware.WithAITimeout(controllers.ReceiptParse))
 	route.Post("/ai/business-summary", middleware.WithAITimeout(controllers.BusinessSummary))

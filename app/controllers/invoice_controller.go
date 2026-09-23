@@ -301,6 +301,8 @@ func CreateInvoice(c fiber.Ctx) error {
 	}
 
 	invalidateAggregates(c, userID)
+	enqueueNotification(db, userID, models.NotifEventInvoiceCreated, "",
+		invoiceNotifData(db, userID, invoice.ID))
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"invoice": detail})
 }
 
@@ -431,6 +433,8 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 	}
 
 	invalidateAggregates(c, userID)
+	enqueueNotification(db, userID, models.NotifEventInvoiceStatusUpdated, "",
+		invoiceNotifData(db, userID, id))
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
 }
 

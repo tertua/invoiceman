@@ -130,6 +130,9 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
 		_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
+		eventHex, _ := randHex(8)
+		enqueueNotification(db, *txn.UserID, models.NotifEventInvoiceStatusUpdated, "evt_"+eventHex,
+			invoiceNotifData(db, *txn.UserID, *txn.InvoiceID))
 	} else if err := db.SaveTransaction(&txn); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update transaction", nil)
 	}

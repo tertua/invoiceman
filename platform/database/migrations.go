@@ -49,6 +49,16 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.Payment{}, "gateway_order_id")
 		},
 	},
+	{
+		Version:     5,
+		Description: "notification endpoints + deliveries",
+		Down: func(db *gorm.DB) error {
+			if err := db.Migrator().DropTable(&models.NotificationDelivery{}); err != nil {
+				return err
+			}
+			return db.Migrator().DropTable(&models.NotificationEndpoint{})
+		},
+	},
 }
 
 // CurrentSchemaVersion reports the version stamp stored in the database.
