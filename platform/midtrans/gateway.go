@@ -47,7 +47,7 @@ func (Gateway) ParseAndVerify(raw []byte) (*gateway.NotificationResult, error) {
 		TransactionID: notif.TransactionID,
 		Status:        MapStatus(notif.TransactionStatus),
 		PaymentType:   notif.PaymentType,
-		GrossMinor:    int64(notif.GrossAmountValue() + 0.5),
+		GrossMinor:    notif.GrossAmountValue().IntPart(),
 		GrossDecimal:  notif.GrossAmount,
 		Currency:      "IDR",
 	}, nil

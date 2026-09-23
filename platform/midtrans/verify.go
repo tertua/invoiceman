@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -45,9 +45,12 @@ func VerifySignature(n *Notification, serverKey string) bool {
 	return subtle.ConstantTimeCompare([]byte(n.SignatureKey), []byte(expected)) == 1
 }
 
-// GrossAmountValue parses gross_amount as float IDR.
-func (n *Notification) GrossAmountValue() float64 {
-	v, _ := strconv.ParseFloat(strings.TrimSpace(n.GrossAmount), 64)
+// GrossAmountValue parses the gross_amount string as a fixed-point decimal.
+func (n *Notification) GrossAmountValue() decimal.Decimal {
+	v, err := decimal.NewFromString(strings.TrimSpace(n.GrossAmount))
+	if err != nil {
+		return decimal.Zero
+	}
 	return v
 }
 
