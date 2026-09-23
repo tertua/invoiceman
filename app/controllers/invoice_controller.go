@@ -11,9 +11,10 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
-// buildInvoice computes invoice and item rows from user input.
+// buildInvoice computes invoice and item rows.
 func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice, []models.InvoiceItem, error) {
 	issueDate, err := utils.ParseDate(input.IssueDate)
 	if err != nil {
@@ -52,8 +53,11 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 
 	items := make([]models.InvoiceItem, 0, len(input.Items))
 	for position, entry := range input.Items {
-		amount := entry.Quantity * entry.Rate
-		invoice.Subtotal += amount
+		if entry.Rate.IsNegative() || input.Discount.IsNegative() {
+			return nil, nil, errors.New("money values cannot be negative")
+		}
+		amount := models.MoneyFromFloat(entry.Quantity).Mul(entry.Rate)
+		invoice.Subtotal = invoice.Subtotal.Add(amount)
 		items = append(items, models.InvoiceItem{
 			ID:          uuid.New(),
 			InvoiceID:   invoice.ID,
@@ -65,12 +69,12 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 		})
 	}
 
-	taxable := invoice.Subtotal - invoice.Discount
-	if taxable < 0 {
-		taxable = 0
+	taxable := invoice.Subtotal.Sub(invoice.Discount)
+	if taxable.IsNegative() {
+		taxable = decimal.Zero
 	}
-	invoice.TaxAmount = taxable * invoice.TaxRate / 100
-	invoice.Total = taxable + invoice.TaxAmount
+	invoice.TaxAmount = taxable.Mul(models.MoneyFromFloat(invoice.TaxRate)).Div(decimal.NewFromInt(100))
+	invoice.Total = taxable.Add(invoice.TaxAmount)
 
 	return invoice, items, nil
 }
@@ -101,9 +105,9 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		return nil, err
 	}
 	paymentMaps := make([]fiber.Map, 0, len(payments))
-	var paid float64
+	var paid decimal.Decimal
 	for _, payment := range payments {
-		paid += payment.Amount
+		paid = paid.Add(payment.Amount)
 		paymentMaps = append(paymentMaps, fiber.Map{
 			"id":       payment.ID,
 			"amount":   payment.Amount,
@@ -153,7 +157,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		"items":            itemMaps,
 		"payments":         paymentMaps,
 		"paid_amount":      paid,
-		"balance":          invoice.Total - paid,
+		"balance":          invoice.Total.Sub(paid),
 	}, nil
 }
 
@@ -161,7 +165,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 // treated as immutable. Paid means stored status paid OR payments covering
 // the total. Content edits and deletes are blocked; reopening a money-paid
 // invoice requires voiding payments first.
-func isPaidLocked(status string, dueDate *time.Time, total, paid float64) bool {
+func isPaidLocked(status string, dueDate *time.Time, total, paid decimal.Decimal) bool {
 	return models.ResolveEffectiveStatus(status, dueDate, total, paid) == models.InvoiceStatusPaid
 }
 
@@ -457,7 +461,7 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 	if paid, err := db.PaidAmount(id); err == nil {
 		if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) &&
 			input.Status != models.InvoiceStatusPaid &&
-			existing.Total > 0 && paid >= existing.Total {
+			existing.Total.GreaterThan(decimal.Zero) && paid.GreaterThanOrEqual(existing.Total) {
 			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is already paid", nil)
 		}
 	} else {

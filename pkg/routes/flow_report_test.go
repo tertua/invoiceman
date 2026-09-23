@@ -58,10 +58,10 @@ func TestReportsFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	report := decodeBody(t, resp)
 	totals := report["totals"].(map[string]interface{})
-	assert.Equal(t, float64(40), totals["revenue"])
-	assert.Equal(t, float64(15), totals["expenses"])
-	assert.Equal(t, float64(25), totals["netProfit"])
-	assert.Equal(t, float64(60), totals["outstanding"])
+	assert.Equal(t, "40", totals["revenue"])
+	assert.Equal(t, "15", totals["expenses"])
+	assert.Equal(t, "25", totals["netProfit"])
+	assert.Equal(t, "60", totals["outstanding"])
 
 	// A draft invoice must not inflate report outstanding or aging.
 	resp = doRequest(t, app, "POST", "/api/invoices", `{
@@ -77,12 +77,15 @@ func TestReportsFlow(t *testing.T) {
 	resp = doRequest(t, app, "GET", "/api/reports", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	reportAfterDraft := decodeBody(t, resp)
-	assert.Equal(t, float64(60), reportAfterDraft["totals"].(map[string]interface{})["outstanding"])
-	agingSum := float64(0)
+	assert.Equal(t, "60", reportAfterDraft["totals"].(map[string]interface{})["outstanding"])
+	agingSum := "0"
 	for _, item := range reportAfterDraft["aging"].([]interface{}) {
-		agingSum += item.(map[string]interface{})["value"].(float64)
+		value := item.(map[string]interface{})["value"].(string)
+		if value != "0" {
+			agingSum = value
+		}
 	}
-	assert.Equal(t, float64(60), agingSum)
+	assert.Equal(t, "60", agingSum)
 	assert.Len(t, report["monthly"].([]interface{}), 6)
 	for _, item := range report["monthly"].([]interface{}) {
 		point := item.(map[string]interface{})

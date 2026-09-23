@@ -65,6 +65,9 @@ func CreateItem(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
+	if input.Rate.IsNegative() {
+		return utils.Fail(c, fiber.StatusBadRequest, "rate cannot be negative", nil)
+	}
 	db, err := database.OpenDBConnection()
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)

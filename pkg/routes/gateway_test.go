@@ -15,6 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/invoiceman/app/models"
@@ -346,7 +347,7 @@ func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// The payment insert failure must roll back the success status too, so the
+	// The payment insert failure must roll back the success status, so the
 	// provider's retry can safely apply both records together.
 	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/midtrans", string(notif), nil, nil)
 	assert.Equal(t, 500, resp.StatusCode)
@@ -356,7 +357,7 @@ func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
 	assert.Equal(t, models.GatewayStatusPending, txn.Status)
 	paid, err := db.PaidAmount(uuid.MustParse(invoiceID))
 	require.NoError(t, err)
-	assert.Zero(t, paid)
+	assert.True(t, paid.IsZero())
 
 	require.NoError(t, db.InvoiceQueries.Exec("DROP TRIGGER fail_gateway_payment").Error)
 	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/midtrans", string(notif), nil, nil)
@@ -373,7 +374,7 @@ func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
 	assert.Equal(t, models.GatewayStatusSuccess, txn.Status)
 	paid, err = db.PaidAmount(uuid.MustParse(invoiceID))
 	require.NoError(t, err)
-	assert.Equal(t, float64(100000), paid)
+	assert.True(t, paid.Equal(decimal.NewFromInt(100000)))
 	var paymentCount int64
 	require.NoError(t, db.InvoiceQueries.Model(&models.Payment{}).
 		Where("gateway_order_id = ?", orderID).Count(&paymentCount).Error)

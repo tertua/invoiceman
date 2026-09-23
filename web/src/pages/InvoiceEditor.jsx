@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import Decimal from "decimal.js";
 import {
   Plus,
   Trash2,
@@ -28,7 +29,8 @@ import { aiApi, isAiUnavailable, isAiFailure, isAiRateLimited } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { CURRENCIES, formatMoney, toDateInput, todayDateInput, addDaysDateInput, cn } from "@/lib/utils";
 
-const round = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+const decimal = (value) => new Decimal(value || 0);
+const round = (value) => decimal(value).toDecimalPlaces(4);
 const blankItem = () => ({ description: "", quantity: 1, rate: 0 });
 
 function todayISO() {
@@ -56,7 +58,7 @@ export default function InvoiceEditor() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  // Initialize the form (from settings for new, from existing for edit).
+  // Initialize the form from settings or the existing invoice.
   useEffect(() => {
     if (isEdit) {
       if (existing && !form) {
@@ -97,13 +99,14 @@ export default function InvoiceEditor() {
 
   const totals = useMemo(() => {
     if (!form) return { subtotal: 0, taxAmount: 0, total: 0 };
-    const subtotal = round(
-      form.items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.rate) || 0), 0)
+    const subtotal = form.items.reduce(
+      (sum, it) => sum.plus(decimal(it.quantity).times(decimal(it.rate))),
+      decimal(0)
     );
-    const disc = Math.min(round(Number(form.discount) || 0), subtotal);
-    const base = round(subtotal - disc);
-    const taxAmount = round((base * (Number(form.tax_rate) || 0)) / 100);
-    return { subtotal, discount: disc, taxAmount, total: round(base + taxAmount) };
+    const disc = Decimal.min(round(form.discount), subtotal);
+    const base = Decimal.max(round(subtotal.minus(disc)), decimal(0));
+    const taxAmount = round(base.times(decimal(form.tax_rate)).div(100));
+    return { subtotal, discount: disc, taxAmount, total: round(base.plus(taxAmount)) };
   }, [form]);
 
   if (isEdit && invoiceError?.status === 401) return null;
@@ -121,7 +124,7 @@ export default function InvoiceEditor() {
   // the backend reject the save. Matches the locked banner on detail.
   if (isEdit && existing?.effective_status === "paid") {
     const moneyPaid =
-      Number(existing.total) > 0 && Number(existing.paid_amount) >= Number(existing.total);
+      decimal(existing.total).greaterThan(0) && decimal(existing.paid_amount).greaterThanOrEqualTo(existing.total);
     return (
       <div className="max-w-[640px]">
         <Card padding="lg" className="text-center">
@@ -171,7 +174,7 @@ export default function InvoiceEditor() {
       status: overrideStatus || form.status,
       client_id: form.client_id || null,
       tax_rate: Number(form.tax_rate) || 0,
-      discount: Number(form.discount) || 0,
+      discount: decimal(form.discount).toFixed(4),
       due_date: form.due_date || undefined,
       issue_date: form.issue_date || undefined,
       items: form.items
@@ -179,7 +182,7 @@ export default function InvoiceEditor() {
         .map((it) => ({
           description: it.description,
           quantity: Number(it.quantity) || 0,
-          rate: Number(it.rate) || 0,
+           rate: decimal(it.rate).toFixed(4),
         })),
     };
     setSaving(true);
@@ -351,7 +354,7 @@ export default function InvoiceEditor() {
                     onChange={(e) => setItem(i, { rate: e.target.value })}
                   />
                   <div className="text-right text-sm font-semibold tabular text-[var(--ink)] pr-1">
-                    {formatMoney((Number(it.quantity) || 0) * (Number(it.rate) || 0), form.currency)}
+                    {formatMoney(decimal(it.quantity).times(decimal(it.rate)).toString(), form.currency)}
                   </div>
                   <button type="button"
                     onClick={() => removeItem(i)}

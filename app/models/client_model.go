@@ -4,9 +4,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
-// Client struct to describe a client object.
+// Client describes a client.
 type Client struct {
 	ID        uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id" validate:"required,uuid"`
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
@@ -33,13 +34,13 @@ type ClientInput struct {
 // ClientListRow struct to describe a client row with billing aggregates.
 type ClientListRow struct {
 	Client
-	TotalBilled float64 `db:"total_billed" json:"total_billed"`
-	Outstanding float64 `db:"outstanding" json:"outstanding"`
+	TotalBilled decimal.Decimal `db:"total_billed" json:"total_billed"`
+	Outstanding decimal.Decimal `db:"outstanding" json:"outstanding"`
 }
 
 // ClientStats struct to describe client detail statistics.
 type ClientStats struct {
-	Count       int     `json:"count"`
-	TotalBilled float64 `json:"totalBilled"`
-	Outstanding float64 `json:"outstanding"`
+	Count       int             `json:"count"`
+	TotalBilled decimal.Decimal `json:"totalBilled"`
+	Outstanding decimal.Decimal `json:"outstanding"`
 }

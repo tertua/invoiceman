@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"gorm.io/gorm"
 )
 
-// PaymentQueries provides payment persistence operations.
+// PaymentQueries provides payment persistence.
 type PaymentQueries struct {
 	*gorm.DB
 }
@@ -45,8 +46,8 @@ func (q *PaymentQueries) CountPayments(userID uuid.UUID) (int64, error) {
 
 // PaymentTotals holds global payment aggregates for a user.
 type PaymentTotals struct {
-	Total     float64
-	ThisMonth float64
+	Total     decimal.Decimal
+	ThisMonth decimal.Decimal
 }
 
 // GetPaymentTotals returns all-time and current-month sums over
@@ -66,7 +67,7 @@ func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, erro
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
 		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
 		Where("payments.paid_on >= ? AND payments.paid_on < ?", monthStart, nextMonth)
-	var thisMonth float64
+	var thisMonth decimal.Decimal
 	if err := monthTx.Select("COALESCE(SUM(payments.amount), 0)").Scan(&thisMonth).Error; err != nil {
 		return totals, err
 	}

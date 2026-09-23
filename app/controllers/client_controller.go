@@ -11,9 +11,10 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
-// ListClients returns one page of clients of the current user.
+// ListClients returns one page of clients for the current user.
 // @Description Get all clients of current user.
 // @Summary get all clients of current user
 // @Tags Clients
@@ -88,13 +89,13 @@ func GetClient(c fiber.Ctx) error {
 	}
 
 	invoices := make([]fiber.Map, 0, len(rows))
-	var totalBilled, paidTotal float64
+	var totalBilled, paidTotal decimal.Decimal
 	for _, row := range rows {
 		paid := row.PaidAmount
 		// Billed invoices are sent + paid; drafts are not billed yet.
 		if row.Status == models.InvoiceStatusSent || row.Status == models.InvoiceStatusPaid {
-			totalBilled += row.Total
-			paidTotal += paid
+			totalBilled = totalBilled.Add(row.Total)
+			paidTotal = paidTotal.Add(paid)
 		}
 		invoices = append(invoices, fiber.Map{
 			"id":               row.ID,
@@ -106,14 +107,14 @@ func GetClient(c fiber.Ctx) error {
 			"status":           row.Status,
 			"effective_status": row.EffectiveStatus(),
 			"paid_amount":      paid,
-			"balance":          row.Total - paid,
+			"balance":          row.Total.Sub(paid),
 		})
 	}
 
 	stats := models.ClientStats{
 		Count:       len(rows),
 		TotalBilled: totalBilled,
-		Outstanding: totalBilled - paidTotal,
+		Outstanding: totalBilled.Sub(paidTotal),
 	}
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{

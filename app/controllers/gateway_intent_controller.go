@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
@@ -18,7 +19,7 @@ import (
 	"github.com/tertua/invoiceman/platform/midtrans"
 )
 
-// CreateIntent creates a Midtrans Snap transaction for a downstream project.
+// CreateIntent creates a Midtrans Snap transaction.
 // Project identity is taken from the API key (GatewayAuth), never from the body.
 // @Description Create a relayed payment intent.
 // @Summary create payment intent
@@ -329,8 +330,8 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
-	balance := invoice.Total - paid
-	if balance <= 0 {
+	balance := invoice.Total.Sub(paid)
+	if !balance.GreaterThan(decimal.Zero) {
 		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 	}
 	gw, err := gateway.Get("midtrans")
@@ -342,7 +343,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create order", nil)
 	}
 	orderID := localOrderID(invoice.InvoiceNumber, suffix)
-	amountIDR := int64(balance + 0.5)
+	amountIDR := balance.IntPart()
 	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{
 		OrderID:     orderID,
 		AmountMinor: amountIDR,

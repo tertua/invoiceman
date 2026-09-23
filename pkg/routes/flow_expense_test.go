@@ -44,8 +44,8 @@ func TestExpenseFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	body := decodeBody(t, resp)
 	assert.Len(t, body["expenses"].([]interface{}), 1)
-	assert.Equal(t, float64(100), body["totals"].(map[string]interface{})["total"])
-	assert.Equal(t, float64(100), body["totals"].(map[string]interface{})["thisMonth"])
+	assert.Equal(t, "100", body["totals"].(map[string]interface{})["total"])
+	assert.Equal(t, "100", body["totals"].(map[string]interface{})["thisMonth"])
 
 	resp = doRequest(t, app, "PATCH", "/api/expenses/"+expenseID, `{
 		"vendor":"Cloud Provider Updated",
@@ -57,7 +57,7 @@ func TestExpenseFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	updated := decodeBody(t, resp)["expense"].(map[string]interface{})
 	assert.Equal(t, "Hosting", updated["category"])
-	assert.Equal(t, float64(125), updated["amount"])
+	assert.Equal(t, "125", updated["amount"])
 
 	resp = doRequest(t, app, "DELETE", "/api/expenses/"+expenseID, "", cookies)
 	assert.Equal(t, 204, resp.StatusCode)

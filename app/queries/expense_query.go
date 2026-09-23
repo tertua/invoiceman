@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"gorm.io/gorm"
 )
 
-// ExpenseQueries provides expense persistence operations.
+// ExpenseQueries provides expense persistence.
 type ExpenseQueries struct {
 	*gorm.DB
 }
@@ -42,8 +43,8 @@ func (q *ExpenseQueries) CountExpenses(userID uuid.UUID, category string) (int64
 
 // ExpenseTotals holds global aggregates over the category filter.
 type ExpenseTotals struct {
-	Total     float64
-	ThisMonth float64
+	Total     decimal.Decimal
+	ThisMonth decimal.Decimal
 }
 
 // GetExpenseTotals returns all-time and current-month sums. Month bounds are
@@ -64,7 +65,7 @@ func (q *ExpenseQueries) GetExpenseTotals(userID uuid.UUID, category string) (Ex
 	if category != "" && category != "all" {
 		monthTx = monthTx.Where("category = ?", category)
 	}
-	var thisMonth float64
+	var thisMonth decimal.Decimal
 	if err := monthTx.Select("COALESCE(SUM(amount), 0)").Scan(&thisMonth).Error; err != nil {
 		return totals, err
 	}

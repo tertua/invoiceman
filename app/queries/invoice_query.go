@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"gorm.io/gorm"
 )
 
-// InvoiceQueries struct for queries from Invoice model.
+// InvoiceQueries provides invoice queries.
 type InvoiceQueries struct {
 	*gorm.DB
 }
@@ -98,14 +99,14 @@ func (q *InvoiceQueries) filteredInvoices(userID uuid.UUID, status, search strin
 
 // ClientInvoiceRow struct to describe an invoice row for client detail.
 type ClientInvoiceRow struct {
-	ID            uuid.UUID  `db:"id"`
-	InvoiceNumber string     `db:"invoice_number"`
-	IssueDate     *time.Time `db:"issue_date"`
-	DueDate       *time.Time `db:"due_date"`
-	Total         float64    `db:"total"`
-	Currency      string     `db:"currency"`
-	Status        string     `db:"status"`
-	PaidAmount    float64    `db:"paid_amount"`
+	ID            uuid.UUID       `db:"id"`
+	InvoiceNumber string          `db:"invoice_number"`
+	IssueDate     *time.Time      `db:"issue_date"`
+	DueDate       *time.Time      `db:"due_date"`
+	Total         decimal.Decimal `db:"total"`
+	Currency      string          `db:"currency"`
+	Status        string          `db:"status"`
+	PaidAmount    decimal.Decimal `db:"paid_amount"`
 }
 
 // EffectiveStatus resolves the display status for a client invoice row,
@@ -172,14 +173,14 @@ func (q *InvoiceQueries) GetInvoicePayments(invoiceID uuid.UUID) ([]models.Payme
 }
 
 // PaidAmount returns the total non-voided paid amount for an invoice.
-func (q *InvoiceQueries) PaidAmount(invoiceID uuid.UUID) (float64, error) {
-	var paid float64
+func (q *InvoiceQueries) PaidAmount(invoiceID uuid.UUID) (decimal.Decimal, error) {
+	var paid decimal.Decimal
 
 	if err := q.Model(&models.Payment{}).
 		Where("invoice_id = ? AND voided_at IS NULL", invoiceID).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&paid).Error; err != nil {
-		return 0, err
+		return decimal.Zero, err
 	}
 
 	return paid, nil

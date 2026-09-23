@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"gorm.io/gorm"
 )
 
-// DashboardQueries struct for dashboard aggregate queries.
+// DashboardQueries provides dashboard aggregate queries.
 type DashboardQueries struct {
 	*gorm.DB
 }
@@ -36,7 +37,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 
 	type paidRow struct {
 		InvoiceID uuid.UUID
-		Paid      float64
+		Paid      decimal.Decimal
 	}
 	var paidRows []paidRow
 	paidInvoiceQuery := q.Model(&models.Payment{}).
@@ -49,20 +50,20 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	if err := paidInvoiceQuery.Group("invoice_id").Scan(&paidRows).Error; err != nil {
 		return stats, err
 	}
-	paidByInvoice := make(map[uuid.UUID]float64, len(paidRows))
+	paidByInvoice := make(map[uuid.UUID]decimal.Decimal, len(paidRows))
 	for _, row := range paidRows {
 		paidByInvoice[row.InvoiceID] = row.Paid
 	}
 
-	var totalRevenue float64
+	var totalRevenue decimal.Decimal
 	for _, paid := range paidByInvoice {
-		totalRevenue += paid
+		totalRevenue = totalRevenue.Add(paid)
 	}
 	stats.TotalRevenue = totalRevenue
 
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	var paidThisMonth float64
+	var paidThisMonth decimal.Decimal
 	paidQuery := q.Model(&models.Payment{}).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
 		Where("invoices.user_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", userID, monthStart)
@@ -80,15 +81,15 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 		if invoice.Status == models.InvoiceStatusDraft {
 			continue
 		}
-		balance := invoice.Total - paidByInvoice[invoice.ID]
-		if balance <= 0 {
+		balance := invoice.Total.Sub(paidByInvoice[invoice.ID])
+		if !balance.GreaterThan(decimal.Zero) {
 			continue
 		}
-		stats.Outstanding += balance
+		stats.Outstanding = stats.Outstanding.Add(balance)
 		if invoice.Status == models.InvoiceStatusSent &&
 			invoice.DueDate != nil && now.After(*invoice.DueDate) {
 			stats.OverdueCount++
-			stats.OverdueTotal += balance
+			stats.OverdueTotal = stats.OverdueTotal.Add(balance)
 		}
 	}
 
@@ -102,7 +103,7 @@ func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) (
 
 	type monthlyRow struct {
 		CreatedAt time.Time
-		Amount    float64
+		Amount    decimal.Decimal
 	}
 	var rows []monthlyRow
 	revenueQuery := q.Model(&models.Payment{}).
@@ -116,10 +117,10 @@ func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) (
 		return nil, err
 	}
 
-	revenueByMonth := make(map[string]float64, 6)
+	revenueByMonth := make(map[string]decimal.Decimal, 6)
 	for _, row := range rows {
 		key := row.CreatedAt.Format("2006-01")
-		revenueByMonth[key] += row.Amount
+		revenueByMonth[key] = revenueByMonth[key].Add(row.Amount)
 	}
 
 	points := make([]models.RevenuePoint, 0, 6)
@@ -141,11 +142,11 @@ type recentInvoiceRow struct {
 	InvoiceNumber string
 	ClientName    string
 	IssueDate     *time.Time
-	Total         float64
+	Total         decimal.Decimal
 	Currency      string
 	Status        string
 	DueDate       *time.Time
-	PaidAmount    float64
+	PaidAmount    decimal.Decimal
 	CreatedAt     time.Time
 }
 

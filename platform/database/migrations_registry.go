@@ -61,4 +61,13 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.Settings{}, "language")
 		},
 	},
+	{
+		Version:     8,
+		Description: "fixed-point decimal money columns",
+		Down: func(db *gorm.DB) error {
+			// Money fields are part of the base tables; fresh dev databases are
+			// recreated for this schema change rather than backfilled in place.
+			return nil
+		},
+	},
 }

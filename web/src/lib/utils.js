@@ -42,7 +42,7 @@ export const CURRENCIES = [
 ];
 
 export function formatMoney(amount, currency = currentCurrency) {
-  const n = Number(amount) || 0;
+  const n = Number.parseFloat(amount) || 0;
   const cur = currency || currentCurrency;
   const noFraction = cur === "IDR";
   const locale = cur === "IDR" ? "id-ID" : currentLocale;

@@ -44,7 +44,7 @@ func TestPaymentFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	body := decodeBody(t, resp)
 	assert.Len(t, body["payments"].([]interface{}), 1)
-	assert.Equal(t, float64(40), body["totals"].(map[string]interface{})["total"])
+	assert.Equal(t, "40", body["totals"].(map[string]interface{})["total"])
 
 	resp = doRequest(t, app, "POST", "/api/payments", `{
 		"invoiceId":"`+invoiceID+`",
@@ -58,7 +58,7 @@ func TestPaymentFlow(t *testing.T) {
 	resp = doRequest(t, app, "GET", "/api/invoices/"+invoiceID, "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	detail := decodeBody(t, resp)["invoice"].(map[string]interface{})
-	assert.Equal(t, float64(40), detail["paid_amount"])
+	assert.Equal(t, "40", detail["paid_amount"])
 	assert.Equal(t, "sent", detail["effective_status"])
 
 	// Void requires a reason.
@@ -77,12 +77,12 @@ func TestPaymentFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	body = decodeBody(t, resp)
 	assert.Empty(t, body["payments"])
-	assert.Equal(t, float64(0), body["totals"].(map[string]interface{})["total"])
+	assert.Equal(t, "0", body["totals"].(map[string]interface{})["total"])
 
 	resp = doRequest(t, app, "GET", "/api/invoices/"+invoiceID, "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	detail = decodeBody(t, resp)["invoice"].(map[string]interface{})
-	assert.Equal(t, float64(0), detail["paid_amount"])
+	assert.Equal(t, "0", detail["paid_amount"])
 	assert.Empty(t, detail["payments"])
 	assert.Equal(t, "sent", detail["effective_status"])
 
@@ -137,7 +137,7 @@ func TestPublicPaymentFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	status := decodeBody(t, resp)
 	assert.NotEqual(t, "paid", status["status"])
-	assert.NotEqual(t, float64(0), status["balance"])
+	assert.NotEqual(t, "0", status["balance"])
 
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
 	assert.Equal(t, 501, resp.StatusCode)

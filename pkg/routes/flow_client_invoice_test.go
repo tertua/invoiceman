@@ -47,7 +47,7 @@ func TestClientInvoiceFlow(t *testing.T) {
 	}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	invoice := decodeBody(t, resp)["invoice"].(map[string]interface{})
-	assert.Equal(t, float64(264), invoice["total"])
+	assert.Equal(t, "264", invoice["total"])
 	assert.Equal(t, "draft", invoice["effective_status"])
 	assert.True(t, strings.HasPrefix(invoice["invoice_number"].(string), "INV-"))
 	invoiceID := invoice["id"].(string)
@@ -62,17 +62,17 @@ func TestClientInvoiceFlow(t *testing.T) {
 	// must all report zero outstanding while the invoice is still a draft.
 	resp = doRequest(t, app, "GET", "/api/dashboard", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, float64(0), decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "0", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
 
 	resp = doRequest(t, app, "GET", "/api/clients", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	draftClients := decodeBody(t, resp)["clients"].([]interface{})
 	require.Len(t, draftClients, 1)
-	assert.Equal(t, float64(0), draftClients[0].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "0", draftClients[0].(map[string]interface{})["outstanding"])
 
 	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, float64(0), decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "0", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
 
 	// Mark as sent.
 	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+`/status`,
@@ -88,20 +88,20 @@ func TestClientInvoiceFlow(t *testing.T) {
 	stats := dashboard["stats"].(map[string]interface{})
 	assert.Equal(t, float64(1), stats["invoiceCount"])
 	assert.Equal(t, float64(1), stats["clientCount"])
-	assert.Equal(t, float64(264), stats["outstanding"])
+	assert.Equal(t, "264", stats["outstanding"])
 
 	// Sent invoices count as receivables in the client list and detail.
 	resp = doRequest(t, app, "GET", "/api/clients", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	sentClients := decodeBody(t, resp)["clients"].([]interface{})
 	require.Len(t, sentClients, 1)
-	assert.Equal(t, float64(264), sentClients[0].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "264", sentClients[0].(map[string]interface{})["outstanding"])
 
 	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	sentDetail := decodeBody(t, resp)["stats"].(map[string]interface{})
-	assert.Equal(t, float64(264), sentDetail["outstanding"])
-	assert.Equal(t, float64(264), sentDetail["totalBilled"])
+	assert.Equal(t, "264", sentDetail["outstanding"])
+	assert.Equal(t, "264", sentDetail["totalBilled"])
 	assert.Len(t, dashboard["revenueSeries"].([]interface{}), 6)
 	// Revenue points expose a stable YYYY-MM key for frontend localization.
 	for _, item := range dashboard["revenueSeries"].([]interface{}) {

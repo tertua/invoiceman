@@ -117,6 +117,9 @@ func CreateExpense(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
+	if input.Amount.IsNegative() {
+		return utils.Fail(c, fiber.StatusBadRequest, "amount cannot be negative", nil)
+	}
 	expenseDate, err := utils.ParseRequiredDate(input.ExpenseDate)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense_date, expected YYYY-MM-DD", nil)

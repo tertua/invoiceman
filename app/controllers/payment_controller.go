@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
@@ -115,6 +115,9 @@ func CreatePayment(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
+	if !input.Amount.GreaterThan(decimal.Zero) {
+		return utils.Fail(c, fiber.StatusBadRequest, "amount must be greater than zero", nil)
+	}
 	invoiceID, err := uuid.Parse(input.InvoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
@@ -138,7 +141,7 @@ func CreatePayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
-	if paid+input.Amount > invoice.Total {
+	if paid.Add(input.Amount).GreaterThan(invoice.Total) {
 		return utils.Fail(c, fiber.StatusBadRequest, "payment exceeds invoice balance", nil)
 	}
 	now := time.Now()
@@ -158,11 +161,11 @@ func CreatePayment(c fiber.Ctx) error {
 	}
 	// Auto-mark the invoice paid when payments now cover the total, so the
 	// stored status column stays in sync (display also uses effective_status).
-	if invoice.Status != models.InvoiceStatusPaid && paid+input.Amount >= invoice.Total && invoice.Total > 0 {
+	if invoice.Status != models.InvoiceStatusPaid && paid.Add(input.Amount).GreaterThanOrEqual(invoice.Total) && invoice.Total.GreaterThan(decimal.Zero) {
 		_ = db.UpdateInvoiceStatus(userID, invoiceID, models.InvoiceStatusPaid)
 	}
 	recordAudit(c, db, userID, "payment.create", "payment", payment.ID.String(),
-		`{"invoice_id":"`+invoiceID.String()+`","amount":`+strconv.FormatFloat(input.Amount, 'f', -1, 64)+`}`)
+		`{"invoice_id":"`+invoiceID.String()+`","amount":"`+input.Amount.String()+`"}`)
 	invalidateAggregates(c, userID)
 	enqueueNotification(db, userID, models.NotifEventPaymentCreated, "", paymentNotifData(db, *payment))
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": fiber.Map{
@@ -242,7 +245,7 @@ func VoidPayment(c fiber.Ctx) error {
 	// Reopen the invoice when a void drops payments below the total again.
 	if invoice, err := db.GetInvoice(userID, payment.InvoiceID); err == nil {
 		if invoice.Status == models.InvoiceStatusPaid {
-			if remaining, err := db.PaidAmount(payment.InvoiceID); err == nil && remaining < invoice.Total {
+			if remaining, err := db.PaidAmount(payment.InvoiceID); err == nil && remaining.LessThan(invoice.Total) {
 				_ = db.UpdateInvoiceStatus(userID, payment.InvoiceID, models.InvoiceStatusSent)
 			}
 		}
@@ -316,7 +319,7 @@ func CreateOnlineLink(c fiber.Ctx) error {
 		if err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 		}
-		if invoice.Total <= paid {
+		if !invoice.Total.GreaterThan(paid) {
 			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 		}
 		token, tokenErr := newPaymentToken()
@@ -388,7 +391,7 @@ func SendOnlineLink(c fiber.Ctx) error {
 		if err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 		}
-		if invoice.Total <= paid {
+		if !invoice.Total.GreaterThan(paid) {
 			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 		}
 		token, tokenErr := newPaymentToken()
@@ -525,13 +528,13 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
-	if invoice.Total <= paid {
+	if !invoice.Total.GreaterThan(paid) {
 		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 	}
-	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total-paid)
+	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total.Sub(paid))
 }
 
-func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance float64) error {
+func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal) error {
 	if !strings.EqualFold(strings.TrimSpace(invoice.Currency), "IDR") {
 		return utils.Fail(c, fiber.StatusBadRequest, "online payment is currently available for IDR invoices only", nil)
 	}
@@ -548,7 +551,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	if existing, err := db.GetTransaction(legacyLocalOrderID(invoice.InvoiceNumber, link.Token[:8])); err == nil {
 		return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": existing.SnapToken, "redirect_url": existing.RedirectURL, "order_id": existing.OrderID})
 	}
-	amountIDR := int64(balance + 0.5)
+	amountIDR := balance.IntPart()
 	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{OrderID: orderID, AmountMinor: amountIDR, Currency: invoice.Currency})
 	if err != nil {
 		if errors.Is(err, gateway.ErrNotConfigured) {

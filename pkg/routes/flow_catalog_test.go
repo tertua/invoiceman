@@ -30,7 +30,7 @@ func TestItemFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	updated := decodeBody(t, resp)["item"].(map[string]interface{})
 	assert.Equal(t, "Strategy", updated["name"])
-	assert.Equal(t, float64(200), updated["rate"])
+	assert.Equal(t, "200", updated["rate"])
 
 	resp = doRequest(t, app, "DELETE", "/api/items/"+itemID, "", cookies)
 	assert.Equal(t, 204, resp.StatusCode)

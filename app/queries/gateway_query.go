@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -122,7 +123,7 @@ func (q *GatewayQueries) CountAllTransactions() (int64, error) {
 	return total, nil
 }
 
-// SaveTransaction persists transaction updates.
+// SaveTransaction persists transaction changes.
 func (q *GatewayQueries) SaveTransaction(t *models.GatewayTransaction) error {
 	return q.Save(t).Error
 }
@@ -132,7 +133,7 @@ func (q *GatewayQueries) SaveTransaction(t *models.GatewayTransaction) error {
 // idempotent; the invoice row lock serializes distinct payments against its
 // remaining balance on PostgreSQL (SQLite serializes writers itself).
 // method is the human payment label recorded on the payment row.
-func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransaction, gross float64, method string) error {
+func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransaction, gross decimal.Decimal, method string) error {
 	return q.Transaction(func(tx *gorm.DB) error {
 		if t.InvoiceID == nil || t.UserID == nil {
 			return tx.Save(t).Error
@@ -164,17 +165,17 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 			return err
 		}
 
-		var paid float64
+		var paid decimal.Decimal
 		if err := tx.Model(&models.Payment{}).Where("invoice_id = ? AND voided_at IS NULL", invoice.ID).
 			Select("COALESCE(SUM(amount), 0)").Scan(&paid).Error; err != nil {
 			return err
 		}
-		balance := invoice.Total - paid
-		if balance <= 0 {
+		balance := invoice.Total.Sub(paid)
+		if !balance.GreaterThan(decimal.Zero) {
 			return nil
 		}
 		amount := balance
-		if gross > 0 && gross < balance {
+		if gross.GreaterThan(decimal.Zero) && gross.LessThan(balance) {
 			amount = gross
 		}
 		now := time.Now()
@@ -189,7 +190,7 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 			return err
 		}
 		// Auto-mark paid when the settlement covers the invoice total.
-		if invoice.Status != models.InvoiceStatusPaid && invoice.Total > 0 && paid+amount >= invoice.Total {
+		if invoice.Status != models.InvoiceStatusPaid && invoice.Total.GreaterThan(decimal.Zero) && paid.Add(amount).GreaterThanOrEqual(invoice.Total) {
 			if err := tx.Model(&models.Invoice{}).Where("id = ?", invoice.ID).
 				Updates(map[string]interface{}{"status": models.InvoiceStatusPaid, "updated_at": now}).Error; err != nil {
 				return err
