@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { CommandPalette } from "./CommandPalette";
 import { useSettings } from "@/hooks/useSettings";
+import { useLang } from "@/context/LangContext";
 import { setDefaultCurrency } from "@/lib/utils";
 
 export function AppShell() {
@@ -12,6 +13,7 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [currency, setCurrency] = useState("IDR");
   const { data: settings } = useSettings();
+  const { lang, setLang } = useLang();
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
@@ -20,11 +22,11 @@ export function AppShell() {
     const nextCurrency = settings?.currency || "IDR";
     setDefaultCurrency(nextCurrency);
     setCurrency(nextCurrency);
-  }, [settings?.currency]);
+    const srv = settings?.language;
+    if ((srv === "en" || srv === "id") && srv !== lang) setLang(srv);
+  }, [settings?.currency, settings?.language, lang, setLang]);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  }, [location.pathname]);
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }, [location.pathname]);
 
   useEffect(() => {
     function onKey(e) {
@@ -39,9 +41,7 @@ export function AppShell() {
   }, []);
 
   // close on route change
-  useEffect(() => {
-    setPaletteOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setPaletteOpen(false); }, [location.pathname]);
 
   return (
     <div className="min-h-screen flex bg-[var(--bg)]">

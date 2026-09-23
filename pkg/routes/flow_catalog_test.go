@@ -10,14 +10,12 @@ import (
 func TestItemFlow(t *testing.T) {
 	app := newTestApp()
 
-	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"Item User","email":"item@example.com","password":"secret123"}`, nil)
+	resp := doRequest(t, app, "POST", "/api/auth/register", `{"name":"Item User","email":"item@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 201, resp.StatusCode)
 	decodeBody(t, resp)
 	cookies := resp.Cookies()
 
-	resp = doRequest(t, app, "POST", "/api/items",
-		`{"name":"Consulting","description":"Hourly consulting","rate":125,"unit":"hour"}`, cookies)
+	resp = doRequest(t, app, "POST", "/api/items", `{"name":"Consulting","description":"Hourly consulting","rate":125,"unit":"hour"}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	item := decodeBody(t, resp)["item"].(map[string]interface{})
 	itemID := item["id"].(string)
@@ -28,8 +26,7 @@ func TestItemFlow(t *testing.T) {
 	items := decodeBody(t, resp)["items"].([]interface{})
 	require.Len(t, items, 1)
 
-	resp = doRequest(t, app, "PATCH", "/api/items/"+itemID,
-		`{"name":"Strategy","description":"Strategy session","rate":200,"unit":"session"}`, cookies)
+	resp = doRequest(t, app, "PATCH", "/api/items/"+itemID, `{"name":"Strategy","description":"Strategy session","rate":200,"unit":"session"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	updated := decodeBody(t, resp)["item"].(map[string]interface{})
 	assert.Equal(t, "Strategy", updated["name"])
@@ -48,8 +45,7 @@ func TestItemFlow(t *testing.T) {
 func TestSettingsFlow(t *testing.T) {
 	app := newTestApp()
 
-	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"Settings User","email":"settings@example.com","password":"secret123"}`, nil)
+	resp := doRequest(t, app, "POST", "/api/auth/register", `{"name":"Settings User","email":"settings@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 201, resp.StatusCode)
 	decodeBody(t, resp)
 	cookies := resp.Cookies()
@@ -59,16 +55,14 @@ func TestSettingsFlow(t *testing.T) {
 	settings := decodeBody(t, resp)["settings"].(map[string]interface{})
 	assert.Equal(t, "IDR", settings["currency"])
 	assert.Equal(t, "INV-", settings["invoice_prefix"])
+	assert.Empty(t, settings["language"])
 
 	resp = doRequest(t, app, "PATCH", "/api/settings", `{
 		"company_name":"Acme Studio",
-		"email":"billing@acme.test",
-		"phone":"+62123456789",
-		"address":"Main Street",
-		"logo_url":"data:image/png;base64,abc",
 		"currency":"IDR",
 		"tax_rate":11,
-		"invoice_prefix":"ACME-"
+		"invoice_prefix":"ACME-",
+		"language":"id"
 	}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	updated := decodeBody(t, resp)["settings"].(map[string]interface{})
@@ -76,6 +70,10 @@ func TestSettingsFlow(t *testing.T) {
 	assert.Equal(t, "IDR", updated["currency"])
 	assert.Equal(t, float64(11), updated["tax_rate"])
 	assert.Equal(t, "ACME-", updated["invoice_prefix"])
+	assert.Equal(t, "id", updated["language"])
+	resp = doRequest(t, app, "PATCH", "/api/settings", `{"currency":"IDR","invoice_prefix":"ACME-","language":""}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "id", decodeBody(t, resp)["settings"].(map[string]interface{})["language"])
 
 	resp = doRequest(t, app, "PATCH", "/api/settings", `{"currency":"INVALID"}`, cookies)
 	assert.Equal(t, 400, resp.StatusCode)

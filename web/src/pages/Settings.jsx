@@ -16,11 +16,7 @@ import NotificationsTab from "@/components/settings/NotificationsTab";
 import { CURRENCIES, cn } from "@/lib/utils";
 
 function FieldLabel({ children }) {
-  return (
-    <label className="text-xs font-medium text-[var(--ink-muted)] mb-1.5 block">
-      {children}
-    </label>
-  );
+  return <label className="text-xs font-medium text-[var(--ink-muted)] mb-1.5 block">{children}</label>;
 }
 
 function CompanySection() {
@@ -107,9 +103,7 @@ function CompanySection() {
         <CardHeader>
           <div>
             <CardTitle className="text-base">{t("settings.companyProfile")}</CardTitle>
-            <CardDescription className="mt-1">
-              {t("settings.companyProfileDesc")}
-            </CardDescription>
+            <CardDescription className="mt-1">{t("settings.companyProfileDesc")}</CardDescription>
           </div>
         </CardHeader>
 
@@ -326,20 +320,24 @@ function AppearanceSection() {
 
 function LanguageSection() {
   const { lang, setLang, t } = useLang();
+  const { data: settings } = useSettings();
+  const update = useUpdateSettings();
+  function select(next) {
+    setLang(next);
+    if (settings) update.mutate({ ...settings, language: next });
+  }
   return (
     <Card padding="lg" className="max-w-2xl">
       <CardHeader>
         <div>
           <CardTitle className="text-base">{t("settings.language")}</CardTitle>
-          <CardDescription className="mt-1">
-            {t("settings.languageDesc")}
-          </CardDescription>
+          <CardDescription className="mt-1">{t("settings.languageDesc")}</CardDescription>
         </div>
       </CardHeader>
 
       <div className="flex gap-3">
-        <ThemeOption value="en" label="English" icon={Languages} current={lang} onSelect={setLang} />
-        <ThemeOption value="id" label="Bahasa Indonesia" icon={Languages} current={lang} onSelect={setLang} />
+        <ThemeOption value="en" label="English" icon={Languages} current={lang} onSelect={select} />
+        <ThemeOption value="id" label="Bahasa Indonesia" icon={Languages} current={lang} onSelect={select} />
       </div>
     </Card>
   );

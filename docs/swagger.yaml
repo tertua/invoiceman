@@ -330,6 +330,11 @@ definitions:
       invoice_prefix:
         maxLength: 20
         type: string
+      language:
+        enum:
+        - en
+        - id
+        type: string
       logo_url:
         type: string
       phone:

@@ -3449,6 +3449,13 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 20
                 },
+                "language": {
+                    "type": "string",
+                    "enum": [
+                        "en",
+                        "id"
+                    ]
+                },
                 "logo_url": {
                     "type": "string"
                 },

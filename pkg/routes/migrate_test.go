@@ -54,23 +54,7 @@ func TestMigrateDownFlow(t *testing.T) {
 	assert.Equal(t, 400, resp.StatusCode)
 	decodeBody(t, resp)
 
-	// Roll back to v1.
-	resp = doRequest(t, app, "POST", "/api/admin/migrate/down",
-		`{"target_version":1,"confirm":true}`, adminCookies)
-	assert.Equal(t, 200, resp.StatusCode)
-	body := decodeBody(t, resp)
-	assert.Equal(t, float64(1), body["version"])
-	stamp, err := database.CurrentSchemaVersion()
-	require.NoError(t, err)
-	assert.Equal(t, 1, stamp)
-
-	// Same target again is refused.
-	resp = doRequest(t, app, "POST", "/api/admin/migrate/down",
-		`{"target_version":1,"confirm":true}`, adminCookies)
-	assert.Equal(t, 400, resp.StatusCode)
-	decodeBody(t, resp)
-
-	// Non-admins are rejected by roles, not by version logic.
+	// Non-admins are rejected by roles, not version logic — before rollback, since v1 lacks new columns.
 	resp = doRequest(t, app, "POST", "/api/auth/register",
 		`{"name":"Mig User","email":"miguser@example.com","password":"secret123"}`, nil)
 	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409)
@@ -85,6 +69,22 @@ func TestMigrateDownFlow(t *testing.T) {
 	resp = doRequest(t, app, "POST", "/api/admin/migrate/down",
 		`{"target_version":1,"confirm":true}`, userCookies)
 	assert.Equal(t, 403, resp.StatusCode)
+	decodeBody(t, resp)
+
+	// Roll back to v1.
+	resp = doRequest(t, app, "POST", "/api/admin/migrate/down",
+		`{"target_version":1,"confirm":true}`, adminCookies)
+	assert.Equal(t, 200, resp.StatusCode)
+	body := decodeBody(t, resp)
+	assert.Equal(t, float64(1), body["version"])
+	stamp, err := database.CurrentSchemaVersion()
+	require.NoError(t, err)
+	assert.Equal(t, 1, stamp)
+
+	// Same target again is refused.
+	resp = doRequest(t, app, "POST", "/api/admin/migrate/down",
+		`{"target_version":1,"confirm":true}`, adminCookies)
+	assert.Equal(t, 400, resp.StatusCode)
 	decodeBody(t, resp)
 
 	// The suite shares one database: remove our accounts so user counts

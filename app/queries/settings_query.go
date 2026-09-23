@@ -34,11 +34,7 @@ func (q *SettingsQueries) GetSettings(userID uuid.UUID) (models.Settings, error)
 
 // CreateSettings creates the default settings row for a user.
 func (q *SettingsQueries) CreateSettings(s *models.Settings) error {
-	if err := q.Create(s).Error; err != nil {
-		return err
-	}
-
-	return nil
+	return q.Create(s).Error
 }
 
 // UpdateSettings updates user settings.
@@ -54,6 +50,7 @@ func (q *SettingsQueries) UpdateSettings(s *models.Settings) error {
 			"currency":       s.Currency,
 			"tax_rate":       s.TaxRate,
 			"invoice_prefix": s.InvoicePrefix,
+			"language":       s.Language,
 		}).Error; err != nil {
 		return err
 	}
