@@ -378,4 +378,18 @@ func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
 	require.NoError(t, db.InvoiceQueries.Model(&models.Payment{}).
 		Where("gateway_order_id = ?", orderID).Count(&paymentCount).Error)
 	assert.EqualValues(t, 1, paymentCount)
+
+	// Gateway-settled payments are not voidable from the UI, and the API
+	// rejects the attempt even if a client sends it directly.
+	resp = doRequest(t, app, "GET", "/api/payments", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	listed := decodeBody(t, resp)["payments"].([]interface{})
+	require.Len(t, listed, 1)
+	assert.Equal(t, false, listed[0].(map[string]interface{})["can_void"])
+	resp.Body.Close()
+
+	gatewayPaymentID := listed[0].(map[string]interface{})["id"].(string)
+	resp = doRequest(t, app, "DELETE", "/api/payments/"+gatewayPaymentID+"?reason=wrong", "", cookies)
+	assert.Equal(t, 422, resp.StatusCode)
+	resp.Body.Close()
 }

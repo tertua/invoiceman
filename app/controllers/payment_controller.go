@@ -42,6 +42,7 @@ func paymentResponse(row models.PaymentListRow) fiber.Map {
 		"paid_on":          utils.FormatDate(row.PaidOn),
 		"txn_id":           row.TxnID,
 		"notes":            row.Notes,
+		"can_void":         row.CanVoid(),
 	}
 }
 
@@ -210,7 +211,7 @@ func VoidPayment(c fiber.Ctx) error {
 	}
 	// Gateway-settled payments are provider ledger entries: voiding them
 	// here would silently diverge from the gateway's record.
-	if payment.GatewayOrderID != nil && strings.TrimSpace(*payment.GatewayOrderID) != "" {
+	if !payment.CanVoid() {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "gateway payment cannot be voided", nil)
 	}
 	reason := strings.TrimSpace(c.Query("reason"))

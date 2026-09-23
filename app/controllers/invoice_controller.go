@@ -105,11 +105,12 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 	for _, payment := range payments {
 		paid += payment.Amount
 		paymentMaps = append(paymentMaps, fiber.Map{
-			"id":      payment.ID,
-			"amount":  payment.Amount,
-			"paid_on": utils.FormatDate(payment.PaidOn),
-			"method":  payment.Method,
-			"txn_id":  payment.TxnID,
+			"id":       payment.ID,
+			"amount":   payment.Amount,
+			"paid_on":  utils.FormatDate(payment.PaidOn),
+			"method":   payment.Method,
+			"txn_id":   payment.TxnID,
+			"can_void": payment.CanVoid(),
 		})
 	}
 

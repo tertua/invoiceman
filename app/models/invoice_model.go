@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,6 +67,18 @@ type Payment struct {
 	VoidedAt       *time.Time `db:"voided_at" json:"voided_at,omitempty"`
 	VoidReason     string     `gorm:"size:500" db:"void_reason" json:"void_reason,omitempty" validate:"lte=500"`
 	Notes          string     `db:"notes" json:"notes"`
+}
+
+// CanVoid reports whether this payment may be voided. Gateway settlements
+// are provider ledger entries and are rejected by VoidPayment.
+func (p Payment) CanVoid() bool {
+	return !gatewaySettled(p.GatewayOrderID)
+}
+
+// gatewaySettled reports whether a payment row carries a gateway order id,
+// i.e. it was settled by a payment provider rather than recorded manually.
+func gatewaySettled(orderID *string) bool {
+	return orderID != nil && strings.TrimSpace(*orderID) != ""
 }
 
 // InvoiceItemInput struct to describe a single invoice line in create/update payloads.

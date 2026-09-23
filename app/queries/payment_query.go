@@ -21,7 +21,8 @@ func (q *PaymentQueries) ListPayments(userID uuid.UUID, limit, offset int) ([]mo
 	err := q.Table("payments").
 		Select(`payments.id AS payment_id, payments.invoice_id, invoices.invoice_number,
 			COALESCE(clients.name, '') AS client_name, invoices.currency AS invoice_currency,
-			payments.amount, payments.method, payments.paid_on, payments.txn_id, payments.notes`).
+			payments.amount, payments.method, payments.paid_on, payments.txn_id, payments.notes,
+			payments.gateway_order_id`).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
 		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).

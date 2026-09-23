@@ -74,9 +74,13 @@ export default function Payments() {
                   {p.method ? <Badge tone="neutral">{p.method}</Badge> : <span className="text-xs text-[var(--ink-muted)]">—</span>}
                 </div>
                 <div className="text-sm font-semibold text-[var(--success)] tabular text-right">{formatMoney(p.amount, p.invoice_currency)}</div>
-                <button type="button" onClick={() => setVoidTarget(p)} aria-label={t("payments.voidTitle")} className="justify-self-end h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--surface-2)] hover:text-[var(--danger)]">
-                  <Trash2 size={13} />
-                </button>
+                {p.can_void !== false ? (
+                  <button type="button" onClick={() => setVoidTarget(p)} aria-label={t("payments.voidTitle")} className="justify-self-end h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--surface-2)] hover:text-[var(--danger)]">
+                    <Trash2 size={13} />
+                  </button>
+                ) : (
+                  <span aria-hidden="true" className="justify-self-end h-7 w-7" />
+                )}
               </div>
             ))}
           </div>

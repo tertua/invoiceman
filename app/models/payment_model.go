@@ -39,4 +39,11 @@ type PaymentListRow struct {
 	PaidOn          *time.Time `db:"paid_on"`
 	TxnID           string     `db:"txn_id"`
 	Notes           string     `db:"notes"`
+	GatewayOrderID  *string    `db:"gateway_order_id"`
+}
+
+// CanVoid reports whether a payment may be voided from the UI. Gateway
+// settlements are provider ledger entries and are rejected by VoidPayment.
+func (r PaymentListRow) CanVoid() bool {
+	return !gatewaySettled(r.GatewayOrderID)
 }

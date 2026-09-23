@@ -385,13 +385,17 @@ function PaymentCard({ invoice }) {
                 <div className="text-[11px] text-[var(--ink-muted)]">{p.method || "—"}{p.txn_id ? ` · ${p.txn_id}` : ""}</div>
               </div>
               <div className="text-sm font-semibold text-[var(--success)] tabular">{formatMoney(p.amount, currency)}</div>
-              <button type="button"
-                onClick={() => setVoidTarget(p)}
-                className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
-                aria-label={t("payments.voidTitle")}
-              >
-                <Trash2 size={12} />
-              </button>
+              {p.can_void !== false ? (
+                <button type="button"
+                  onClick={() => setVoidTarget(p)}
+                  className="md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
+                  aria-label={t("payments.voidTitle")}
+                >
+                  <Trash2 size={12} />
+                </button>
+              ) : (
+                <span aria-hidden="true" className="h-6 w-6" />
+              )}
             </li>
           ))}
         </ul>
