@@ -196,7 +196,7 @@ export function InvoiceDocument({ invoice, settings, lang = "en" }) {
         )}
 
         <Text style={styles.footer}>
-          {t(lang, "common.thankYou")} · {s.company_name || ""}
+          {t(lang, "common.thankYou")}
         </Text>
       </Page>
     </Document>

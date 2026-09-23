@@ -846,7 +846,7 @@ export const translations = {
     "app.tagline": "Manajer Faktur & Penagihan AI",
     "common.loading": "Memuat...",
     "common.balance": "Saldo",
-    "common.thankYou": "Terima kasih atas bisnis Anda",
+    "common.thankYou": "Terima kasih atas kerjasama Anda",
     "common.cancel": "Batal",
     "common.done": "Selesai",
     "common.save": "Simpan",
