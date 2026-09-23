@@ -234,13 +234,13 @@ function InvoicePreview({ invoice, settings }) {
           {invoice.notes && (
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] font-semibold mb-1">{t("common.notes")}</div>
-              <p className="text-sm text-[var(--ink)]">{invoice.notes}</p>
+              <p className="text-sm text-[var(--ink)] whitespace-pre-line">{invoice.notes}</p>
             </div>
           )}
           {invoice.terms && (
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] font-semibold mb-1">{t("common.terms")}</div>
-              <p className="text-sm text-[var(--ink)]">{invoice.terms}</p>
+              <p className="text-sm text-[var(--ink)] whitespace-pre-line">{invoice.terms}</p>
             </div>
           )}
         </div>

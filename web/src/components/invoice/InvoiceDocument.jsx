@@ -74,6 +74,18 @@ const styles = StyleSheet.create({
   footer: { marginTop: 30, textAlign: "center", color: MUTED, fontSize: 8 },
 });
 
+// Renders each source line as its own block so multi-line notes/terms
+// keep their line breaks in the PDF instead of collapsing to one line.
+function Multiline({ text, style }) {
+  return (
+    <>
+      {String(text ?? "").split("\n").map((line, i) => (
+        <Text key={i} style={style}>{line === "" ? " " : line}</Text>
+      ))}
+    </>
+  );
+}
+
 export function InvoiceDocument({ invoice, settings, lang = "en" }) {
   const s = settings || {};
   const currency = invoice.currency || "IDR";
@@ -171,13 +183,13 @@ export function InvoiceDocument({ invoice, settings, lang = "en" }) {
             {invoice.notes ? (
               <>
                 <Text style={styles.label}>{t(lang, "common.notes")}</Text>
-                <Text style={{ marginBottom: 8 }}>{invoice.notes}</Text>
+                <Multiline text={invoice.notes} style={{ marginBottom: 8 }} />
               </>
             ) : null}
             {invoice.terms ? (
               <>
                 <Text style={styles.label}>{t(lang, "common.terms")}</Text>
-                <Text>{invoice.terms}</Text>
+                <Multiline text={invoice.terms} />
               </>
             ) : null}
           </View>
