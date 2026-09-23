@@ -106,14 +106,20 @@ func (r *Registry) Observe(method, route string, status int, d time.Duration) {
 	r.mu.Unlock()
 	c.Add(1)
 
-	nanos := uint64(d.Nanoseconds())
-	secs := float64(nanos) / 1e9
+	// Durations are non-negative in practice, but a negative value would
+	// wrap on conversion; clamp it instead of overflowing the buckets.
+	nanos := d.Nanoseconds()
+	if nanos < 0 {
+		nanos = 0
+	}
+	unanos := uint64(nanos)
+	secs := float64(unanos) / 1e9
 	for i, bound := range latencyBounds {
 		if secs <= bound {
 			r.buckets[i].Add(1)
 		}
 	}
-	r.sumNanos.Add(nanos)
+	r.sumNanos.Add(unanos)
 	r.count.Add(1)
 }
 

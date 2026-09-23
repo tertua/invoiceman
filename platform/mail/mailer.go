@@ -145,7 +145,7 @@ func (m *SMTPMailer) sendTLS(address, to string, message []byte) error {
 		_ = conn.Close()
 		return err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 	if m.user != "" {
 		if err := client.Auth(smtp.PlainAuth("", m.user, m.pass, m.host)); err != nil {
 			return err

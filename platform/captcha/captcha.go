@@ -26,7 +26,7 @@ var ErrNotConfigured = errors.New("captcha is not configured")
 var ErrFailed = errors.New("captcha verification failed")
 
 // TokenHeader carries the client token (set by the SPA widget).
-const TokenHeader = "X-Captcha-Token"
+const TokenHeader = "X-Captcha-Token" // #nosec G101 -- header name, not a credential
 
 // verifyURL is a variable so tests can point at a fake provider.
 var verifyURL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
@@ -73,7 +73,7 @@ func Verify(ctx context.Context, token, remoteIP string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	out := verifyResponse{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return err

@@ -19,7 +19,7 @@ func openLocal(dir string) (*localStorage, error) {
 	if strings.TrimSpace(dir) == "" {
 		return nil, fmt.Errorf("STORAGE_DIR is required for the local backend")
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
 	return &localStorage{dir: dir}, nil
@@ -39,14 +39,16 @@ func (s *localStorage) Put(_ context.Context, key string, data io.Reader, _ int6
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
+	// #nosec G304 -- path is built by (*localStorage).path, which anchors
+	// Clean keys under s.dir so ".." segments can never escape it.
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, err = io.Copy(f, data)
 	return err
 }
@@ -56,6 +58,8 @@ func (s *localStorage) Get(_ context.Context, key string) (io.ReadCloser, string
 	if err != nil {
 		return nil, "", err
 	}
+	// #nosec G304 -- path is built by (*localStorage).path, which anchors
+	// Clean keys under s.dir so ".." segments can never escape it.
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, "", err

@@ -126,7 +126,7 @@ func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*pay
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.BaseURL()+"/payment/"+paymentID, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.BaseURL()+"/payment/"+paymentID, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*pay
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments status: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments status: %w", err)

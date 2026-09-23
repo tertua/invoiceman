@@ -34,7 +34,7 @@ func (q *InvoiceQueries) ListInvoices(userID uuid.UUID, status, search, sort, or
 		sortColumn = column
 	}
 	sortOrder := "DESC"
-	if strings.ToLower(order) == "asc" {
+	if strings.EqualFold(order, "asc") {
 		sortOrder = "ASC"
 	}
 	tx = tx.Order(sortColumn + " " + sortOrder).Order("invoices.created_at DESC")

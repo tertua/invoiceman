@@ -6,8 +6,11 @@ BUILD_DIR = $(PWD)/build
 clean:
 	rm -rf ./build
 
+# Packages are listed explicitly so third-party code under web/node_modules
+# is never linted. hugeParam/rangeValCopy are style/perf suggestions whose
+# refactors would churn many call sites for no behavior change.
 critic:
-	gocritic check -enableAll ./...
+	gocritic check -enableAll -disable hugeParam,rangeValCopy ./app/... ./pkg/... ./platform/... ./docs/... .
 
 security:
 	gosec ./...

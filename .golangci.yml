@@ -1,0 +1,16 @@
+version: "2"
+linters:
+  exclusions:
+    paths:
+      # Third-party code vendored via npm; not ours to lint.
+      - web/node_modules/...
+    rules:
+      # Test response bodies are consumed by decode helpers; Close errors
+      # carry no signal in tests.
+      - linters: [errcheck]
+        path: _test\.go$
+        text: 'Error return value of `.*\.Close` is not checked'
+      # t.Setenv is preferred, but TestMain has no *testing.T.
+      - linters: [errcheck]
+        path: _test\.go$
+        text: 'Error return value of `os\.(Setenv|Unsetenv)` is not checked'

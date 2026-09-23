@@ -111,7 +111,7 @@ func (c *GeminiClient) generate(ctx context.Context, parts []geminiPart, jsonRes
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
 		return "", err
@@ -122,12 +122,12 @@ func (c *GeminiClient) generate(ctx context.Context, parts []geminiPart, jsonRes
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		if result.Error != nil && result.Error.Message != "" {
-			return "", fmt.Errorf("Gemini request failed: %s", result.Error.Message)
+			return "", fmt.Errorf("gemini request failed: %s", result.Error.Message)
 		}
-		return "", fmt.Errorf("Gemini request failed with status %d", resp.StatusCode)
+		return "", fmt.Errorf("gemini request failed with status %d", resp.StatusCode)
 	}
 	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
-		return "", errors.New("Gemini returned no content")
+		return "", errors.New("gemini returned no content")
 	}
 	return strings.TrimSpace(result.Candidates[0].Content.Parts[0].Text), nil
 }

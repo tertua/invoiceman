@@ -14,7 +14,7 @@ import (
 // /uploads/receipts/* matches no route and falls through to the JSON 404.
 func MountUploads(a *fiber.App, storageDir string) error {
 	logosDir := filepath.Join(storageDir, "logos")
-	if err := os.MkdirAll(logosDir, 0o755); err != nil {
+	if err := os.MkdirAll(logosDir, 0o750); err != nil {
 		return err
 	}
 	a.Use("/uploads/logos", static.New(logosDir, static.Config{

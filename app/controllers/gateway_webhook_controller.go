@@ -36,16 +36,6 @@ type RelayPayload struct {
 	PaidAt          string  `json:"paid_at"`
 }
 
-func terminalStatus(s string) bool {
-	switch s {
-	case models.GatewayStatusSuccess, models.GatewayStatusFailed,
-		models.GatewayStatusExpired, models.GatewayStatusRefunded:
-		return true
-	default:
-		return false
-	}
-}
-
 // HandleMidtransWebhook is the single Midtrans notification URL.
 // @Description Handle Midtrans payment notification.
 // @Summary midtrans webhook

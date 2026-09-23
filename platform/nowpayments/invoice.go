@@ -62,7 +62,7 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments invoice: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments invoice: %w", err)
@@ -83,14 +83,14 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 }
 
 // priceFromRequest resolves the fiat price for an invoice request.
-func priceFromRequest(req *gateway.CreateTxRequest) (float64, string, error) {
-	currency := strings.ToUpper(strings.TrimSpace(req.Currency))
+func priceFromRequest(req *gateway.CreateTxRequest) (amount float64, currency string, err error) {
+	currency = strings.ToUpper(strings.TrimSpace(req.Currency))
 	if currency == "" {
 		currency = "IDR"
 	}
-	if amount := strings.TrimSpace(req.AmountDecimal); amount != "" {
-		value, err := strconv.ParseFloat(amount, 64)
-		if err != nil || value <= 0 {
+	if raw := strings.TrimSpace(req.AmountDecimal); raw != "" {
+		value, parseErr := strconv.ParseFloat(raw, 64)
+		if parseErr != nil || value <= 0 {
 			return 0, "", errors.New("nowpayments: invalid amount_decimal")
 		}
 		return value, currency, nil

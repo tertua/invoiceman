@@ -33,7 +33,7 @@ func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payloa
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 	if err != nil {
 		return &ForwardResult{StatusCode: resp.StatusCode}, err

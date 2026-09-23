@@ -131,7 +131,7 @@ func UploadLogo(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read logo file", nil)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	head := make([]byte, 512)
 	n, _ := io.ReadFull(reader, head)
 	ct := http.DetectContentType(head[:n])

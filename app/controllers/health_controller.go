@@ -58,7 +58,7 @@ func Ready(c fiber.Ctx) error {
 		if err != nil {
 			return utils.Fail(c, fiber.StatusServiceUnavailable, "not ready", nil)
 		}
-		defer client.Close()
+		defer func() { _ = client.Close() }()
 		if err := client.Ping(ctx).Err(); err != nil {
 			return utils.Fail(c, fiber.StatusServiceUnavailable, "not ready", nil)
 		}

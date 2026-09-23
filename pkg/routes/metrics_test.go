@@ -2,6 +2,7 @@ package routes
 
 import (
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -21,7 +22,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	PublicRoutes(app)
 
 	// Generate traffic on a known route template.
-	req := httptest.NewRequest("GET", "/api/config", nil)
+	req := httptest.NewRequest("GET", "/api/config", http.NoBody)
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	resp.Body.Close()
@@ -29,7 +30,7 @@ func TestMetricsEndpoint(t *testing.T) {
 
 	// Scrape twice: the second scrape must not count the first.
 	for i := 0; i < 2; i++ {
-		req = httptest.NewRequest("GET", "/metrics", nil)
+		req = httptest.NewRequest("GET", "/metrics", http.NoBody)
 		resp, err = app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		body, err := io.ReadAll(resp.Body)
@@ -51,7 +52,7 @@ func TestMetricsDisabled(t *testing.T) {
 	app := fiber.New()
 	MetricsRoutes(app)
 
-	req := httptest.NewRequest("GET", "/metrics", nil)
+	req := httptest.NewRequest("GET", "/metrics", http.NoBody)
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	resp.Body.Close()

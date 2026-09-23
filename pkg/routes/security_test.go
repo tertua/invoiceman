@@ -79,6 +79,7 @@ func TestCaptchaEnforcement(t *testing.T) {
 	require.Equal(t, 403, resp.StatusCode)
 	resp.Body.Close()
 }
+
 // TestCSRFBindingEnforced cross-checks the token against the session
 // store: the cookie/header pair alone is not enough.
 func TestCSRFBindingEnforced(t *testing.T) {

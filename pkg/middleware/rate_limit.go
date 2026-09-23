@@ -43,9 +43,9 @@ func limitReached(c fiber.Ctx) error {
 	return utils.Fail(c, fiber.StatusTooManyRequests, "rate limit exceeded, try again later", nil)
 }
 
-func newLimiter(max int, keyGen func(fiber.Ctx) string) fiber.Handler {
+func newLimiter(maxRequests int, keyGen func(fiber.Ctx) string) fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:          max,
+		Max:          maxRequests,
 		Expiration:   rateLimitWindow,
 		KeyGenerator: keyGen,
 		LimitReached: limitReached,
@@ -122,7 +122,7 @@ func (s *redisRateLimitStorage) Set(key string, val []byte, exp time.Duration) e
 }
 
 func (s *redisRateLimitStorage) SetWithContext(ctx context.Context, key string, val []byte, exp time.Duration) error {
-	if len(key) == 0 || len(val) == 0 {
+	if key == "" || len(val) == 0 {
 		return nil
 	}
 	return s.client.Set(ctx, s.key(key), val, exp).Err()

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -15,7 +16,7 @@ func testRequestID(t *testing.T, a *fiber.App) string {
 		seen = RequestID(c)
 		return c.SendStatus(200)
 	})
-	resp, err := a.Test(httptest.NewRequest("GET", "/", nil))
+	resp, err := a.Test(httptest.NewRequest("GET", "/", http.NoBody))
 	if err != nil {
 		t.Fatal(err)
 	}

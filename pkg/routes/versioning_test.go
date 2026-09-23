@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -24,7 +25,7 @@ func newVersionedApp() *fiber.App {
 func TestVersionParity(t *testing.T) {
 	app := newVersionedApp()
 
-	legacyReq := httptest.NewRequest("GET", "/api/config", nil)
+	legacyReq := httptest.NewRequest("GET", "/api/config", http.NoBody)
 	legacyResp, err := app.Test(legacyReq, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	legacyBody := decodeBody(t, legacyResp)
@@ -32,7 +33,7 @@ func TestVersionParity(t *testing.T) {
 	assert.Equal(t, "true", legacyResp.Header.Get("Deprecation"))
 	assert.NotEmpty(t, legacyResp.Header.Get("Sunset"))
 
-	v1Req := httptest.NewRequest("GET", "/api/v1/config", nil)
+	v1Req := httptest.NewRequest("GET", "/api/v1/config", http.NoBody)
 	v1Resp, err := app.Test(v1Req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	v1Body := decodeBody(t, v1Resp)

@@ -55,13 +55,13 @@ func doRequest(t *testing.T, app *fiber.App, method, route, body string, cookies
 
 // mergeCookies overlays new cookies onto the jar by name (a refresh
 // response only carries session cookies; the CSRF cookie persists).
-func mergeCookies(old, new []*http.Cookie) []*http.Cookie {
+func mergeCookies(old, incoming []*http.Cookie) []*http.Cookie {
 	merged := append([]*http.Cookie{}, old...)
 	index := map[string]int{}
 	for i, c := range merged {
 		index[c.Name] = i
 	}
-	for _, c := range new {
+	for _, c := range incoming {
 		if i, ok := index[c.Name]; ok {
 			merged[i] = c
 		} else {
@@ -836,7 +836,7 @@ func TestCORSOrigins(t *testing.T) {
 	PrivateRoutes(app)
 
 	preflight := func(origin string) *http.Response {
-		req := httptest.NewRequest("OPTIONS", "/api/config", nil)
+		req := httptest.NewRequest("OPTIONS", "/api/config", http.NoBody)
 		req.Header.Set("Origin", origin)
 		req.Header.Set("Access-Control-Request-Method", "GET")
 		resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})

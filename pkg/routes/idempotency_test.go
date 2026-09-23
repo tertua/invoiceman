@@ -35,12 +35,12 @@ func doRequestWithHeaders(t *testing.T, app *fiber.App, method, route, body stri
 	return resp
 }
 
-func readBody(t *testing.T, resp *http.Response) (int, map[string]interface{}, http.Header) {
+func readBody(t *testing.T, resp *http.Response) (code int, body map[string]interface{}, header http.Header) {
 	t.Helper()
 	defer resp.Body.Close()
-	data := map[string]interface{}{}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&data))
-	return resp.StatusCode, data, resp.Header
+	body = map[string]interface{}{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	return resp.StatusCode, body, resp.Header
 }
 
 // TestPaymentIdempotency covers replay, mismatch rejection and opt-in.
@@ -68,7 +68,7 @@ func TestPaymentIdempotency(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
 
-	payload := fmt.Sprintf(`{"invoiceId":"%s","amount":40,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
+	payload := fmt.Sprintf(`{"invoiceId":%q,"amount":40,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
 	key := "test-key-idempotency-1"
 
 	// First execution creates the payment.
@@ -94,7 +94,7 @@ func TestPaymentIdempotency(t *testing.T) {
 	assert.Len(t, list["payments"], 1)
 
 	// Same key with a different payload is rejected.
-	other := fmt.Sprintf(`{"invoiceId":"%s","amount":50,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
+	other := fmt.Sprintf(`{"invoiceId":%q,"amount":50,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
 	resp = doRequestWithHeaders(t, app, "POST", "/api/payments", other, cookies,
 		map[string]string{"Idempotency-Key": key})
 	status, mismatched, _ := readBody(t, resp)

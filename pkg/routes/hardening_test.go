@@ -46,7 +46,7 @@ func TestHealthProbes(t *testing.T) {
 func TestSecurityHeadersAndRequestID(t *testing.T) {
 	app := newHardenedApp()
 
-	req := httptest.NewRequest("GET", "/healthz", nil)
+	req := httptest.NewRequest("GET", "/healthz", http.NoBody)
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -58,7 +58,7 @@ func TestSecurityHeadersAndRequestID(t *testing.T) {
 	assert.Empty(t, resp.Header.Get("Content-Security-Policy"), "CSP stays off for the JSON API")
 
 	// A client-provided request id is echoed back.
-	req = httptest.NewRequest("GET", "/healthz", nil)
+	req = httptest.NewRequest("GET", "/healthz", http.NoBody)
 	req.Header.Set("X-Request-ID", "test-123")
 	resp2, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
@@ -72,7 +72,7 @@ func TestRecoverMiddleware(t *testing.T) {
 	middleware.FiberMiddleware(app)
 	app.Get("/panic", func(_ fiber.Ctx) error { panic("boom") })
 
-	req := httptest.NewRequest("GET", "/panic", nil)
+	req := httptest.NewRequest("GET", "/panic", http.NoBody)
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -117,7 +117,7 @@ func TestTrustedProxyIP(t *testing.T) {
 		return app
 	}
 	getIP := func(app *fiber.App, forwardedFor string) string {
-		req := httptest.NewRequest("GET", "/echo-ip", nil)
+		req := httptest.NewRequest("GET", "/echo-ip", http.NoBody)
 		if forwardedFor != "" {
 			req.Header.Set("X-Forwarded-For", forwardedFor)
 		}

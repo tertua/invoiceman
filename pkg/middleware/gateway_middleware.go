@@ -44,6 +44,7 @@ func GatewayAuth() fiber.Handler {
 }
 
 // CurrentProject returns the project stored by GatewayAuth.
+//
 // Deprecated: prefer utils.CurrentServiceProject to keep app/ free of
 // middleware imports; kept here for backward compatibility.
 func CurrentProject(c fiber.Ctx) (models.GatewayProject, error) {

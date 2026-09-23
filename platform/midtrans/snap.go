@@ -107,7 +107,7 @@ func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amou
 	if err != nil {
 		return nil, fmt.Errorf("midtrans snap: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, fmt.Errorf("midtrans snap: %w", err)

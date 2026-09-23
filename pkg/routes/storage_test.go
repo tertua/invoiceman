@@ -35,7 +35,7 @@ func multipartFile(t *testing.T, app *fiber.App, method, route, field, filename,
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
 	h := map[string][]string{
-		"Content-Disposition": {fmt.Sprintf(`form-data; name="%s"; filename="%s"`, field, filename)},
+		"Content-Disposition": {fmt.Sprintf(`form-data; name=%q; filename=%q`, field, filename)},
 		"Content-Type":        {contentType},
 	}
 	part, err := w.CreatePart(h)
@@ -105,7 +105,7 @@ func TestReceiptNotExposedViaStaticUploads(t *testing.T) {
 		"/uploads/receipts",
 		"/uploads",
 	} {
-		resp, err := app.Test(httptest.NewRequest("GET", path, nil), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+		resp, err := app.Test(httptest.NewRequest("GET", path, http.NoBody), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 		require.NoError(t, err)
 		assert.Equal(t, 404, resp.StatusCode, path)
 		resp.Body.Close()
@@ -113,7 +113,7 @@ func TestReceiptNotExposedViaStaticUploads(t *testing.T) {
 
 	// Logos still serve.
 	require.NoError(t, os.WriteFile(dir+"/logos/u1.png", tinyPNG, 0o644))
-	resp, err := app.Test(httptest.NewRequest("GET", "/uploads/logos/u1.png", nil), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+	resp, err := app.Test(httptest.NewRequest("GET", "/uploads/logos/u1.png", http.NoBody), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	got, err := io.ReadAll(resp.Body)

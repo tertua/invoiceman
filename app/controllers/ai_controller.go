@@ -58,7 +58,7 @@ func ReceiptParse(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	data, err := io.ReadAll(io.LimitReader(reader, maxReceiptSize+1))
 	if err != nil || len(data) > maxReceiptSize {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)

@@ -87,7 +87,6 @@ func TestGatewayRelayFlow(t *testing.T) {
 		`{"email":"relay-admin@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 200, resp.StatusCode)
 	adminID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
-	adminCookies := resp.Cookies()
 	resp.Body.Close()
 	db, err := database.OpenDBConnection()
 	require.NoError(t, err)
@@ -96,7 +95,7 @@ func TestGatewayRelayFlow(t *testing.T) {
 	resp = doRequest(t, app, "POST", "/api/auth/login",
 		`{"email":"relay-admin@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 200, resp.StatusCode)
-	adminCookies = resp.Cookies()
+	adminCookies := resp.Cookies()
 	resp.Body.Close()
 
 	// Register downstream project.

@@ -314,7 +314,7 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	ct, ok := receiptContentType(file.Header.Get("Content-Type"), sniffContentType(reader))
 	if !ok {
 		return utils.Fail(c, fiber.StatusBadRequest, "receipt must be an image or PDF", nil)
