@@ -22,14 +22,18 @@ import { formatMoney, formatDate, formatMonthShort, todayDateInput } from "@/lib
 
 const ClientCharts = lazy(() => import("@/components/clients/ClientCharts"));
 
+function displayStatus(inv) {
+  return inv.effective_status || inv.status;
+}
+
 function isOverdue(inv) {
-  return inv.status === "sent" && inv.due_date && inv.due_date < todayDateInput();
+  return displayStatus(inv) === "sent" && inv.due_date && inv.due_date < todayDateInput();
 }
 
 // Everything below is derived from the invoices already loaded — no extra API call.
 function computeInsights(invoices, stats, t) {
   const num = (v) => Number(v) || 0;
-  const paidAmt = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + num(i.total), 0);
+  const paidAmt = invoices.filter((i) => displayStatus(i) === "paid").reduce((s, i) => s + num(i.total), 0);
   const overdueAmt = invoices.filter(isOverdue).reduce((s, i) => s + num(i.total), 0);
   const openAmt = Math.max(0, num(stats.totalBilled) - paidAmt - overdueAmt);
 
@@ -58,7 +62,7 @@ function computeInsights(invoices, stats, t) {
     });
   }
 
-  const paidCount = invoices.filter((i) => i.status === "paid").length;
+  const paidCount = invoices.filter((i) => displayStatus(i) === "paid").length;
   const count = invoices.length;
   const largest = invoices.reduce((m, i) => Math.max(m, num(i.total)), 0);
   const avgInvoice = count ? num(stats.totalBilled) / count : 0;
@@ -198,7 +202,7 @@ export default function ClientDetail() {
                       {formatMoney(inv.total, inv.currency)}
                     </div>
                     <StatusBadge
-                      status={isOverdue(inv) ? "overdue" : inv.status}
+                      status={isOverdue(inv) ? "overdue" : displayStatus(inv)}
                     />
                   </button>
                 ))}

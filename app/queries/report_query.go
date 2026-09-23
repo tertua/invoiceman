@@ -84,8 +84,10 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	for _, invoice := range invoices {
 		paid := paidByInvoice[invoice.ID]
 		balance := invoice.Total - paid
-		// Only sent invoices are receivables; drafts are not billed yet.
-		if balance > 0 && invoice.Status == models.InvoiceStatusSent {
+		status := models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid)
+		// Receivables are billed invoices with an open balance; drafts and
+		// paid rows never count toward outstanding/aging.
+		if balance > 0 && (status == models.InvoiceStatusSent || status == models.InvoiceEffectiveOverdue) {
 			report.Totals.Outstanding += balance
 			bucket := 0
 			if invoice.DueDate != nil && now.After(*invoice.DueDate) {
@@ -103,7 +105,6 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 			}
 			agingValues[bucket] += balance
 		}
-		status := models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid)
 		statusValues[status] += invoice.Total
 		if invoice.ClientID != nil {
 			clientBilled[*invoice.ClientID] += invoice.Total

@@ -188,6 +188,13 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 		}).Error; err != nil {
 			return err
 		}
+		// Auto-mark paid when the settlement covers the invoice total.
+		if invoice.Status != models.InvoiceStatusPaid && invoice.Total > 0 && paid+amount >= invoice.Total {
+			if err := tx.Model(&models.Invoice{}).Where("id = ?", invoice.ID).
+				Updates(map[string]interface{}{"status": models.InvoiceStatusPaid, "updated_at": now}).Error; err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 }

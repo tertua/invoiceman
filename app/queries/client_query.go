@@ -17,16 +17,17 @@ type ClientQueries struct {
 func (q *ClientQueries) ListClients(userID uuid.UUID, limit, offset int) ([]models.ClientListRow, error) {
 	clients := []models.ClientListRow{}
 
-	// Only sent invoices are receivables; drafts are not billed yet.
+	// Billed invoices are sent + paid; drafts are not billed yet. Paid must
+	// stay in total_billed so auto-marking paid never shrinks client totals.
 	paidSubquery := q.Model(&models.Payment{}).
 		Select("invoices.client_id AS client_id, SUM(payments.amount) AS paid").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND invoices.status = ? AND payments.voided_at IS NULL", userID, models.InvoiceStatusSent).
+		Where("invoices.user_id = ? AND invoices.status IN ? AND payments.voided_at IS NULL", userID, []string{models.InvoiceStatusSent, models.InvoiceStatusPaid}).
 		Group("invoices.client_id")
 
 	billedSubquery := q.Model(&models.Invoice{}).
 		Select("client_id, SUM(total) AS total_billed").
-		Where("user_id = ? AND status = ?", userID, models.InvoiceStatusSent).
+		Where("user_id = ? AND status IN ?", userID, []string{models.InvoiceStatusSent, models.InvoiceStatusPaid}).
 		Group("client_id")
 
 	if err := q.Table("clients AS c").

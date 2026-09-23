@@ -105,16 +105,31 @@ type ClientInvoiceRow struct {
 	Total         float64    `db:"total"`
 	Currency      string     `db:"currency"`
 	Status        string     `db:"status"`
+	PaidAmount    float64    `db:"paid_amount"`
+}
+
+// EffectiveStatus resolves the display status for a client invoice row,
+// matching the /invoices listing (paid via payments counts as paid).
+func (r ClientInvoiceRow) EffectiveStatus() string {
+	return models.ResolveEffectiveStatus(r.Status, r.DueDate, r.Total, r.PaidAmount)
 }
 
 // ClientInvoices returns invoices of a client owned by a user.
 func (q *InvoiceQueries) ClientInvoices(userID, clientID uuid.UUID) ([]ClientInvoiceRow, error) {
 	rows := []ClientInvoiceRow{}
 
-	if err := q.Model(&models.Invoice{}).
-		Select("id, invoice_number, issue_date, due_date, total, currency, status").
-		Where("user_id = ? AND client_id = ?", userID, clientID).
-		Order("created_at DESC").
+	paidSubquery := q.Model(&models.Payment{}).
+		Select("invoice_id, SUM(amount) AS paid").
+		Where("voided_at IS NULL").
+		Group("invoice_id")
+
+	if err := q.Table("invoices").
+		Select(`invoices.id, invoices.invoice_number, invoices.issue_date, invoices.due_date,
+			invoices.total, invoices.currency, invoices.status,
+			COALESCE(pay.paid, 0) AS paid_amount`).
+		Joins("LEFT JOIN (?) AS pay ON pay.invoice_id = invoices.id", paidSubquery).
+		Where("invoices.user_id = ? AND invoices.client_id = ?", userID, clientID).
+		Order("invoices.created_at DESC").
 		Scan(&rows).Error; err != nil {
 		return rows, err
 	}

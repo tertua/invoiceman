@@ -156,6 +156,11 @@ func CreatePayment(c fiber.Ctx) error {
 	if err := db.CreatePayment(payment); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment", nil)
 	}
+	// Auto-mark the invoice paid when payments now cover the total, so the
+	// stored status column stays in sync (display also uses effective_status).
+	if invoice.Status != models.InvoiceStatusPaid && paid+input.Amount >= invoice.Total && invoice.Total > 0 {
+		_ = db.UpdateInvoiceStatus(userID, invoiceID, models.InvoiceStatusPaid)
+	}
 	recordAudit(c, db, userID, "payment.create", "payment", payment.ID.String(),
 		`{"invoice_id":"`+invoiceID.String()+`","amount":`+strconv.FormatFloat(input.Amount, 'f', -1, 64)+`}`)
 	invalidateAggregates(c, userID)
@@ -233,6 +238,14 @@ func VoidPayment(c fiber.Ctx) error {
 			return utils.Fail(c, fiber.StatusConflict, "payment is already voided", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to void payment", nil)
+	}
+	// Reopen the invoice when a void drops payments below the total again.
+	if invoice, err := db.GetInvoice(userID, payment.InvoiceID); err == nil {
+		if invoice.Status == models.InvoiceStatusPaid {
+			if remaining, err := db.PaidAmount(payment.InvoiceID); err == nil && remaining < invoice.Total {
+				_ = db.UpdateInvoiceStatus(userID, payment.InvoiceID, models.InvoiceStatusSent)
+			}
+		}
 	}
 	meta, _ := json.Marshal(fiber.Map{
 		"invoice_id": payment.InvoiceID.String(),

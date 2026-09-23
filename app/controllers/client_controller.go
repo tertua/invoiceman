@@ -90,23 +90,23 @@ func GetClient(c fiber.Ctx) error {
 	invoices := make([]fiber.Map, 0, len(rows))
 	var totalBilled, paidTotal float64
 	for _, row := range rows {
-		paid, err := db.PaidAmount(row.ID)
-		if err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payments", nil)
-		}
-		// Only sent invoices are receivables; drafts are not billed yet.
-		if row.Status == models.InvoiceStatusSent {
+		paid := row.PaidAmount
+		// Billed invoices are sent + paid; drafts are not billed yet.
+		if row.Status == models.InvoiceStatusSent || row.Status == models.InvoiceStatusPaid {
 			totalBilled += row.Total
 			paidTotal += paid
 		}
 		invoices = append(invoices, fiber.Map{
-			"id":             row.ID,
-			"invoice_number": row.InvoiceNumber,
-			"issue_date":     utils.FormatDate(row.IssueDate),
-			"due_date":       utils.FormatDate(row.DueDate),
-			"total":          row.Total,
-			"currency":       row.Currency,
-			"status":         row.Status,
+			"id":               row.ID,
+			"invoice_number":   row.InvoiceNumber,
+			"issue_date":       utils.FormatDate(row.IssueDate),
+			"due_date":         utils.FormatDate(row.DueDate),
+			"total":            row.Total,
+			"currency":         row.Currency,
+			"status":           row.Status,
+			"effective_status": row.EffectiveStatus(),
+			"paid_amount":      paid,
+			"balance":          row.Total - paid,
 		})
 	}
 

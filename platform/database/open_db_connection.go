@@ -110,6 +110,18 @@ func Migrate() error {
 		return err
 	}
 
+	// Data heal (idempotent, no schema change): invoices that are fully
+	// covered by non-voided payments must read stored as paid, so the
+	// status column stays in sync for rows created before auto-marking.
+	// Standard SQL here runs on both SQLite and PostgreSQL.
+	_ = db.Exec(
+		"UPDATE invoices SET status = 'paid', updated_at = ? "+
+			"WHERE status = 'sent' AND total > 0 AND "+
+			"(SELECT COALESCE(SUM(amount), 0) FROM payments "+
+			"WHERE payments.invoice_id = invoices.id AND payments.voided_at IS NULL) >= invoices.total",
+		time.Now(),
+	).Error
+
 	return checkSchemaVersion(db)
 }
 
