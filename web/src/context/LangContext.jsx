@@ -10,6 +10,9 @@ function resolveInitial() {
   if (typeof window === "undefined") return "en";
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "en" || stored === "id") return stored;
+  // No saved preference yet: follow the browser language so first-time
+  // visitors see content in their own language (same rule as PublicPay).
+  if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("id")) return "id";
   return "en";
 }
 
