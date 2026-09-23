@@ -57,7 +57,7 @@ export default function InvoiceDetail() {
   }
 
   const st = invoice.effective_status;
-  const isPaid = invoice.status === "paid";
+  const isPaid = st === "paid";
 
   async function onDelete() {
     if (!window.confirm(t("invDetail.confirmDelete", { number: invoice.invoice_number }))) return;
