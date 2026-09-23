@@ -35,7 +35,7 @@ export const translations = {
     "common.discount": "Discount",
     "common.tax": "Tax",
     "common.notes": "Notes",
-    "common.terms": "Terms",
+    "common.terms": "Terms and Conditions",
     "common.description": "Description",
     "common.qty": "Qty",
     "common.rate": "Rate",
@@ -471,7 +471,7 @@ export const translations = {
 
     /* ============================ items ============================ */
     "items.title": "Items & Services",
-    "items.namePlaceholder": "Frontend development",
+    "items.namePlaceholder": "Item name",
     "items.desc": "Reusable products and services you can drop into any invoice.",
     "items.add": "Add Item",
     "items.noneYet": "No items yet",
@@ -481,7 +481,7 @@ export const translations = {
     "items.nameRequired": "Name is required",
     "items.saveFailed": "Couldn't save item",
     "items.shortDesc": "Short description",
-    "items.unitPlaceholder": "hour / project",
+    "items.unitPlaceholder": "e.g. hour, pcs, package",
     "items.confirmDelete": "Delete \"{name}\"?",
 
     /* ============================ expenses ============================ */
@@ -1257,7 +1257,7 @@ export const translations = {
 
     /* ============================ items ============================ */
     "items.title": "Item & Layanan",
-    "items.namePlaceholder": "Pengembangan frontend",
+    "items.namePlaceholder": "Nama item",
     "items.desc": "Produk dan layanan yang bisa dipakai ulang untuk faktur apa pun.",
     "items.add": "Tambah Item",
     "items.noneYet": "Belum ada item",
@@ -1267,7 +1267,7 @@ export const translations = {
     "items.nameRequired": "Nama wajib diisi",
     "items.saveFailed": "Gagal menyimpan item",
     "items.shortDesc": "Deskripsi singkat",
-    "items.unitPlaceholder": "jam / proyek",
+    "items.unitPlaceholder": "cth: jam, pcs, paket",
     "items.confirmDelete": "Hapus \"{name}\"?",
 
     /* ============================ expenses ============================ */
