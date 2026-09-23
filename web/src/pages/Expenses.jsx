@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useExpenses, useExpenseMutations } from "@/hooks/useExpenses";
-import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure, isAiRateLimited } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate, toDateInput, todayDateInput, cn } from "@/lib/utils";
 
@@ -56,7 +56,7 @@ export default function Expenses() {
       });
     } catch (ex) {
       setAiUnavailable(isAiUnavailable(ex));
-      if (ex.status !== 401) setScanErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("expenses.scanFailed"));
+      if (ex.status !== 401) setScanErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiRateLimited(ex) ? t("ai.rateLimited") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("expenses.scanFailed"));
     } finally {
       setScanning(false);
     }

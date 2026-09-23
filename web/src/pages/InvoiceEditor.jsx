@@ -24,7 +24,7 @@ import {
   useCreateInvoice,
   useUpdateInvoice,
 } from "@/hooks/useInvoices";
-import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure, isAiRateLimited } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { CURRENCIES, formatMoney, toDateInput, todayDateInput, addDaysDateInput, cn } from "@/lib/utils";
 
@@ -473,7 +473,7 @@ function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
       onChange(text);
     } catch (error) {
       setUnavailable(isAiUnavailable(error));
-      if (error.status !== 401) setErr(isAiUnavailable(error) ? t("ai.unavailable") : isAiFailure(error) ? t("ai.failed") : error.message || t("invEditor.writeFailed"));
+      if (error.status !== 401) setErr(isAiUnavailable(error) ? t("ai.unavailable") : isAiRateLimited(error) ? t("ai.rateLimited") : isAiFailure(error) ? t("ai.failed") : error.message || t("invEditor.writeFailed"));
     } finally {
       setLoading(false);
     }
@@ -567,7 +567,7 @@ function ReceiptScanButton({ onParsed }) {
       onParsed(res);
     } catch (ex) {
       setUnavailable(isAiUnavailable(ex));
-      if (ex.status !== 401) setErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("invEditor.scanFailed"));
+      if (ex.status !== 401) setErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiRateLimited(ex) ? t("ai.rateLimited") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("invEditor.scanFailed"));
     } finally {
       setLoading(false);
     }

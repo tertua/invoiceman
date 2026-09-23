@@ -61,6 +61,7 @@ export const translations = {
     "ai.unavailable": "AI is not configured. Add a Gemini API key to enable this feature.",
     "ai.unavailableShort": "AI unavailable",
     "ai.failed": "The AI provider could not complete the request. Please try again.",
+    "ai.rateLimited": "The AI service is busy (free quota reached). Please wait a minute and try again.",
     "invEditor.writeFailed": "Couldn't write this note",
 
     /* ============================ status ============================ */
@@ -846,6 +847,7 @@ export const translations = {
     "ai.unavailable": "AI belum dikonfigurasi. Tambahkan API key Gemini untuk mengaktifkan fitur ini.",
     "ai.unavailableShort": "AI tidak tersedia",
     "ai.failed": "Provider AI gagal menyelesaikan permintaan. Silakan coba lagi.",
+    "ai.rateLimited": "Layanan AI sedang sibuk (kuota gratis tercapai). Tunggu sebentar lalu coba lagi.",
     "invEditor.writeFailed": "Gagal menulis catatan ini",
 
     /* ============================ status ============================ */

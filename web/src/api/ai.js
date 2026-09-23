@@ -8,6 +8,10 @@ export function isAiFailure(error) {
   return error?.status === 502;
 }
 
+export function isAiRateLimited(error) {
+  return error?.status === 429;
+}
+
 export const aiApi = {
   receiptParse: (file) => {
     const form = new FormData();

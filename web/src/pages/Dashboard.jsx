@@ -20,7 +20,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Ca
 import { StatusBadge } from "@/components/ui/Badge";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useReports } from "@/hooks/useReports";
-import { aiApi, isAiUnavailable, isAiFailure } from "@/api/ai";
+import { aiApi, isAiUnavailable, isAiFailure, isAiRateLimited } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/hooks/useSettings";
@@ -152,7 +152,7 @@ function AISummaryCard({ stats }) {
       }
     } catch (e) {
       setUnavailable(isAiUnavailable(e));
-      if (e.status !== 401) setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiFailure(e) ? t("ai.failed") : e.message || t("dash.generateFailed"));
+      if (e.status !== 401) setErr(isAiUnavailable(e) ? t("ai.unavailable") : isAiRateLimited(e) ? t("ai.rateLimited") : isAiFailure(e) ? t("ai.failed") : e.message || t("dash.generateFailed"));
     } finally {
       setLoading(false);
     }

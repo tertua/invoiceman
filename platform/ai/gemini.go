@@ -17,6 +17,11 @@ import (
 
 var ErrNotConfigured = errors.New("AI provider is not configured")
 
+// ErrRateLimited reports a 429 from the provider (free-tier quota). Callers
+// map it to HTTP 429 so the UI can tell users to retry shortly instead of
+// showing a generic failure.
+var ErrRateLimited = errors.New("AI provider rate limit reached")
+
 type GeminiClient struct {
 	APIKey     string
 	Model      string
@@ -121,6 +126,13 @@ func (c *GeminiClient) generate(ctx context.Context, parts []geminiPart, jsonRes
 		return "", fmt.Errorf("invalid Gemini response: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			msg := "rate limited"
+			if result.Error != nil && result.Error.Message != "" {
+				msg = result.Error.Message
+			}
+			return "", fmt.Errorf("%w: %s", ErrRateLimited, msg)
+		}
 		if result.Error != nil && result.Error.Message != "" {
 			return "", fmt.Errorf("gemini request failed: %s", result.Error.Message)
 		}

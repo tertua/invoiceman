@@ -58,9 +58,12 @@ func aiError(c fiber.Ctx, err error) error {
 	if errors.Is(err, ai.ErrNotConfigured) {
 		return utils.Fail(c, fiber.StatusNotImplemented, "AI provider is not configured", nil)
 	}
-	// Logged server-side only; the client keeps the generic message so no
+	// Logged server-side only; the client keeps generic messages so no
 	// provider details leak to the browser.
 	logger.L().Warn("AI provider request failed", "err", err)
+	if errors.Is(err, ai.ErrRateLimited) {
+		return utils.Fail(c, fiber.StatusTooManyRequests, "AI rate limit reached, please try again shortly", nil)
+	}
 	return utils.Fail(c, fiber.StatusBadGateway, "AI provider request failed", nil)
 }
 
