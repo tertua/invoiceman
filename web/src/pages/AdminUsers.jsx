@@ -70,7 +70,7 @@ function UserRow({ account, currentUserId }) {
             value={role}
             onChange={onRoleChange}
             disabled={updateRole.isPending}
-            className="h-9 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-60"
+            className="h-9 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-50 disabled:pointer-events-none"
           >
             {ROLES.map((value) => <option key={value} value={value}>{t(`admin.role.${value}`)}</option>)}
           </select>

@@ -21,7 +21,7 @@ export function AuthShell({ children, headline, subhead }) {
 
 function BrandPanel({ headline, subhead }) {
   return (
-    <div className="hidden lg:block flex-1 relative rounded-[28px] overflow-hidden isolate">
+    <div className="hidden lg:block flex-1 relative rounded-3xl overflow-hidden isolate">
       {/* Base dark gradient */}
       <div
         className="absolute inset-0"
@@ -154,7 +154,7 @@ export function AuthField({
           minLength={minLength}
           className={`peer w-full h-12 ${
             Icon ? "pl-11 pr-4" : "px-4"
-          } rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[15px] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/60 outline-none transition-all duration-200 focus:border-[var(--accent)]/40 focus:ring-4 focus:ring-[var(--accent)]/10`}
+          } rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[15px] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/60 outline-none transition-all duration-200 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15`}
         />
         {Icon && (
           <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/55 peer-focus:text-[var(--accent-strong)] peer-[:not(:placeholder-shown)]:text-[var(--accent-strong)] transition-colors">
@@ -171,24 +171,16 @@ export function AuthPrimaryButton({ children, disabled, ...props }) {
     <motion.button
       whileTap={{ scale: 0.985 }}
       disabled={disabled}
-      className="relative w-full h-12 rounded-2xl text-white font-semibold text-[15px] flex items-center justify-center gap-2 overflow-hidden shadow-[0_8px_24px_-8px_rgba(13,148,136,0.55)] transition-all duration-200 hover:shadow-[0_12px_28px_-8px_rgba(13,148,136,0.7)] disabled:opacity-60 disabled:cursor-not-allowed"
+      className="relative w-full h-12 rounded-2xl text-white font-semibold text-[15px] flex items-center justify-center gap-2 overflow-hidden transition-all duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] disabled:opacity-50 disabled:pointer-events-none"
       style={{
-        background:
-          "linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)",
+        background: "linear-gradient(135deg, var(--accent-hero-2) 0%, var(--accent) 50%, var(--accent-strong) 100%)",
+        boxShadow: "0 8px 24px -8px color-mix(in srgb, var(--accent) 55%, transparent)",
       }}
       {...props}
     >
       {/* Soft sheen on top */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 50%)",
-        }}
-      />
-      <span className="relative z-10 inline-flex items-center gap-2">
-        {children}
-      </span>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 50%)" }} />
+      <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
     </motion.button>
   );
 }
