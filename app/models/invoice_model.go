@@ -52,15 +52,16 @@ type InvoiceItem struct {
 
 // Payment struct to describe a payment recorded against an invoice.
 type Payment struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id" validate:"required,uuid"`
-	CreatedAt time.Time  `db:"created_at" json:"created_at"`
-	UserID    uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
-	InvoiceID uuid.UUID  `gorm:"type:uuid" db:"invoice_id" json:"invoice_id" validate:"required,uuid"`
-	Amount    float64    `db:"amount" json:"amount" validate:"gt=0"`
-	Method    string     `db:"method" json:"method" validate:"lte=50"`
-	PaidOn    *time.Time `db:"paid_on" json:"paid_on"`
-	TxnID     string     `db:"txn_id" json:"txn_id" validate:"lte=255"`
-	Notes     string     `db:"notes" json:"notes"`
+	ID             uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id" validate:"required,uuid"`
+	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
+	UserID         uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
+	InvoiceID      uuid.UUID  `gorm:"type:uuid" db:"invoice_id" json:"invoice_id" validate:"required,uuid"`
+	Amount         float64    `db:"amount" json:"amount" validate:"gt=0"`
+	Method         string     `db:"method" json:"method" validate:"lte=50"`
+	PaidOn         *time.Time `db:"paid_on" json:"paid_on"`
+	TxnID          string     `db:"txn_id" json:"txn_id" validate:"lte=255"`
+	GatewayOrderID *string    `gorm:"uniqueIndex" db:"gateway_order_id" json:"-"`
+	Notes          string     `db:"notes" json:"notes"`
 }
 
 // InvoiceItemInput struct to describe a single invoice line in create/update payloads.

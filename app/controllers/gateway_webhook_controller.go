@@ -135,13 +135,13 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		now := time.Now()
 		txn.PaidAt = &now
 	}
-	if err := db.SaveTransaction(&txn); err != nil {
+	if status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
+		if err := db.SaveTransactionAndSettleInvoice(&txn, float64(notif.GrossMinor), gatewayDisplayName(gatewayName)); err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
+		}
+		_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
+	} else if err := db.SaveTransaction(&txn); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update transaction", nil)
-	}
-
-	// Settle local invoices on success.
-	if status == models.GatewayStatusSuccess && txn.InvoiceID != nil && txn.UserID != nil {
-		settleLocalInvoice(*db, txn, float64(notif.GrossMinor))
 	}
 
 	// Local orders have no downstream project to notify.
@@ -208,44 +208,6 @@ func gatewayDisplayName(name string) string {
 	default:
 		return strings.TrimSpace(name)
 	}
-}
-
-// settleLocalInvoice records a payment against a local invoice on success.
-// It is best-effort and idempotent via the invoice balance check.
-func settleLocalInvoice(db database.Queries, txn models.GatewayTransaction, gross float64) {
-	if txn.InvoiceID == nil || txn.UserID == nil {
-		return
-	}
-	invoice, err := db.GetInvoice(*txn.UserID, *txn.InvoiceID)
-	if err != nil {
-		return
-	}
-	paid, err := db.PaidAmount(*txn.InvoiceID)
-	if err != nil {
-		return
-	}
-	balance := invoice.Total - paid
-	if balance <= 0 {
-		return
-	}
-	amount := balance
-	if gross > 0 && gross < balance {
-		amount = gross
-	}
-	now := time.Now()
-	_ = db.CreatePayment(&models.Payment{
-		ID:        uuid.New(),
-		CreatedAt: now,
-		UserID:    *txn.UserID,
-		InvoiceID: *txn.InvoiceID,
-		Amount:    amount,
-		Method:    gatewayDisplayName(txn.Gateway),
-		PaidOn:    &now,
-		TxnID:     txn.MidtransTxnID,
-		Notes:     gatewayDisplayName(txn.Gateway) + " " + txn.OrderID,
-	})
-	// Webhook context has no request id; invalidation stays best-effort.
-	_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
 }
 
 // ListDeliveries returns one page of recent relay deliveries for admins.

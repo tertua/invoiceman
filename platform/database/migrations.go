@@ -42,6 +42,13 @@ var migrations = []Migration{
 			return db.Migrator().DropTable(&models.AdminClaim{})
 		},
 	},
+	{
+		Version:     4,
+		Description: "idempotent local gateway payment settlement",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropColumn(&models.Payment{}, "gateway_order_id")
+		},
+	},
 }
 
 // CurrentSchemaVersion reports the version stamp stored in the database.

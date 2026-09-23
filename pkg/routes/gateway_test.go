@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/outbox"
 	"github.com/tertua/invoiceman/platform/relay"
@@ -193,4 +194,90 @@ func TestGatewayRelayFlow(t *testing.T) {
 	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/midtrans", string(bad), nil, nil)
 	assert.Equal(t, 401, resp.StatusCode)
 	resp.Body.Close()
+}
+
+func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
+	t.Setenv("MIDTRANS_SERVER_KEY", "local-settlement-server-key")
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Settlement User","email":"settlement@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"settlement@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	login := decodeBody(t, resp)
+	userID := uuid.MustParse(login["user"].(map[string]interface{})["id"].(string))
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"status":"sent",
+		"issue_date":"2026-09-01",
+		"due_date":"2026-09-30",
+		"currency":"IDR",
+		"items":[{"description":"Settlement service","quantity":1,"rate":100000}]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	invoiceUUID := uuid.MustParse(invoiceID)
+	orderID := "INV-test-settlement-001"
+	require.NoError(t, db.CreateTransaction(&models.GatewayTransaction{
+		OrderID: orderID, ProjectSlug: "local", Gateway: "midtrans",
+		InvoiceID: &invoiceUUID, UserID: &userID, AmountIDR: 100000,
+		Currency: "IDR", Status: models.GatewayStatusPending,
+	}))
+	trigger := `CREATE TRIGGER fail_gateway_payment BEFORE INSERT ON payments
+		WHEN NEW.gateway_order_id IS NOT NULL BEGIN SELECT RAISE(ABORT, 'injected settlement failure'); END;`
+	require.NoError(t, db.InvoiceQueries.Exec(trigger).Error)
+	defer db.InvoiceQueries.Exec("DROP TRIGGER IF EXISTS fail_gateway_payment")
+
+	gross := "100000.00"
+	sum := sha512.Sum512([]byte(orderID + "200" + gross + "local-settlement-server-key"))
+	notif, err := json.Marshal(map[string]string{
+		"transaction_id":     "local-mid-txn",
+		"order_id":           orderID,
+		"transaction_status": "settlement",
+		"payment_type":       "qris",
+		"status_code":        "200",
+		"gross_amount":       gross,
+		"signature_key":      hex.EncodeToString(sum[:]),
+	})
+	require.NoError(t, err)
+
+	// The payment insert failure must roll back the success status too, so the
+	// provider's retry can safely apply both records together.
+	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/midtrans", string(notif), nil, nil)
+	assert.Equal(t, 500, resp.StatusCode)
+	resp.Body.Close()
+	txn, err := db.GetTransaction(orderID)
+	require.NoError(t, err)
+	assert.Equal(t, models.GatewayStatusPending, txn.Status)
+	paid, err := db.PaidAmount(uuid.MustParse(invoiceID))
+	require.NoError(t, err)
+	assert.Zero(t, paid)
+
+	require.NoError(t, db.InvoiceQueries.Exec("DROP TRIGGER fail_gateway_payment").Error)
+	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/midtrans", string(notif), nil, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	// Replaying a successful notification must not insert another payment.
+	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/midtrans", string(notif), nil, nil)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	txn, err = db.GetTransaction(orderID)
+	require.NoError(t, err)
+	assert.Equal(t, models.GatewayStatusSuccess, txn.Status)
+	paid, err = db.PaidAmount(uuid.MustParse(invoiceID))
+	require.NoError(t, err)
+	assert.Equal(t, float64(100000), paid)
+	var paymentCount int64
+	require.NoError(t, db.InvoiceQueries.Model(&models.Payment{}).
+		Where("gateway_order_id = ?", orderID).Count(&paymentCount).Error)
+	assert.EqualValues(t, 1, paymentCount)
 }
