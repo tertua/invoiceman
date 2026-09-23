@@ -450,7 +450,6 @@ function PaymentCard({ invoice }) {
             <ExternalLink size={13} />
           </a>
           </div>
-          <p className="text-[10px] text-[var(--ink-muted)] mt-1.5">{t("payments.onlinePersisted")}</p>
           {!isPaid && (
           <div className="mt-2 pt-2 border-t border-[var(--border)]">
             <div className="flex items-center gap-2">
