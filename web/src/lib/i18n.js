@@ -268,7 +268,7 @@ export const translations = {
     "landing.ctaCard.aiParsed": "AI parsed",
     "landing.ctaCard.paid": "Paid",
     "landing.ctaCard.revenue": "Revenue · +12%",
-    "landing.footer.copyright": "© {year} {app} · Built with Neon + Gemini",
+    "landing.footer.copyright": "© {year} {app} · All Rights Reserved",
     "landing.footer.signIn": "Sign in",
     "landing.footer.getStarted": "Get started",
 
@@ -1054,7 +1054,7 @@ export const translations = {
     "landing.ctaCard.aiParsed": "Terbaca AI",
     "landing.ctaCard.paid": "Lunas",
     "landing.ctaCard.revenue": "Pendapatan · +12%",
-    "landing.footer.copyright": "© {year} {app} · Dibangun dengan Neon + Gemini",
+    "landing.footer.copyright": "© {year} {app} · All Rights Reserved",
     "landing.footer.signIn": "Masuk",
     "landing.footer.getStarted": "Mulai",
 
