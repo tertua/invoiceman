@@ -2,13 +2,10 @@ import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, ArrowLeft, Loader2, Mail, Lock } from "lucide-react";
-import {
-  AuthShell,
-  AuthField,
-  AuthPrimaryButton,
-  AuthErrorBanner,
-} from "@/components/auth/AuthShell";
+import { AuthShell, AuthField, AuthPrimaryButton, AuthErrorBanner } from "@/components/auth/AuthShell";
+import { useQueryClient } from "@tanstack/react-query";
 import Turnstile from "@/components/auth/Turnstile";
+import { warmSessionAfterLogin } from "@/lib/sessionWarmup";
 import AILogo from "@/components/layout/AILogo";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
@@ -42,6 +39,7 @@ function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpire
   const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -49,7 +47,8 @@ function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpire
     clearSessionExpired?.();
     setLoading(true);
     try {
-      await login(form, captchaToken);
+      const minDelay = new Promise((r) => setTimeout(r, 800));
+      await Promise.all([login(form, captchaToken).then(() => warmSessionAfterLogin(queryClient)), minDelay]);
       const destination = location.state?.from;
       nav(destination ? `${destination.pathname}${destination.search}${destination.hash}` : "/dashboard", { replace: true });
     } catch (e) {

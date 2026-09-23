@@ -23,9 +23,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   // Any authenticated API call returning 401 means the session is gone
   // (expired, revoked, or wiped by a server restart). Drop the stale user
@@ -41,11 +39,12 @@ export function AuthProvider({ children }) {
   }, [queryClient]);
 
   const login = useCallback(async (credentials, captchaToken) => {
+    queryClient.clear(); // drop previous account's cached queries before swapping identity
     const { user } = await authApi.login(credentials, captchaToken);
     setUser(user);
     setSessionExpired(false);
     return user;
-  }, []);
+  }, [queryClient]);
 
   const register = useCallback(async (payload, captchaToken) => {
     const { user } = await authApi.register(payload, captchaToken);
