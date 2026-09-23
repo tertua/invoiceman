@@ -439,8 +439,8 @@ info:
     (captcha token required) and rate-limited; AI endpoints answer
     501 without GEMINI_API_KEY.
   license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
+    name: GNU GPLv3
+    url: https://www.gnu.org/licenses/gpl-3.0.html
   termsOfService: http://swagger.io/terms/
   title: Invoiceman API
   version: "1.0"
