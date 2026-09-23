@@ -54,6 +54,15 @@ func currencyDirective(code string) string {
 	return "All money amounts are in " + code + ". Write them in that currency's conventional format and never default to US dollars. "
 }
 
+// writeNoteInstruction keeps descriptions as prose but forces terms into a
+// numbered-only list so the invoice field stays scannable.
+func writeNoteInstruction(kind string) string {
+	if kind == "terms" {
+		return "Write polished invoice payment terms as only a numbered list, one term per line like \"1. ...\". No title, intro, or closing sentence. Keep each term concise and suitable for a professional invoice. "
+	}
+	return "Write a polished invoice " + kind + " in plain text. Keep it concise and suitable for a professional invoice. "
+}
+
 func aiError(c fiber.Ctx, err error) error {
 	if errors.Is(err, ai.ErrNotConfigured) {
 		return utils.Fail(c, fiber.StatusNotImplemented, "AI provider is not configured", nil)
@@ -232,7 +241,7 @@ func WriteNote(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 	payload, _ := json.Marshal(input)
-	result, err := ai.NewGeminiClient().Generate(context.Background(), languageDirective(aiLocale(c))+"Write a polished invoice "+input.Kind+" in plain text. Keep it concise and suitable for a professional invoice. Use this JSON context: "+string(payload))
+	result, err := ai.NewGeminiClient().Generate(context.Background(), languageDirective(aiLocale(c))+writeNoteInstruction(input.Kind)+"Use this JSON context: "+string(payload))
 	if err != nil {
 		return aiError(c, err)
 	}

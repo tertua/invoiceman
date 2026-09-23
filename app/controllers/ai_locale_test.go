@@ -34,6 +34,20 @@ func TestLanguageDirective(t *testing.T) {
 	}
 }
 
+// writeNoteInstruction forces terms into a numbered-only list.
+func TestWriteNoteInstruction(t *testing.T) {
+	terms := writeNoteInstruction("terms")
+	if !strings.Contains(terms, "numbered list") || !strings.Contains(terms, "1.") {
+		t.Errorf("terms instruction must require a numbered list: %q", terms)
+	}
+	if strings.Contains(terms, "plain text") {
+		t.Errorf("terms instruction must not fall back to prose: %q", terms)
+	}
+	if got := writeNoteInstruction("description"); !strings.Contains(got, "plain text") {
+		t.Errorf("description instruction must stay prose: %q", got)
+	}
+}
+
 // currencyDirective must bind formatting to the ISO code so the model never
 // defaults bare numbers to US dollars.
 func TestCurrencyDirective(t *testing.T) {
