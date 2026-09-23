@@ -428,6 +428,22 @@ func TestClientInvoiceFlow(t *testing.T) {
 	listed := decodeBody(t, resp)["invoices"].([]interface{})
 	require.Len(t, listed, 1)
 
+	// Drafts are not receivables: dashboard, client list and client detail
+	// must all report zero outstanding while the invoice is still a draft.
+	resp = doRequest(t, app, "GET", "/api/dashboard", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, float64(0), decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+
+	resp = doRequest(t, app, "GET", "/api/clients", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	draftClients := decodeBody(t, resp)["clients"].([]interface{})
+	require.Len(t, draftClients, 1)
+	assert.Equal(t, float64(0), draftClients[0].(map[string]interface{})["outstanding"])
+
+	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, float64(0), decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+
 	// Mark as sent.
 	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+`/status`,
 		`{"status":"sent"}`, cookies)
@@ -443,6 +459,19 @@ func TestClientInvoiceFlow(t *testing.T) {
 	assert.Equal(t, float64(1), stats["invoiceCount"])
 	assert.Equal(t, float64(1), stats["clientCount"])
 	assert.Equal(t, float64(264), stats["outstanding"])
+
+	// Sent invoices count as receivables in the client list and detail.
+	resp = doRequest(t, app, "GET", "/api/clients", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	sentClients := decodeBody(t, resp)["clients"].([]interface{})
+	require.Len(t, sentClients, 1)
+	assert.Equal(t, float64(264), sentClients[0].(map[string]interface{})["outstanding"])
+
+	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	sentDetail := decodeBody(t, resp)["stats"].(map[string]interface{})
+	assert.Equal(t, float64(264), sentDetail["outstanding"])
+	assert.Equal(t, float64(264), sentDetail["totalBilled"])
 	assert.Len(t, dashboard["revenueSeries"].([]interface{}), 6)
 	// Revenue points expose a stable YYYY-MM key for frontend localization.
 	for _, item := range dashboard["revenueSeries"].([]interface{}) {
@@ -719,6 +748,27 @@ func TestReportsFlow(t *testing.T) {
 	assert.Equal(t, float64(15), totals["expenses"])
 	assert.Equal(t, float64(25), totals["netProfit"])
 	assert.Equal(t, float64(60), totals["outstanding"])
+
+	// A draft invoice must not inflate report outstanding or aging.
+	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"client_id":"`+clientID+`",
+		"status":"draft",
+		"issue_date":"`+today+`",
+		"due_date":"`+today+`",
+		"currency":"USD",
+		"items":[{"description":"Draft work","quantity":2,"rate":100}]
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+
+	resp = doRequest(t, app, "GET", "/api/reports", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	reportAfterDraft := decodeBody(t, resp)
+	assert.Equal(t, float64(60), reportAfterDraft["totals"].(map[string]interface{})["outstanding"])
+	agingSum := float64(0)
+	for _, item := range reportAfterDraft["aging"].([]interface{}) {
+		agingSum += item.(map[string]interface{})["value"].(float64)
+	}
+	assert.Equal(t, float64(60), agingSum)
 	assert.Len(t, report["monthly"].([]interface{}), 6)
 	for _, item := range report["monthly"].([]interface{}) {
 		point := item.(map[string]interface{})

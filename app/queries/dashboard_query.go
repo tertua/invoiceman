@@ -75,6 +75,10 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	stats.PaidThisMonth = paidThisMonth
 
 	for _, invoice := range invoices {
+		// Only sent invoices are receivables; drafts are not billed yet.
+		if invoice.Status != models.InvoiceStatusSent {
+			continue
+		}
 		balance := invoice.Total - paidByInvoice[invoice.ID]
 		if balance <= 0 {
 			continue

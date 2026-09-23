@@ -84,7 +84,8 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	for _, invoice := range invoices {
 		paid := paidByInvoice[invoice.ID]
 		balance := invoice.Total - paid
-		if balance > 0 {
+		// Only sent invoices are receivables; drafts are not billed yet.
+		if balance > 0 && invoice.Status == models.InvoiceStatusSent {
 			report.Totals.Outstanding += balance
 			bucket := 0
 			if invoice.DueDate != nil && now.After(*invoice.DueDate) {

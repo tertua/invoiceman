@@ -94,8 +94,11 @@ func GetClient(c fiber.Ctx) error {
 		if err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payments", nil)
 		}
-		totalBilled += row.Total
-		paidTotal += paid
+		// Only sent invoices are receivables; drafts are not billed yet.
+		if row.Status == models.InvoiceStatusSent {
+			totalBilled += row.Total
+			paidTotal += paid
+		}
 		invoices = append(invoices, fiber.Map{
 			"id":             row.ID,
 			"invoice_number": row.InvoiceNumber,
