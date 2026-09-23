@@ -146,6 +146,11 @@ export const translations = {
     "gateway.noDeliveries": "No webhook deliveries yet",
     "gateway.attempt": "attempt",
     "gateway.retry": "Retry delivery",
+    "gateway.availability": "Gateway availability",
+    "gateway.configured": "Configured",
+    "gateway.notConfigured": "Not configured",
+    "gateway.sandbox": "Sandbox",
+    "gateway.live": "Live",
 
     /* ============================ user webhooks ============================ */
     "notif.desc": "Send invoice and payment events to your automation (n8n, WhatsApp bridge). Each delivery is signed with HMAC-SHA256 in X-Relay-Signature.",
@@ -957,6 +962,11 @@ export const translations = {
     "gateway.noDeliveries": "Belum ada pengiriman webhook",
     "gateway.attempt": "percobaan",
     "gateway.retry": "Coba kirim ulang",
+    "gateway.availability": "Ketersediaan gateway",
+    "gateway.configured": "Terkonfigurasi",
+    "gateway.notConfigured": "Belum dikonfigurasi",
+    "gateway.sandbox": "Sandbox",
+    "gateway.live": "Live",
 
     /* ============================ user webhooks ============================ */
     "notif.desc": "Kirim event faktur dan pembayaran ke otomasi Anda (n8n, bridge WhatsApp). Setiap pengiriman ditandatangani HMAC-SHA256 di X-Relay-Signature.",

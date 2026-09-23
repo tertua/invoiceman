@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "@/api/admin";
+import { gatewayApi } from "@/api/gateway";
 
 export const gatewayProjectsKey = ["admin", "gateway", "projects"];
 export const gatewayTransactionsKey = ["admin", "gateway", "transactions"];
 export const gatewayDeliveriesKey = ["admin", "gateway", "deliveries"];
+export const gatewayStatusKey = ["gateway", "status"];
+
+export function useGatewayStatus() {
+  return useQuery({ queryKey: gatewayStatusKey, queryFn: gatewayApi.status });
+}
 
 export function useGatewayProjects() {
   return useQuery({ queryKey: gatewayProjectsKey, queryFn: adminApi.listGatewayProjects });

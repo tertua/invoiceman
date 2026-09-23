@@ -23,6 +23,7 @@ import {
   useCreateGatewayProject,
   useGatewayDeliveries,
   useGatewayProjects,
+  useGatewayStatus,
   useGatewayTransactions,
   useRetryGatewayDelivery,
   useRotateGatewayKey,
@@ -75,10 +76,44 @@ function SecretNotice({ project, onClose }) {
   );
 }
 
+function GatewayStatusBanner() {
+  const { t } = useLang();
+  const { data: gateways = [], isLoading } = useGatewayStatus();
+  if (isLoading || !gateways.length) return null;
+  return (
+    <Card className="mb-6">
+      <div className="mb-3 flex items-center gap-2">
+        <Network size={16} className="text-[var(--accent-strong)]" />
+        <h2 className="font-display text-base font-semibold">{t("gateway.availability")}</h2>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {gateways.map((gw) => (
+          <span
+            key={gw.name}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold",
+              gw.configured ? "bg-[var(--success)]/12 text-[var(--success)]" : "bg-[var(--surface-2)] text-[var(--ink-muted)]",
+            )}
+            title={gw.configured ? t("gateway.configured") : t("gateway.notConfigured")}
+          >
+            <code>{gw.name}</code>
+            <span>·</span>
+            <span>{gw.configured ? t("gateway.configured") : t("gateway.notConfigured")}</span>
+            {gw.configured && <span>·</span>}
+            {gw.configured && <span>{gw.sandbox ? t("gateway.sandbox") : t("gateway.live")}</span>}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function CreateProjectForm({ onCreated }) {
   const { t } = useLang();
   const toast = useToast();
   const create = useCreateGatewayProject();
+  const { data: gateways = [] } = useGatewayStatus();
+  const options = gateways.length ? gateways : [{ name: "midtrans", configured: true }, { name: "nowpayments", configured: false }];
   const [form, setForm] = useState({ slug: "", name: "", webhook_url: "", default_gateway: "midtrans" });
   const [error, setError] = useState("");
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
@@ -106,7 +141,18 @@ function CreateProjectForm({ onCreated }) {
         <Input value={form.slug} onChange={set("slug")} placeholder={t("gateway.slugPlaceholder")} required />
         <Input value={form.name} onChange={set("name")} placeholder={t("gateway.namePlaceholder")} required />
         <Input value={form.webhook_url} onChange={set("webhook_url")} placeholder={t("gateway.webhookPlaceholder")} type="url" required />
-        <Input value={form.default_gateway} onChange={set("default_gateway")} placeholder={t("gateway.gatewayPlaceholder")} />
+        <select
+          value={form.default_gateway}
+          onChange={set("default_gateway")}
+          className="h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none transition-colors focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+          aria-label={t("gateway.gateway")}
+        >
+          {options.map((gw) => (
+            <option key={gw.name} value={gw.name}>
+              {gw.name}{gw.configured === false ? ` (${t("gateway.notConfigured")})` : ""}
+            </option>
+          ))}
+        </select>
         {error && <p className="text-sm text-[var(--danger)] md:col-span-2">{error}</p>}
         <div className="md:col-span-2">
           <Button type="submit" variant="accent" disabled={create.isPending}>
@@ -212,6 +258,7 @@ export default function AdminGateway() {
     <div>
       <PageHeader title={t("gateway.title")} description={t("gateway.desc")} />
       {credentials && <SecretNotice project={credentials} onClose={() => setCredentials(null)} />}
+      <GatewayStatusBanner />
       <CreateProjectForm onCreated={setCredentials} />
       {projects.length ? <ProjectsTable projects={projects} onCredentials={setCredentials} /> : <EmptyState icon={ShieldCheck} title={t("gateway.empty")} description={t("gateway.emptyDesc")} />}
       <OperationsTables />
