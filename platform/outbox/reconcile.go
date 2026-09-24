@@ -18,6 +18,7 @@ import (
 	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/gateway"
 	"github.com/tertua/invoiceman/platform/midtrans"
 )
 
@@ -80,7 +81,8 @@ func (w *Worker) reconcileOne(db *database.Queries, txn models.GatewayTransactio
 		txn.PaidAt = &now
 	}
 	if st.Status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
-		if err := db.SaveTransactionAndSettleInvoice(&txn, st.GrossAmount, reconcileMethod(txn.Gateway)); err != nil {
+		gross := gateway.SettleAmount(st.GrossAmount, gateway.FiatIDR, txn.InvoiceCurrency, txn.UsdToIdr)
+		if err := db.SaveTransactionAndSettleInvoice(&txn, gross, reconcileMethod(txn.Gateway)); err != nil {
 			logger.L().Warn("outbox reconcile settle failed", "order_id", txn.OrderID, "err", err)
 			return
 		}

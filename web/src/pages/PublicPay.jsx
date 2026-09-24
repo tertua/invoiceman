@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
+import PublicShell from "@/components/publicpay/PublicShell";
 import { publicPayApi } from "@/api/publicPay";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
-import { useAppName } from "@/hooks/useConfig";
 
 const LANG_STORAGE_KEY = "arr-lang";
 
@@ -32,13 +31,54 @@ function Row({ label, value, bold }) {
   );
 }
 
+// MethodPicker lets the payer choose how to pay; the gateway intent (and its
+// paylink) is only created after a method is chosen.
+function MethodPicker({ methods, lang, onPick, pending, error }) {
+  return (
+    <div className="mt-6">
+      <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)] mb-3">
+        {t(lang, "public.chooseMethod")}
+      </div>
+      {methods.length ? (
+        <div className="space-y-2">
+          {methods.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onPick(m.id)}
+              disabled={!!pending}
+              className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--surface-2)] disabled:opacity-60"
+            >
+              <span className="text-sm font-semibold text-[var(--ink)]">{m.name}</span>
+              <span className="flex items-center gap-2">
+                <span className="text-sm tabular text-[var(--ink)]">{formatMoney(m.amount, m.currency)}</span>
+                {pending === m.id ? (
+                  <Loader2 size={15} className="animate-spin text-[var(--accent-strong)]" />
+                ) : (
+                  <ArrowRight size={15} className="text-[var(--accent-strong)]" />
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</p>
+      )}
+      {error && methods.length ? <p className="text-xs text-[var(--danger)] mt-3 text-center">{error}</p> : null}
+      <div className="flex items-center justify-center gap-1.5 mt-4 text-[11px] text-[var(--ink-muted)]">
+        <ShieldCheck size={13} /> {t(lang, "public.secureBy")}
+      </div>
+    </div>
+  );
+}
+
 export default function PublicPay() {
   const { token } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [lang, setLang] = useState(() => detectLang(searchParams));
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
-  const [paying, setPaying] = useState(false);
+  const [pending, setPending] = useState("");
   const [payErr, setPayErr] = useState("");
 
   useEffect(() => {
@@ -99,24 +139,29 @@ export default function PublicPay() {
     };
   }, [data, token]);
 
-  async function pay() {
-    setPaying(true);
+  async function pay(method) {
+    setPending(method);
     setPayErr("");
     try {
-      const res = await publicPayApi.createTransaction(token);
+      const res = await publicPayApi.createTransaction(token, method);
       if (res.snap_token && data.gateway?.client_key) {
         const snap = await loadMidtransSnap(data.gateway.is_production);
         snap.pay(res.snap_token, {
-          onClose: () => setPaying(false),
-          onError: () => setPaying(false),
+          onClose: () => setPending(""),
+          onError: () => setPending(""),
           onSuccess: () => window.location.reload(),
         });
         return;
       }
-      if (res.redirect_url) window.location.href = res.redirect_url;
+      const hosted = res.redirect_url || res.payment_url;
+      if (hosted) {
+        window.location.href = hosted;
+        return;
+      }
+      setPending("");
     } catch (e) {
       setPayErr(e.message || t(lang, "public.notPayable"));
-      setPaying(false);
+      setPending("");
     }
   }
 
@@ -137,7 +182,7 @@ export default function PublicPay() {
     );
   }
 
-  const { invoice, branding, can_pay } = data;
+  const { invoice, branding, can_pay, methods = [] } = data;
   const cur = invoice.currency || "IDR";
   const isPaid = invoice.effective_status === "paid", isPending = invoice.effective_status === "pending";
 
@@ -210,64 +255,11 @@ export default function PublicPay() {
             </div>
           </div>
         ) : can_pay ? (
-          <div className="mt-6">
-            <Button variant="accent" className="w-full" onClick={pay} disabled={paying}>
-              {paying ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
-              {paying ? t(lang, "public.paying") : t(lang, "public.payNow")}
-            </Button>
-            {payErr && <p className="text-xs text-[var(--danger)] mt-3 text-center">{payErr}</p>}
-            <div className="flex items-center justify-center gap-1.5 mt-4 text-[11px] text-[var(--ink-muted)]">
-              <ShieldCheck size={13} /> {t(lang, "public.secureBy")}
-            </div>
-          </div>
+          <MethodPicker methods={methods} lang={lang} onPick={pay} pending={pending} error={payErr} />
         ) : (
           <div className="mt-6 text-center text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</div>
         )}
       </Card>
     </PublicShell>
-  );
-}
-
-function LangToggle({ lang, onLang }) {
-  return (
-    <div className="flex items-center gap-1 rounded-full border border-[var(--border)] p-1 text-[11px] font-semibold">
-      {["en", "id"].map((code) => (
-        <button
-          key={code}
-          type="button"
-          onClick={() => onLang(code)}
-          aria-pressed={lang === code}
-          className={`px-2.5 py-1 rounded-full uppercase tracking-wide transition-colors ${
-            lang === code ? "bg-[var(--ink)] text-[var(--bg)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-          }`}
-        >
-          {code}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function PublicShell({ children, branding, lang, onLang }) {
-  const appName = useAppName();
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-[var(--bg)]">
-      <div className="w-full max-w-[520px] flex justify-end">
-        <LangToggle lang={lang} onLang={onLang} />
-      </div>
-      {branding?.logo_url ? (
-        <img src={branding.logo_url} alt={branding.company_name || "logo"} className="h-12 w-12 object-contain rounded" />
-      ) : null}
-      {branding?.company_name ? (
-        <div className="font-display text-lg font-semibold text-[var(--ink)]">{branding.company_name}</div>
-      ) : null}
-      {children}
-      <p className="text-[11px] text-[var(--ink-muted)]">
-        Powered by{" "}
-        <Link to="/" className="font-semibold text-[var(--ink)] hover:underline">
-          {appName}
-        </Link>
-      </p>
-    </div>
   );
 }

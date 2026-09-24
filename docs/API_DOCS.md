@@ -24,3 +24,14 @@ Midtrans `bni` or NOWPayments `btc`) and `payment_method` (the neutral id
 above), so consumers can migrate without parsing provider-specific strings.
 `gross_amount_idr` is an integer number of fiat minor units; fractional crypto
 amounts use `amount_decimal` with `currency`.
+
+## Currency conversion
+
+Providers are not required to support every invoice currency (Midtrans is
+IDR-only). Invoiceman converts with a **manual** rate the account owner sets in
+`PATCH /api/v1/settings` as `usd_to_idr` (IDR per 1 USD, e.g. `"18000"`); no
+realtime FX feed is ever used. A USD intent routed to an IDR-only provider is
+charged at that rate, and the transaction records `currency` (charged),
+`invoice_currency`/`invoice_amount` (source), and `usd_to_idr` used. When the
+rate is unset (or the currency pair is unsupported) the intent is rejected with
+`400 currency conversion is not configured` rather than guessing.

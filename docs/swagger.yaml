@@ -433,6 +433,8 @@ definitions:
       tax_rate:
         minimum: 0
         type: number
+      usd_to_idr:
+        type: number
     required:
     - currency
     - invoice_prefix

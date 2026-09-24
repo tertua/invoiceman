@@ -98,7 +98,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		txn.PaidAt = &now
 	}
 	if status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
-		if err := db.SaveTransactionAndSettleInvoice(&txn, models.MoneyFromMinor(notif.GrossMinor), gatewayDisplayName(gatewayName)); err != nil {
+		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gatewayDisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
 		_ = cache.InvalidateUser(context.Background(), txn.UserID.String())

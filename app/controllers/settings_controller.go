@@ -66,17 +66,10 @@ func UpdateSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
-	settings.CompanyName = input.CompanyName
-	settings.Email = input.Email
-	settings.Phone = input.Phone
-	settings.Address = input.Address
-	settings.LogoURL = input.LogoURL
-	settings.Currency = input.Currency
-	settings.TaxRate = input.TaxRate
-	settings.InvoicePrefix = input.InvoicePrefix
-	if input.Language == "en" || input.Language == "id" {
-		settings.Language = input.Language
+	if input.UsdToIdr.IsNegative() {
+		return utils.Fail(c, fiber.StatusBadRequest, "usd_to_idr cannot be negative", nil)
 	}
+	applySettingsInput(&settings, input)
 	if err := db.UpdateSettings(&settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update settings", nil)
 	}

@@ -1,17 +1,12 @@
 package controllers
 
 import (
-	"errors"
-	"strings"
-	"time"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map, error) {
@@ -22,6 +17,18 @@ func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map,
 	settings, err := db.GetSettings(link.UserID)
 	if err != nil {
 		return nil, err
+	}
+	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	paid, err := db.PaidAmount(invoice.ID)
+	if err != nil {
+		return nil, err
+	}
+	balance := invoice.Total.Sub(paid)
+	if balance.IsNegative() {
+		balance = decimal.Zero
 	}
 	delete(detail, "client_id")
 	delete(detail, "client_email")
@@ -49,6 +56,7 @@ func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map,
 			"client_key":    configs.Get().Midtrans.ClientKey,
 			"is_production": configs.Get().Midtrans.IsProd,
 		},
+		"methods": availableChargeMethods(invoice.Currency, balance, settings.UsdToIdr),
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
 }
@@ -116,45 +124,9 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	if !invoice.Total.GreaterThan(paid) {
 		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 	}
-	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total.Sub(paid))
-}
-
-func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal) error {
-	if !strings.EqualFold(strings.TrimSpace(invoice.Currency), "IDR") {
-		return utils.Fail(c, fiber.StatusBadRequest, "online payment is currently available for IDR invoices only", nil)
-	}
-	gw, err := gateway.Get("midtrans")
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "payment gateway is not registered", nil)
-	}
-	orderID := localOrderID(invoice.InvoiceNumber, link.Token[:8])
-	if existing, err := db.GetTransaction(orderID); err == nil {
-		return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": existing.SnapToken, "redirect_url": existing.RedirectURL, "order_id": existing.OrderID})
-	}
-	// Backward compat: reuse the pre-rename INV- intent for the same
-	// invoice+link instead of opening a duplicate at the gateway.
-	if existing, err := db.GetTransaction(legacyLocalOrderID(invoice.InvoiceNumber, link.Token[:8])); err == nil {
-		return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": existing.SnapToken, "redirect_url": existing.RedirectURL, "order_id": existing.OrderID})
-	}
-	amountIDR := balance.IntPart()
-	created, err := gw.CreateTransaction(c.Context(), &gateway.CreateTxRequest{OrderID: orderID, AmountMinor: amountIDR, Currency: invoice.Currency})
-	if err != nil {
-		if errors.Is(err, gateway.ErrNotConfigured) {
-			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
-		}
-		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
-	}
-	now := time.Now()
-	txn := &models.GatewayTransaction{
-		OrderID: orderID, ProjectSlug: "local", Gateway: "midtrans", ExternalOrderID: invoice.ID.String(),
-		InvoiceID: &invoice.ID, UserID: &link.UserID, AmountIDR: amountIDR, Currency: invoice.Currency,
-		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
-		CreatedAt: now, UpdatedAt: now,
-	}
-	if err := db.CreateTransaction(txn); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
-	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"snap_token": txn.SnapToken, "redirect_url": txn.RedirectURL, "order_id": txn.OrderID})
+	input := &publicIntentRequest{}
+	_ = c.Bind().Body(input) // body is optional; an empty body keeps the default
+	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total.Sub(paid), input.PaymentMethod)
 }
 
 // GetPublicPaymentStatus returns the current public payment status.

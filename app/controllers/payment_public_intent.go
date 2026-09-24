@@ -1,0 +1,105 @@
+package controllers
+
+import (
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/invoiceman/platform/gateway"
+)
+
+// publicIntentRequest is the optional body for creating a public pay intent.
+type publicIntentRequest struct {
+	PaymentMethod string `json:"payment_method" validate:"omitempty,lte=32"`
+}
+
+// createPublicGatewayIntent opens (or reuses) the gateway intent for an
+// invoice's outstanding balance. method is the provider-neutral choice from
+// the public page; an empty method keeps the legacy Midtrans default. The
+// charge is converted to the provider's currency with the owner's manual rate
+// when they differ.
+func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method string) error {
+	method = normalizedPaymentMethod(method)
+	gw, err := routePublicGateway(method)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
+	}
+	settings, err := db.GetSettings(link.UserID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
+	}
+	spec, err := buildCharge(gw, invoice.Currency, balance, settings.UsdToIdr)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
+	}
+	orderID := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
+	if existing, err := db.GetTransaction(orderID); err == nil {
+		return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
+	}
+	// Backward compat: reuse the pre-rename INV- intent for the same
+	// invoice+link instead of opening a duplicate at the gateway.
+	if method == "" {
+		if existing, err := db.GetTransaction(legacyLocalOrderID(invoice.InvoiceNumber, link.Token[:8])); err == nil {
+			return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
+		}
+	}
+	created, err := gw.CreateTransaction(c.Context(), spec.request(orderID, "", "", method))
+	if err != nil {
+		if errors.Is(err, gateway.ErrNotConfigured) {
+			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+		}
+		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
+	}
+	now := time.Now()
+	txn := &models.GatewayTransaction{
+		OrderID: orderID, ProjectSlug: "local", Gateway: gw.Name(), PaymentMethod: method,
+		ExternalOrderID: invoice.ID.String(),
+		InvoiceID:       &invoice.ID, UserID: &link.UserID, AmountIDR: spec.AmountMinor, AmountDecimal: spec.AmountDecimal,
+		Currency: spec.Currency, InvoiceCurrency: strings.ToUpper(strings.TrimSpace(invoice.Currency)),
+		InvoiceAmount: spec.InvoiceAmount, UsdToIdr: spec.UsdToIdr,
+		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
+		PaymentURL: created.PaymentURL, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.CreateTransaction(txn); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
+	}
+	return utils.OK(c, fiber.StatusOK, publicIntentResponse(*txn))
+}
+
+// routePublicGateway resolves the provider for a public charge: an explicit
+// method routes across configured providers, an empty method keeps Midtrans
+// for backward compatibility.
+func routePublicGateway(method string) (gateway.Gateway, error) {
+	if method == "" {
+		return gateway.Get("midtrans")
+	}
+	return gateway.Route("", method)
+}
+
+// publicIntentSuffix keeps distinct methods from colliding on one order id,
+// while an empty method preserves the legacy token-only suffix.
+func publicIntentSuffix(token, method string) string {
+	if method == "" {
+		return token[:8]
+	}
+	return token[:8] + "-" + sanitizeExternal(method)
+}
+
+func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
+	out := fiber.Map{
+		"order_id":     t.OrderID,
+		"gateway":      t.Gateway,
+		"redirect_url": t.RedirectURL,
+		"payment_url":  t.PaymentURL,
+	}
+	// Snap tokens are Midtrans-only; other providers use a hosted payment URL.
+	if t.Gateway == "midtrans" {
+		out["snap_token"] = t.SnapToken
+	}
+	return out
+}

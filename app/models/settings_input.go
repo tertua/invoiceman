@@ -9,6 +9,7 @@ type SettingsInput struct {
 	LogoURL       string  `json:"logo_url"`
 	Currency      string  `json:"currency" validate:"required,lte=3"`
 	TaxRate       float64 `json:"tax_rate" validate:"gte=0"`
+	UsdToIdr      Money   `json:"usd_to_idr"`
 	InvoicePrefix string  `json:"invoice_prefix" validate:"required,lte=20"`
 	Language      string  `json:"language" validate:"omitempty,oneof=en id"`
 }

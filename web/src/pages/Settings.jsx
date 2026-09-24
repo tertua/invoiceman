@@ -13,7 +13,8 @@ import { QueryError } from "@/components/ui/QueryError";
 import { authApi } from "@/api/auth";
 import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
 import NotificationsTab from "@/components/settings/NotificationsTab";
-import { CURRENCIES, cn } from "@/lib/utils";
+import DefaultsCard from "@/components/settings/DefaultsCard";
+import { cn } from "@/lib/utils";
 
 function FieldLabel({ children }) {
   return <label className="text-xs font-medium text-[var(--ink-muted)] mb-1.5 block">{children}</label>;
@@ -41,6 +42,7 @@ function CompanySection() {
         logo_url: settings.logo_url || "",
         currency: settings.currency || "IDR",
         tax_rate: Number(settings.tax_rate) || 0,
+        usd_to_idr: settings.usd_to_idr && Number(settings.usd_to_idr) ? String(settings.usd_to_idr) : "",
         invoice_prefix: settings.invoice_prefix || "INV-",
       });
     }
@@ -79,7 +81,11 @@ function CompanySection() {
     e.preventDefault();
     setSaving(true);
     try {
-      await update.mutateAsync({ ...form, tax_rate: Number(form.tax_rate) || 0 });
+      await update.mutateAsync({
+        ...form,
+        tax_rate: Number(form.tax_rate) || 0,
+        usd_to_idr: form.usd_to_idr === "" ? "0" : String(form.usd_to_idr),
+      });
       toast.success(t("settings.companySaved"));
     } catch (err) {
       if (err?.status !== 401) toast.error(t("settings.saveFailed"), err?.message);
@@ -155,36 +161,7 @@ function CompanySection() {
         </div>
       </Card>
 
-      <Card padding="lg">
-        <CardHeader>
-          <div>
-            <CardTitle className="text-base">{t("settings.defaults")}</CardTitle>
-            <CardDescription className="mt-1">
-              {t("settings.defaultsDesc")}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <FieldLabel>{t("settings.defaultCurrency")}</FieldLabel>
-            <select className={selectClass} value={form.currency} onChange={set("currency")}>
-              {CURRENCIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <FieldLabel>{t("settings.defaultTax")}</FieldLabel>
-            <Input type="number" min="0" step="0.1" value={form.tax_rate} onChange={set("tax_rate")} className="tabular" />
-          </div>
-          <div>
-            <FieldLabel>{t("settings.prefix")}</FieldLabel>
-            <Input value={form.invoice_prefix} onChange={set("invoice_prefix")} placeholder="INV-" />
-          </div>
-        </div>
-      </Card>
+      <DefaultsCard form={form} set={set} selectClass={selectClass} />
       </fieldset>
 
       <div className="flex justify-end">

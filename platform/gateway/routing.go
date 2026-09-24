@@ -28,11 +28,19 @@ func Route(preferredProvider, method string) (Gateway, error) {
 	}
 	for _, name := range sortedNames() {
 		g, err := Get(name)
-		if err == nil && (method == "" || supports(g, method)) {
+		if err == nil && ProviderReady(g) && (method == "" || supports(g, method)) {
 			return g, nil
 		}
 	}
 	return nil, ErrUnsupportedPaymentMethod
+}
+
+// ProviderReady reports whether a provider declares itself usable. Providers
+// without the optional ConfiguredProvider capability are assumed ready so
+// test doubles and future gateways keep working.
+func ProviderReady(g Gateway) bool {
+	configured, ok := g.(ConfiguredProvider)
+	return !ok || configured.Configured()
 }
 
 func supports(g Gateway, method string) bool {

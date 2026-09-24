@@ -32,7 +32,15 @@ type GatewayTransaction struct {
 	UserID          *uuid.UUID `gorm:"type:uuid;index" db:"user_id" json:"user_id"`
 	AmountIDR       int64      `db:"amount_idr" json:"amount_idr"`
 	AmountDecimal   string     `gorm:"size:64" db:"amount_decimal" json:"amount_decimal"`
-	Currency        string     `gorm:"size:8;default:IDR" db:"currency" json:"currency"`
+	// Currency is the currency actually charged by the provider. When it
+	// differs from InvoiceCurrency the charge was converted at UsdToIdr.
+	Currency string `gorm:"size:8;default:IDR" db:"currency" json:"currency"`
+	// InvoiceCurrency is the settlement currency of the source invoice, and
+	// InvoiceAmount the balance it was charged for. UsdToIdr is the manual
+	// rate used (0 when no conversion happened).
+	InvoiceCurrency string     `gorm:"size:8" db:"invoice_currency" json:"invoice_currency"`
+	InvoiceAmount   Money      `gorm:"type:decimal(19,4)" db:"invoice_amount" json:"invoice_amount"`
+	UsdToIdr        Money      `gorm:"type:decimal(19,4)" db:"usd_to_idr" json:"usd_to_idr"`
 	CustomerEmail   string     `gorm:"size:255" db:"customer_email" json:"customer_email"`
 	CustomerPhone   string     `gorm:"size:64" db:"customer_phone" json:"customer_phone"`
 	Status          string     `gorm:"size:32;index;default:pending" db:"status" json:"status"`

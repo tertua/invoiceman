@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.0] - 2026-09-24
+
+### Added
+- Multi-provider payments: a `payment_method` on an intent now routes to any
+  configured provider that supports it, regardless of the project default. The
+  optional `gateway` field still pins a provider for legacy callers.
+- Manual USD/IDR conversion: a new `usd_to_idr` setting (IDR per 1 USD) lets an
+  IDR-only provider charge a USD invoice and vice versa. No realtime FX feed is
+  used; when the rate is unset the intent is rejected instead of guessing.
+- The public pay page now lets the payer choose a payment method first and only
+  then opens the gateway paylink (Snap for Midtrans, hosted checkout for
+  crypto), showing the converted amount per method.
+
+### Changed
+- Gateway transactions record the charged currency plus the source
+  `invoice_currency`/`invoice_amount` and the `usd_to_idr` rate used.
+- Settings gain the manual rate field; the public "secured by" note is now
+  provider-neutral.
+
 ## [v0.3.1] - 2026-09-24
 
 ### Fixed

@@ -3609,6 +3609,9 @@ const docTemplate = `{
                 "tax_rate": {
                     "type": "number",
                     "minimum": 0
+                },
+                "usd_to_idr": {
+                    "type": "number"
                 }
             }
         },

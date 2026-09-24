@@ -96,4 +96,20 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "payment_method")
 		},
 	},
+	{
+		Version:     11,
+		Description: "manual USD/IDR gateway conversion",
+		Down: func(db *gorm.DB) error {
+			if err := db.Migrator().DropColumn(&models.Settings{}, "usd_to_idr"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropColumn(&models.GatewayTransaction{}, "invoice_currency"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropColumn(&models.GatewayTransaction{}, "invoice_amount"); err != nil {
+				return err
+			}
+			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "usd_to_idr")
+		},
+	},
 }
