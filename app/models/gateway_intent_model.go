@@ -11,7 +11,7 @@ type IntentInput struct {
 	ExternalOrderID string `json:"external_order_id" validate:"required,lte=128"`
 	Gateway         string `json:"gateway" validate:"omitempty,lte=32"`
 	// Keep the oneof list in sync with gateway.IDs(); the enum test guards it.
-	PaymentMethod string `json:"payment_method" validate:"omitempty,lte=32,oneof=bank_transfer qris gopay convenience_store credit_card crypto akulaku klik_bca bca_klikpay cimb_clicks danamon_online"`
+	PaymentMethod string `json:"payment_method" validate:"omitempty,lte=32,oneof=bank_transfer qris gopay credit_card crypto"`
 	AmountIDR     int64  `json:"amount_idr" validate:"gte=0"`
 	AmountDecimal string `json:"amount_decimal" validate:"omitempty,lte=64"`
 	Currency      string `json:"currency" validate:"omitempty,lte=8"`

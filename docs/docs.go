@@ -3306,14 +3306,8 @@ const docTemplate = `{
                         "bank_transfer",
                         "qris",
                         "gopay",
-                        "convenience_store",
                         "credit_card",
-                        "crypto",
-                        "akulaku",
-                        "klik_bca",
-                        "bca_klikpay",
-                        "cimb_clicks",
-                        "danamon_online"
+                        "crypto"
                     ]
                 }
             }
