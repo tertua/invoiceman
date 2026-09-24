@@ -77,18 +77,18 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	}
 	report.Totals.NetProfit = report.Totals.Revenue.Sub(report.Totals.Expenses)
 
-	statusValues := map[string]decimal.Decimal{"draft": decimal.Zero, "sent": decimal.Zero, "overdue": decimal.Zero, "paid": decimal.Zero}
+	statusValues := map[string]decimal.Decimal{"draft": decimal.Zero, "sent": decimal.Zero, "overdue": decimal.Zero, "paid": decimal.Zero, "pending": decimal.Zero}
 	agingValues := make([]decimal.Decimal, 5)
 	clientBilled := make(map[uuid.UUID]decimal.Decimal)
 	clientPaid := make(map[uuid.UUID]decimal.Decimal)
 	now := time.Now()
+	pending := pendingInvoiceSet(q.DB, userID)
 	for _, invoice := range invoices {
 		paid := paidByInvoice[invoice.ID]
 		balance := invoice.Total.Sub(paid)
-		status := models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid)
-		// Receivables are billed invoices with an open balance; drafts and
-		// paid rows never count toward outstanding/aging.
-		if balance.GreaterThan(decimal.Zero) && (status == models.InvoiceStatusSent || status == models.InvoiceEffectiveOverdue) {
+		status := models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid, pending[invoice.ID])
+		// Receivables are billed invoices with an open balance; drafts and paid never count (pending still owes).
+		if balance.GreaterThan(decimal.Zero) && (status == models.InvoiceStatusSent || status == models.InvoiceEffectiveOverdue || status == models.InvoiceEffectivePending) {
 			report.Totals.Outstanding = report.Totals.Outstanding.Add(balance)
 			bucket := 0
 			if invoice.DueDate != nil && now.After(*invoice.DueDate) {

@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Ca
 import { useLang } from "@/context/LangContext";
 import { formatMoney, localizeAgingBuckets, localizeMonthLabels } from "@/lib/utils";
 
-const STATUS_COLORS = { draft: "var(--ink-muted)", sent: "var(--accent)", overdue: "var(--danger)", paid: "var(--success)" };
+const STATUS_COLORS = { draft: "var(--ink-muted)", sent: "var(--accent)", overdue: "var(--danger)", paid: "var(--success)", pending: "var(--warning)" };
 const tooltipStyle = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12, color: "var(--ink)" };
 
 export default function ReportsCharts({ monthly, statusData, aging, agingHasData, topClients, maxClient }) {

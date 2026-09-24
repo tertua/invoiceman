@@ -7,7 +7,7 @@ import { formatMoney, localizeAgingBuckets, localizeMonthLabels } from "@/lib/ut
 const T1 = "#2dd4bf";
 const T2 = "#14b8a6";
 const T3 = "#0f766e";
-const STATUS_COLORS = { draft: "#94a3b8", sent: "#5eead4", overdue: "var(--danger)", paid: T2 };
+const STATUS_COLORS = { draft: "#94a3b8", sent: "#5eead4", overdue: "var(--danger)", paid: T2, pending: "var(--warning)" };
 const tooltipStyle = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, fontSize: 12, color: "var(--ink)", boxShadow: "var(--shadow-hover)" };
 
 export function DashboardCharts({ series, reports, total, collections }) {

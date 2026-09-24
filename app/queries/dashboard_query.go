@@ -76,8 +76,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	stats.PaidThisMonth = paidThisMonth
 
 	for _, invoice := range invoices {
-		// Billed invoices are sent + paid; drafts are not billed yet.
-		// Paid rows carry zero balance so they contribute nothing below.
+		// Billed invoices are sent + paid; drafts are not billed yet (paid rows carry zero balance).
 		if invoice.Status == models.InvoiceStatusDraft {
 			continue
 		}
@@ -179,6 +178,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 		return invoices, err
 	}
 
+	pending := pendingInvoiceSet(q.DB, userID)
 	for _, row := range rows {
 		issueDate := ""
 		if row.IssueDate != nil {
@@ -191,7 +191,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 			IssueDate:       issueDate,
 			Total:           row.Total,
 			Currency:        row.Currency,
-			EffectiveStatus: models.ResolveEffectiveStatus(row.Status, row.DueDate, row.Total, row.PaidAmount),
+			EffectiveStatus: models.ResolveEffectiveStatus(row.Status, row.DueDate, row.Total, row.PaidAmount, pending[row.ID]),
 			CreatedAt:       row.CreatedAt,
 		})
 	}

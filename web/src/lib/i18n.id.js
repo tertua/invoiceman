@@ -61,7 +61,7 @@ export const id = {
     "status.draft": "Draf",
     "status.sent": "Terkirim",
     "status.paid": "Lunas",
-    "status.overdue": "Jatuh tempo",
+    "status.overdue": "Jatuh tempo", "status.pending": "Menunggu pembayaran",
 
     /* ============================ relative time ============================ */
     "relative.justNow": "baru saja",
@@ -80,8 +80,8 @@ export const id = {
     "sidebar.settings": "Pengaturan",
     "sidebar.logOut": "Keluar",
     "sidebar.account": "Akun",
-    "sidebar.adminUsers": "Pengguna admin",
-    "sidebar.adminGateway": "Gateway pembayaran",
+    "sidebar.adminUsers": "Pengguna",
+    "sidebar.adminGateway": "Gateway",
 
     /* ============================ admin ============================ */
     "admin.title": "Pengguna admin",
@@ -408,6 +408,7 @@ export const id = {
     "invDetail.notFound": "Faktur tidak ditemukan",
     "invDetail.deleted": "Mungkin sudah dihapus.",
     "invDetail.markAs": "Tandai sebagai:",
+    "invDetail.confirmMarkAs": "Ubah faktur {number} menjadi {status}?",
     "invDetail.confirmDelete": "Hapus faktur {number}?",
     "invDetail.billTo": "Ditagih ke",
     "invDetail.issued": "Diterbitkan",

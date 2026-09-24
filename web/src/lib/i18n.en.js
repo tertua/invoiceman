@@ -61,7 +61,7 @@ export const en = {
     "status.draft": "Draft",
     "status.sent": "Sent",
     "status.paid": "Paid",
-    "status.overdue": "Overdue",
+    "status.overdue": "Overdue", "status.pending": "Awaiting payment",
 
     /* ============================ relative time ============================ */
     "relative.justNow": "just now",
@@ -408,6 +408,7 @@ export const en = {
     "invDetail.notFound": "Invoice not found",
     "invDetail.deleted": "It may have been deleted.",
     "invDetail.markAs": "Mark as:",
+    "invDetail.confirmMarkAs": "Change invoice {number} to {status}?",
     "invDetail.confirmDelete": "Delete invoice {number}?",
     "invDetail.billTo": "Bill To",
     "invDetail.issued": "Issued",

@@ -27,10 +27,9 @@ export function Badge({ className, tone, ...props }) {
 // Maps an invoice status → badge tone + label. Kept here so every table,
 // list, and detail view renders status consistently.
 export const INVOICE_STATUS = {
-  draft: { tone: "neutral", labelKey: "status.draft" },
-  sent: { tone: "accent", labelKey: "status.sent" },
-  paid: { tone: "success", labelKey: "status.paid" },
-  overdue: { tone: "danger", labelKey: "status.overdue" },
+  draft: { tone: "neutral", labelKey: "status.draft" }, sent: { tone: "accent", labelKey: "status.sent" },
+  paid: { tone: "success", labelKey: "status.paid" }, overdue: { tone: "danger", labelKey: "status.overdue" },
+  pending: { tone: "warning", labelKey: "status.pending" },
 };
 
 export function StatusBadge({ status, className }) {

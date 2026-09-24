@@ -138,7 +138,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		"id":               invoice.ID,
 		"invoice_number":   invoice.InvoiceNumber,
 		"status":           invoice.Status,
-		"effective_status": models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid),
+		"effective_status": models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid, db.PendingInvoiceIDs(userID)[id]),
 		"payment_link":     paymentLink,
 		"client_id":        invoice.ClientID,
 		"client_name":      clientName,
@@ -161,12 +161,10 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 	}, nil
 }
 
-// isPaidLocked reports whether an invoice is effectively paid and must be
-// treated as immutable. Paid means stored status paid OR payments covering
-// the total. Content edits and deletes are blocked; reopening a money-paid
-// invoice requires voiding payments first.
+// isPaidLocked reports whether an invoice is effectively paid (stored paid
+// or payments covering the total) and must be treated as immutable.
 func isPaidLocked(status string, dueDate *time.Time, total, paid decimal.Decimal) bool {
-	return models.ResolveEffectiveStatus(status, dueDate, total, paid) == models.InvoiceStatusPaid
+	return models.ResolveEffectiveStatus(status, dueDate, total, paid, false) == models.InvoiceStatusPaid
 }
 
 // ListInvoices returns one page of invoices of the current user.
@@ -215,6 +213,7 @@ func ListInvoices(c fiber.Ctx) error {
 	}
 
 	invoices := make([]fiber.Map, 0, len(rows))
+	pending := db.PendingInvoiceIDs(userID)
 	for _, row := range rows {
 		invoices = append(invoices, fiber.Map{
 			"id":               row.ID,
@@ -225,7 +224,7 @@ func ListInvoices(c fiber.Ctx) error {
 			"due_date":         utils.FormatDate(row.DueDate),
 			"total":            row.Total,
 			"currency":         row.Currency,
-			"effective_status": row.EffectiveStatus(),
+			"effective_status": row.EffectiveStatus(pending[row.ID]),
 		})
 	}
 

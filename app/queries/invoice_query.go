@@ -111,8 +111,8 @@ type ClientInvoiceRow struct {
 
 // EffectiveStatus resolves the display status for a client invoice row,
 // matching the /invoices listing (paid via payments counts as paid).
-func (r ClientInvoiceRow) EffectiveStatus() string {
-	return models.ResolveEffectiveStatus(r.Status, r.DueDate, r.Total, r.PaidAmount)
+func (r ClientInvoiceRow) EffectiveStatus(pending bool) string {
+	return models.ResolveEffectiveStatus(r.Status, r.DueDate, r.Total, r.PaidAmount, pending)
 }
 
 // ClientInvoices returns invoices of a client owned by a user.

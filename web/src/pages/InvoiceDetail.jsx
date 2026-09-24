@@ -132,13 +132,13 @@ export default function InvoiceDetail() {
         <span className="text-xs text-[var(--ink-muted)] mr-1">{t("invDetail.markAs")}</span>
         <StatusButton
           active={invoice.status === "draft"}
-          onClick={() => setStatus.mutate({ id, status: "draft" })}
+          onClick={() => { if (window.confirm(t("invDetail.confirmMarkAs", { number: invoice.invoice_number, status: t("status.draft") }))) setStatus.mutate({ id, status: "draft" }); }}
           icon={Undo2}
           label={t("status.draft")}
         />
         <StatusButton
           active={invoice.status === "sent"}
-          onClick={() => setStatus.mutate({ id, status: "sent" })}
+          onClick={() => { if (window.confirm(t("invDetail.confirmMarkAs", { number: invoice.invoice_number, status: t("status.sent") }))) setStatus.mutate({ id, status: "sent" }); }}
           icon={Send}
           label={t("status.sent")}
         />

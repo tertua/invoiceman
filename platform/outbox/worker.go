@@ -128,12 +128,12 @@ func (w *Worker) Stop() {
 	}
 }
 
-// ProcessOnce runs one tick: mail, deliveries, notifications, purge.
-// Exported for tests and admin-triggered drains.
+// ProcessOnce runs one tick (mail, deliveries, notifications, gateway reconcile, purge); exported for tests and drains.
 func (w *Worker) ProcessOnce(ctx context.Context) {
 	w.processMail(ctx)
 	w.processDeliveries(ctx)
 	w.processNotifications(ctx)
+	w.reconcileGateway(ctx)
 	w.purgeIdempotency()
 }
 

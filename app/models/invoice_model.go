@@ -17,6 +17,7 @@ const (
 // EffectiveInvoiceStatus values displayed by the frontend.
 const (
 	InvoiceEffectiveOverdue = "overdue"
+	InvoiceEffectivePending = "pending"
 )
 
 // Invoice describes an invoice.
@@ -122,18 +123,18 @@ type InvoiceListRow struct {
 }
 
 // EffectiveStatus resolves the display status for an invoice row.
-func (r InvoiceListRow) EffectiveStatus() string {
-	return ResolveEffectiveStatus(r.Status, r.DueDate, r.Total, r.PaidAmount)
+func (r InvoiceListRow) EffectiveStatus(pending bool) string {
+	return ResolveEffectiveStatus(r.Status, r.DueDate, r.Total, r.PaidAmount, pending)
 }
 
 // ResolveEffectiveStatus computes the display status from stored status,
-// due date, total and paid amount.
-func ResolveEffectiveStatus(status string, dueDate *time.Time, total, paid Money) string {
-	if status == InvoiceStatusPaid {
+// due date, total, paid amount and a live gateway transaction flag.
+func ResolveEffectiveStatus(status string, dueDate *time.Time, total, paid Money, pending bool) string {
+	if status == InvoiceStatusPaid || (total.GreaterThan(ZeroMoney) && paid.GreaterThanOrEqual(total)) {
 		return InvoiceStatusPaid
 	}
-	if total.GreaterThan(ZeroMoney) && paid.GreaterThanOrEqual(total) {
-		return InvoiceStatusPaid
+	if pending {
+		return InvoiceEffectivePending
 	}
 	if status == InvoiceStatusSent && dueDate != nil && time.Now().After(*dueDate) {
 		return InvoiceEffectiveOverdue

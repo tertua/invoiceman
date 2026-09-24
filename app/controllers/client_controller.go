@@ -49,7 +49,6 @@ func ListClients(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"clients": clients, "meta": paging.Meta(total)})
 }
 
-// GetClient returns one client with invoices and stats.
 // @Description Get client by ID with invoices and stats.
 // @Summary get client by ID with invoices and stats
 // @Tags Clients
@@ -90,6 +89,7 @@ func GetClient(c fiber.Ctx) error {
 
 	invoices := make([]fiber.Map, 0, len(rows))
 	var totalBilled, paidTotal decimal.Decimal
+	pending := db.PendingInvoiceIDs(userID)
 	for _, row := range rows {
 		paid := row.PaidAmount
 		// Billed invoices are sent + paid; drafts are not billed yet.
@@ -105,7 +105,7 @@ func GetClient(c fiber.Ctx) error {
 			"total":            row.Total,
 			"currency":         row.Currency,
 			"status":           row.Status,
-			"effective_status": row.EffectiveStatus(),
+			"effective_status": row.EffectiveStatus(pending[row.ID]),
 			"paid_amount":      paid,
 			"balance":          row.Total.Sub(paid),
 		})
