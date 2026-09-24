@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Ca
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, localizeAgingBuckets, localizeMonthLabels } from "@/lib/utils";
-
+import { chartNumbers } from "@/lib/chartData";
 const T1 = "#2dd4bf";
 const T2 = "#14b8a6";
 const T3 = "#0f766e";
@@ -27,7 +27,7 @@ function RevenueChart({ series }) {
 
 function StatusDonutCard({ reports, total }) {
   const { t } = useLang();
-  const data = (reports?.statusBreakdown || []).filter((item) => item.value > 0);
+  const data = chartNumbers(reports?.statusBreakdown || [], ["value"]).filter((item) => item.value > 0);
   return <Card padding="lg" className="h-full flex flex-col"><CardHeader><div><CardTitle>{t("dash.invoiceStatus")}</CardTitle><CardDescription>{t("dash.byAmount")}</CardDescription></div></CardHeader>{!reports ? <ChartSkeleton /> : data.length ? <div className="flex-1 flex items-center gap-5"><div className="relative h-[172px] w-[172px] shrink-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" innerRadius={54} outerRadius={80} paddingAngle={2} stroke="none">{data.map((item) => <Cell key={item.key} fill={STATUS_COLORS[item.key]} />)}</Pie><Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [formatMoney(v), t("status." + (n || "draft").toLowerCase())]} /></PieChart></ResponsiveContainer><div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><span className="font-display text-2xl font-semibold text-[var(--ink)]">{total}</span><span className="text-[10px] text-[var(--ink-muted)]">{t("dash.invoices")}</span></div></div><div className="flex-1 min-w-0 space-y-3">{data.map((item) => <div key={item.key} className="flex items-center gap-2 text-sm"><span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: STATUS_COLORS[item.key] }} /><span className="text-[var(--ink-muted)] flex-1">{t("status." + (item.key || "draft"))}</span><span className="tabular font-semibold text-[var(--ink)]">{formatMoney(item.value)}</span></div>)}</div></div> : <div className="flex-1 flex items-center justify-center text-sm text-[var(--ink-muted)]">{t("dash.noInvoices")}</div>}</Card>;
 }
 
