@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.2.3] - 2026-09-24
+
+### Added
+- External service projects can create invoices through the API key-protected
+  `/api/v1/gateway/invoices` endpoint with an inline customer payload.
+- Integration invoice creation supports project-scoped external IDs and
+  idempotent retries through the `Idempotency-Key` header.
+- Swagger documentation and integration flow tests cover customer creation,
+  invoice creation, retries, and duplicate external IDs.
+
 ### Added
 - Sending an invoice now requires a client: the backend returns `422 client is
   required to send an invoice`, the detail page hides the "Sent" action, and the
