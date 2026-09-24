@@ -1,14 +1,13 @@
 package models
 
-import (
-	"time"
-)
+import "time"
 
 // GatewayProject is a downstream service allowed to create payment intents
 // through Invoiceman. Identity is derived server-side from the API key,
 // never from client-supplied fields.
 type GatewayProject struct {
-	Slug           string    `gorm:"primaryKey;size:64" db:"slug" json:"slug" validate:"required,lte=64"`
+	Slug string `gorm:"primaryKey;size:64" db:"slug" json:"slug" validate:"required,lte=64"`
+	GatewayOwner
 	Name           string    `gorm:"size:255" db:"name" json:"name" validate:"required,lte=255"`
 	APIKeyHash     string    `gorm:"size:128;uniqueIndex" db:"api_key_hash" json:"-"`
 	WebhookURL     string    `gorm:"size:1024" db:"webhook_url" json:"webhook_url" validate:"required,lte=1024"`

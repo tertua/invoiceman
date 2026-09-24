@@ -70,4 +70,23 @@ var migrations = []Migration{
 			return nil
 		},
 	},
+	{
+		Version:     9,
+		Description: "gateway project ownership and external invoice identities",
+		Down: func(db *gorm.DB) error {
+			if err := db.Migrator().DropColumn(&models.GatewayProject{}, "owner_user_id"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropColumn(&models.Client{}, "gateway_project_slug"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropColumn(&models.Client{}, "external_id"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropColumn(&models.Invoice{}, "gateway_project_slug"); err != nil {
+				return err
+			}
+			return db.Migrator().DropColumn(&models.Invoice{}, "external_id")
+		},
+	},
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/tertua/invoiceman/pkg/middleware"
 )
 
-// GatewayRoutes registers the service-to-service relay endpoints.
 func GatewayRoutes(a *fiber.App) {
 	GatewayRoutesAt(a, APILegacyPrefix)
 }
@@ -19,10 +18,10 @@ func GatewayRoutes(a *fiber.App) {
 func GatewayRoutesAt(a *fiber.App, prefix string) {
 	gateway := a.Group(prefix+"/gateway", middleware.GatewayLimiter(), middleware.GatewayAuth())
 	gateway.Post("/intents", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateIntent)
+	gateway.Post("/invoices", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateGatewayInvoice)
 	gateway.Get("/intents/:order_id", controllers.GetIntent)
 	gateway.Get("/transactions", controllers.ListMyTransactions)
 	gateway.Get("/deliveries", controllers.ListMyDeliveries)
-
 	admin := a.Group(prefix+"/admin/gateway", middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
 	admin.Post("/projects", controllers.CreateProject)
 	admin.Get("/projects", controllers.ListProjects)

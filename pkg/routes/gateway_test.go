@@ -110,7 +110,6 @@ func TestGatewayRelayFlow(t *testing.T) {
 	require.NotEmpty(t, apiKey)
 	require.NotEmpty(t, webhookSecret)
 
-	// Service creates an intent (identity from header, no slug in body).
 	headers := map[string]string{"X-Api-Key": apiKey}
 	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
 		`{"external_order_id":"topup_abc123","amount_idr":32000}`, headers, nil)
@@ -122,12 +121,13 @@ func TestGatewayRelayFlow(t *testing.T) {
 	assert.Equal(t, "midtrans", intent["gateway"])
 	resp.Body.Close()
 
-	// Unknown gateway webhooks are rejected.
+	// Service can create a customer and sent invoice atomically.
+	runGatewayInvoiceFlow(t, app, apiKey)
+
 	resp = doGatewayRequest(t, app, "POST", "/api/webhooks/bogus", `{}`, nil, nil)
 	assert.Equal(t, 404, resp.StatusCode)
 	resp.Body.Close()
 
-	// Missing key is rejected.
 	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
 		`{"external_order_id":"topup_nope","amount_idr":1000}`, nil, nil)
 	assert.Equal(t, 401, resp.StatusCode)

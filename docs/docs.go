@@ -1611,6 +1611,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/gateway/invoices": {
+            "post": {
+                "description": "Create an invoice using project-scoped external identifiers.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "create integration invoice",
+                "parameters": [
+                    {
+                        "description": "Invoice payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.GatewayInvoiceInput"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key",
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/gateway/transactions": {
             "get": {
                 "description": "List own payment intents.",
@@ -3075,8 +3117,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "amount": {
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "category": {
                     "type": "string",
@@ -3107,6 +3148,94 @@ const docTemplate = `{
                 "email": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "models.GatewayCustomerInput": {
+            "type": "object",
+            "required": [
+                "external_id",
+                "name"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "company": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "external_id": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "models.GatewayInvoiceInput": {
+            "type": "object",
+            "required": [
+                "currency",
+                "customer",
+                "external_id",
+                "items",
+                "status"
+            ],
+            "properties": {
+                "currency": {
+                    "type": "string",
+                    "maxLength": 3
+                },
+                "customer": {
+                    "$ref": "#/definitions/models.GatewayCustomerInput"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "issue_date": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/models.InvoiceItemInput"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "sent"
+                    ]
+                },
+                "tax_rate": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "terms": {
+                    "type": "string"
                 }
             }
         },
@@ -3162,8 +3291,7 @@ const docTemplate = `{
                     "maxLength": 3
                 },
                 "discount": {
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "due_date": {
                     "type": "string"
@@ -3212,8 +3340,7 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "rate": {
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
@@ -3248,8 +3375,7 @@ const docTemplate = `{
                     "maxLength": 255
                 },
                 "rate": {
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "unit": {
                     "type": "string",

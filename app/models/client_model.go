@@ -12,12 +12,13 @@ type Client struct {
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt *time.Time `db:"updated_at" json:"updated_at"`
 	UserID    uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
-	Name      string     `db:"name" json:"name" validate:"required,lte=255"`
-	Email     string     `db:"email" json:"email" validate:"omitempty,email,lte=255"`
-	Company   string     `db:"company" json:"company" validate:"lte=255"`
-	Phone     string     `db:"phone" json:"phone" validate:"lte=100"`
-	Address   string     `db:"address" json:"address"`
-	Notes     string     `db:"notes" json:"notes"`
+	ClientGatewayIdentity
+	Name    string `db:"name" json:"name" validate:"required,lte=255"`
+	Email   string `db:"email" json:"email" validate:"omitempty,email,lte=255"`
+	Company string `db:"company" json:"company" validate:"lte=255"`
+	Phone   string `db:"phone" json:"phone" validate:"lte=100"`
+	Address string `db:"address" json:"address"`
+	Notes   string `db:"notes" json:"notes"`
 }
 
 // ClientInput struct to describe create/update client payload.
@@ -39,7 +40,7 @@ type ClientListRow struct {
 
 // ClientStats struct to describe client detail statistics.
 type ClientStats struct {
-	Count       int             `json:"count"`
+	Count       int   `json:"count"`
 	TotalBilled Money `json:"totalBilled"`
 	Outstanding Money `json:"outstanding"`
 }

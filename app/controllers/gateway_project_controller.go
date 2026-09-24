@@ -42,17 +42,11 @@ func projectResponse(p models.GatewayProject, revealSecrets bool, apiKey string)
 // @Param request body models.CreateProjectInput true "Project payload"
 // @Success 201 {object} map[string]interface{}
 // @Router /admin/gateway/projects [post]
-
-// CreateProject registers a downstream project and returns secrets once.
-// @Description Register a downstream project.
-// @Summary create gateway project
-// @Tags Admin
-// @Accept json
-// @Produce json
-// @Param request body models.CreateProjectInput true "Project payload"
-// @Success 201 {object} map[string]interface{}
-// @Router /admin/gateway/projects [post]
 func CreateProject(c fiber.Ctx) error {
+	ownerID, err := currentGatewayOwner(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
+	}
 	input := &models.CreateProjectInput{}
 	if err := c.Bind().Body(input); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
@@ -86,6 +80,7 @@ func CreateProject(c fiber.Ctx) error {
 	now := time.Now()
 	p := &models.GatewayProject{
 		Slug:           input.Slug,
+		OwnerUserID:    &ownerID,
 		Name:           strings.TrimSpace(input.Name),
 		APIKeyHash:     relay.HashKey(apiKey),
 		WebhookURL:     strings.TrimSpace(input.WebhookURL),

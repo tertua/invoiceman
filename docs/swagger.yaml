@@ -67,7 +67,6 @@ definitions:
   models.ExpenseInput:
     properties:
       amount:
-        minimum: 0
         type: number
       category:
         maxLength: 100
@@ -93,6 +92,69 @@ definitions:
         type: string
     required:
     - email
+    type: object
+  models.GatewayCustomerInput:
+    properties:
+      address:
+        type: string
+      company:
+        maxLength: 255
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      external_id:
+        maxLength: 128
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      phone:
+        maxLength: 100
+        type: string
+    required:
+    - external_id
+    - name
+    type: object
+  models.GatewayInvoiceInput:
+    properties:
+      currency:
+        maxLength: 3
+        type: string
+      customer:
+        $ref: '#/definitions/models.GatewayCustomerInput'
+      discount:
+        type: number
+      due_date:
+        type: string
+      external_id:
+        maxLength: 128
+        type: string
+      issue_date:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/models.InvoiceItemInput'
+        minItems: 1
+        type: array
+      notes:
+        type: string
+      status:
+        enum:
+        - draft
+        - sent
+        type: string
+      tax_rate:
+        minimum: 0
+        type: number
+      terms:
+        type: string
+    required:
+    - currency
+    - customer
+    - external_id
+    - items
+    - status
     type: object
   models.IntentInput:
     properties:
@@ -128,7 +190,6 @@ definitions:
         maxLength: 3
         type: string
       discount:
-        minimum: 0
         type: number
       due_date:
         type: string
@@ -165,7 +226,6 @@ definitions:
         minimum: 0
         type: number
       rate:
-        minimum: 0
         type: number
     required:
     - description
@@ -190,7 +250,6 @@ definitions:
         maxLength: 255
         type: string
       rate:
-        minimum: 0
         type: number
       unit:
         maxLength: 50
@@ -1463,6 +1522,34 @@ paths:
             additionalProperties: true
             type: object
       summary: create invoice intent
+      tags:
+      - Gateway
+  /gateway/invoices:
+    post:
+      consumes:
+      - application/json
+      description: Create an invoice using project-scoped external identifiers.
+      parameters:
+      - description: Invoice payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.GatewayInvoiceInput'
+      - description: Replay protection key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: create integration invoice
       tags:
       - Gateway
   /gateway/transactions:
