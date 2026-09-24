@@ -20,8 +20,9 @@ type publicChargeMethod struct {
 // availableChargeMethods lists provider-neutral methods that can settle the
 // invoice balance, one entry per method, sorted by id. Providers whose
 // currency cannot be reached with the configured rate are skipped, so the
-// payer never sees a method that would fail at intent creation.
-func availableChargeMethods(invoiceCurrency string, balance, usdToIdr decimal.Decimal) []publicChargeMethod {
+// payer never sees a method that would fail at intent creation. The owner's
+// Midtrans allowlist narrows the Midtrans methods; nil allows them all.
+func availableChargeMethods(invoiceCurrency string, balance, usdToIdr decimal.Decimal, midtransAllow map[string]bool) []publicChargeMethod {
 	seen := make(map[string]bool)
 	out := make([]publicChargeMethod, 0)
 	for _, name := range gateway.Names() {
@@ -41,6 +42,9 @@ func availableChargeMethods(invoiceCurrency string, balance, usdToIdr decimal.De
 			if seen[method] {
 				continue
 			}
+			if name == "midtrans" && !methodAllowed(midtransAllow, method) {
+				continue
+			}
 			seen[method] = true
 			out = append(out, publicChargeMethod{
 				ID:       method,
@@ -52,4 +56,14 @@ func availableChargeMethods(invoiceCurrency string, balance, usdToIdr decimal.De
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+// methodAllowed reports whether method passes the Midtrans allowlist. A nil
+// allowlist means the owner never restricted methods, so everything is
+// allowed; an empty method (default Snap) is always allowed.
+func methodAllowed(allow map[string]bool, method string) bool {
+	if allow == nil || method == "" {
+		return true
+	}
+	return allow[method]
 }

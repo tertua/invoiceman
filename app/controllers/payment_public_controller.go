@@ -56,7 +56,7 @@ func publicPaymentData(db database.Queries, link models.PaymentLink) (fiber.Map,
 			"client_key":    configs.Get().Midtrans.ClientKey,
 			"is_production": configs.Get().Midtrans.IsProd,
 		},
-		"methods": availableChargeMethods(invoice.Currency, balance, settings.UsdToIdr),
+		"methods": availableChargeMethods(invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist(settings)),
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
 }

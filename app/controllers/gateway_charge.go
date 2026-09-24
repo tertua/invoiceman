@@ -20,6 +20,9 @@ type chargeSpec struct {
 	Currency      string
 	InvoiceAmount decimal.Decimal
 	UsdToIdr      decimal.Decimal
+	// EnabledMethods narrows the provider's selectable methods (neutral ids).
+	// Empty leaves the provider default untouched.
+	EnabledMethods []string
 }
 
 // buildCharge converts an invoice-currency balance into the currency the
@@ -52,13 +55,14 @@ func buildCharge(gw gateway.Gateway, invoiceCurrency string, balance, usdToIdr d
 // request shapes the spec as a gateway creation request.
 func (s chargeSpec) request(orderID, email, phone, method string) *gateway.CreateTxRequest {
 	return &gateway.CreateTxRequest{
-		OrderID:       orderID,
-		AmountMinor:   s.AmountMinor,
-		AmountDecimal: s.AmountDecimal,
-		Currency:      s.Currency,
-		Email:         email,
-		Phone:         phone,
-		PaymentMethod: method,
+		OrderID:        orderID,
+		AmountMinor:    s.AmountMinor,
+		AmountDecimal:  s.AmountDecimal,
+		Currency:       s.Currency,
+		Email:          email,
+		Phone:          phone,
+		PaymentMethod:  method,
+		EnabledMethods: s.EnabledMethods,
 	}
 }
 

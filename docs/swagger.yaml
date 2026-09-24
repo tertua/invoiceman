@@ -427,6 +427,10 @@ definitions:
         type: string
       logo_url:
         type: string
+      midtrans_methods:
+        description: MidtransMethods is a CSV of gateway method ids. Empty = all methods.
+        maxLength: 255
+        type: string
       phone:
         maxLength: 100
         type: string
@@ -2411,6 +2415,22 @@ paths:
       security:
       - SessionCookie: []
       summary: upload company logo
+      tags:
+      - Settings
+  /settings/methods:
+    get:
+      description: List selectable Midtrans payment methods.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: list midtrans methods
       tags:
       - Settings
   /webhooks/{gateway}:

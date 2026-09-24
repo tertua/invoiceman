@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.0] - 2026-09-24
+
+### Added
+- Choose which Midtrans payment methods your account offers. The setting lists
+  every method Midtrans supports; unchecking one hides it from payment links
+  and blocks it if requested directly. Leaving all checked keeps the previous
+  "every method" behaviour.
+
+### Changed
+- The public pay page now shows each method as a name-only button. The invoice
+  total is already shown above, so the per-button converted amount that
+  overlapped on every method is gone.
+
 ## [v0.4.0] - 2026-09-24
 
 ### Added

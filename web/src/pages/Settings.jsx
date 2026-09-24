@@ -14,6 +14,7 @@ import { authApi } from "@/api/auth";
 import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
 import NotificationsTab from "@/components/settings/NotificationsTab";
 import DefaultsCard from "@/components/settings/DefaultsCard";
+import MidtransMethodsCard from "@/components/settings/MidtransMethodsCard";
 import { cn } from "@/lib/utils";
 
 function FieldLabel({ children }) {
@@ -43,6 +44,7 @@ function CompanySection() {
         currency: settings.currency || "IDR",
         tax_rate: Number(settings.tax_rate) || 0,
         usd_to_idr: settings.usd_to_idr && Number(settings.usd_to_idr) ? String(settings.usd_to_idr) : "",
+        midtrans_methods: settings.midtrans_methods || "",
         invoice_prefix: settings.invoice_prefix || "INV-",
       });
     }
@@ -162,6 +164,7 @@ function CompanySection() {
       </Card>
 
       <DefaultsCard form={form} set={set} selectClass={selectClass} />
+      <MidtransMethodsCard value={form.midtrans_methods} onChange={(v) => setForm((f) => ({ ...f, midtrans_methods: v }))} />
       </fieldset>
 
       <div className="flex justify-end">

@@ -14,12 +14,24 @@ var ErrUnsupportedPaymentMethod = errors.New("payment method is not supported")
 // provider the registry is searched in deterministic name order so routing
 // never depends on Go map iteration.
 func Route(preferredProvider, method string) (Gateway, error) {
+	return RouteWhere(preferredProvider, method, nil)
+}
+
+// RouteWhere is Route with an extra predicate that can veto a provider for a
+// method (e.g. a per-account method allowlist). A nil predicate allows every
+// provider. The predicate is consulted before a provider is selected, so a
+// vetoed provider is skipped and the next candidate is tried.
+func RouteWhere(preferredProvider, method string, allow func(provider, method string) bool) (Gateway, error) {
 	method = strings.ToLower(strings.TrimSpace(method))
 	preferredProvider = strings.ToLower(strings.TrimSpace(preferredProvider))
+	permitted := func(name string) bool { return allow == nil || allow(name, method) }
 	if preferredProvider != "" {
 		g, err := Get(preferredProvider)
 		if err != nil {
 			return nil, err
+		}
+		if !permitted(preferredProvider) {
+			return nil, ErrUnsupportedPaymentMethod
 		}
 		if method == "" || supports(g, method) {
 			return g, nil
@@ -28,7 +40,7 @@ func Route(preferredProvider, method string) (Gateway, error) {
 	}
 	for _, name := range sortedNames() {
 		g, err := Get(name)
-		if err == nil && ProviderReady(g) && (method == "" || supports(g, method)) {
+		if err == nil && ProviderReady(g) && permitted(name) && (method == "" || supports(g, method)) {
 			return g, nil
 		}
 	}

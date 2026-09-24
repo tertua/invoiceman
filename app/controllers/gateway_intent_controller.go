@@ -93,14 +93,20 @@ func CreateIntent(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for nowpayments", nil)
 	}
 	usdToIdr := decimal.Zero
+	var ownerSettings models.Settings
+	haveOwnerSettings := false
 	if project.OwnerUserID != nil {
 		if s, err := db.GetSettings(*project.OwnerUserID); err == nil {
 			usdToIdr = s.UsdToIdr
+			ownerSettings, haveOwnerSettings = s, true
 		}
 	}
 	spec, err := buildCharge(gw, invoiceCurrency, balance, usdToIdr)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
+	}
+	if haveOwnerSettings {
+		applyEnabledMethods(&spec, gw.Name(), ownerSettings)
 	}
 	orderID, err := relayOrderID(project.Slug, input.ExternalOrderID)
 	if err != nil {
@@ -315,6 +321,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
+	applyEnabledMethods(&spec, gw.Name(), settings)
 	suffix, err := randHex(4)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create order", nil)

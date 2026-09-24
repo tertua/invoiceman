@@ -14,7 +14,7 @@ import (
 
 // multiProviderAdmin boots an app with a configured Midtrans and returns the
 // admin session plus a helper to register projects.
-func multiProviderAdmin(t *testing.T, app *fiber.App) ([]*http.Cookie, func(body string) map[string]interface{}) {
+func multiProviderAdmin(t *testing.T, app *fiber.App) (cookies []*http.Cookie, create func(body string) map[string]interface{}) {
 	t.Helper()
 	resp := doRequest(t, app, "POST", "/api/auth/register",
 		`{"name":"MP Admin","email":"mp-admin@example.com","password":"secret123"}`, nil)
@@ -24,7 +24,6 @@ func multiProviderAdmin(t *testing.T, app *fiber.App) ([]*http.Cookie, func(body
 		`{"email":"mp-admin@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 200, resp.StatusCode)
 	adminID := uuid.MustParse(decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string))
-	cookies := resp.Cookies()
 	resp.Body.Close()
 	db, err := database.OpenDBConnection()
 	require.NoError(t, err)
@@ -36,7 +35,7 @@ func multiProviderAdmin(t *testing.T, app *fiber.App) ([]*http.Cookie, func(body
 	cookies = resp.Cookies()
 	resp.Body.Close()
 
-	create := func(body string) map[string]interface{} {
+	create = func(body string) map[string]interface{} {
 		resp := doRequest(t, app, "POST", "/api/admin/gateway/projects", body, cookies)
 		require.Equal(t, 201, resp.StatusCode)
 		return decodeBody(t, resp)["project"].(map[string]interface{})

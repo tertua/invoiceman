@@ -25,18 +25,19 @@ type publicIntentRequest struct {
 // when they differ.
 func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method string) error {
 	method = normalizedPaymentMethod(method)
-	gw, err := routePublicGateway(method)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
-	}
 	settings, err := db.GetSettings(link.UserID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
+	}
+	gw, err := routePublicGateway(method, midtransMethodAllowlist(settings))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
 	}
 	spec, err := buildCharge(gw, invoice.Currency, balance, settings.UsdToIdr)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
+	applyEnabledMethods(&spec, gw.Name(), settings)
 	orderID := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
 	if existing, err := db.GetTransaction(orderID); err == nil {
 		return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
@@ -73,12 +74,15 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 
 // routePublicGateway resolves the provider for a public charge: an explicit
 // method routes across configured providers, an empty method keeps Midtrans
-// for backward compatibility.
-func routePublicGateway(method string) (gateway.Gateway, error) {
+// for backward compatibility. The owner's Midtrans allowlist vetoes Midtrans
+// for disallowed methods while leaving other providers untouched.
+func routePublicGateway(method string, allow map[string]bool) (gateway.Gateway, error) {
 	if method == "" {
 		return gateway.Get("midtrans")
 	}
-	return gateway.Route("", method)
+	return gateway.RouteWhere("", method, func(provider, m string) bool {
+		return provider != "midtrans" || methodAllowed(allow, m)
+	})
 }
 
 // publicIntentSuffix keeps distinct methods from colliding on one order id,

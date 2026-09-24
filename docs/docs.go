@@ -2952,6 +2952,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/settings/methods": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "List selectable Midtrans payment methods.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "list midtrans methods",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/webhooks/{gateway}": {
             "post": {
                 "description": "Handle a payment gateway notification.",
@@ -3601,6 +3627,11 @@ const docTemplate = `{
                 },
                 "logo_url": {
                     "type": "string"
+                },
+                "midtrans_methods": {
+                    "description": "MidtransMethods is a CSV of gateway method ids. Empty = all methods.",
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "phone": {
                     "type": "string",

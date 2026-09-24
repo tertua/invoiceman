@@ -95,9 +95,9 @@ func (w *Worker) reconcileOne(db *database.Queries, txn models.GatewayTransactio
 }
 
 // reconcileMethod mirrors the webhook payment label for locally settled rows.
-func reconcileMethod(gateway string) string {
-	if gateway == "" || gateway == "midtrans" {
+func reconcileMethod(provider string) string {
+	if provider == "" || provider == "midtrans" {
 		return "Midtrans"
 	}
-	return gateway
+	return provider
 }

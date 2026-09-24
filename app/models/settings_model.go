@@ -18,6 +18,7 @@ type Settings struct {
 	Currency    string    `db:"currency" json:"currency" validate:"required,lte=3"`
 	TaxRate     float64   `db:"tax_rate" json:"tax_rate" validate:"gte=0"`
 	SettingsGatewayConversion
+	SettingsGatewayMethods
 	InvoicePrefix string `db:"invoice_prefix" json:"invoice_prefix" validate:"required,lte=20"`
 	InvoiceSeq    int    `db:"invoice_seq" json:"-"`
 	Language      string `db:"language" json:"language" validate:"omitempty,oneof=en id"`

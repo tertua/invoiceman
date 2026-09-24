@@ -32,7 +32,9 @@ function Row({ label, value, bold }) {
 }
 
 // MethodPicker lets the payer choose how to pay; the gateway intent (and its
-// paylink) is only created after a method is chosen.
+// paylink) is only created after a method is chosen. The invoice total is
+// already shown above, so each button carries only the method name — the
+// provider's charged amount/currency is not repeated per button.
 function MethodPicker({ methods, lang, onPick, pending, error }) {
   return (
     <div className="mt-6">
@@ -50,14 +52,11 @@ function MethodPicker({ methods, lang, onPick, pending, error }) {
               className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--surface-2)] disabled:opacity-60"
             >
               <span className="text-sm font-semibold text-[var(--ink)]">{m.name}</span>
-              <span className="flex items-center gap-2">
-                <span className="text-sm tabular text-[var(--ink)]">{formatMoney(m.amount, m.currency)}</span>
-                {pending === m.id ? (
-                  <Loader2 size={15} className="animate-spin text-[var(--accent-strong)]" />
-                ) : (
-                  <ArrowRight size={15} className="text-[var(--accent-strong)]" />
-                )}
-              </span>
+              {pending === m.id ? (
+                <Loader2 size={15} className="animate-spin text-[var(--accent-strong)]" />
+              ) : (
+                <ArrowRight size={15} className="text-[var(--accent-strong)]" />
+              )}
             </button>
           ))}
         </div>

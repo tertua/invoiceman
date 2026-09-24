@@ -73,9 +73,7 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Get("/reports", controllers.GetReports)
 
 	// Settings routes (GET for any session user; PATCH restricted to admin/user):
-	route.Get("/settings", controllers.GetSettings)
-	route.Patch("/settings", middleware.RequireRoles("admin", "user"), controllers.UpdateSettings)
-	route.Post("/settings/logo", controllers.UploadLogo)
+	registerSettingsRoutes(route)
 
 	// Notification webhook routes (user-owned targets, e.g. n8n):
 	route.Get("/notifications/endpoints", controllers.ListEndpoints)

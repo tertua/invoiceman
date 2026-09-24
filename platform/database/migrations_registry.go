@@ -112,4 +112,11 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "usd_to_idr")
 		},
 	},
+	{
+		Version:     12,
+		Description: "per-account Midtrans payment method allowlist",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropColumn(&models.Settings{}, "midtrans_methods")
+		},
+	},
 }
