@@ -169,9 +169,11 @@ export default function InvoiceEditor() {
 
   async function onSave(overrideStatus) {
     setErr("");
+    const status = overrideStatus || form.status;
+    if (status === "sent" && !form.client_id) return setErr(t("api.client is required to send an invoice"));
     const payload = {
       ...form,
-      status: overrideStatus || form.status,
+      status,
       client_id: form.client_id || null,
       tax_rate: Number(form.tax_rate) || 0,
       discount: decimal(form.discount).toFixed(4),
@@ -179,11 +181,7 @@ export default function InvoiceEditor() {
       issue_date: form.issue_date || undefined,
       items: form.items
         .filter((it) => it.description.trim() || decimal(it.rate).greaterThan(0))
-        .map((it) => ({
-          description: it.description,
-          quantity: Number(it.quantity) || 0,
-           rate: decimal(it.rate).toFixed(4),
-        })),
+        .map((it) => ({ description: it.description, quantity: Number(it.quantity) || 0, rate: decimal(it.rate).toFixed(4) })),
     };
     setSaving(true);
     try {

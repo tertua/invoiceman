@@ -697,7 +697,7 @@ export const en = {
     "api.admin role cannot be changed": "admin role cannot be changed",
     "api.amount_idr or amount_decimal is required": "amount_idr or amount_decimal is required",
     "api.captcha verification failed": "captcha verification failed",
-    "api.client not found": "client not found",
+    "api.client is required to send an invoice": "client is required to send an invoice", "api.client not found": "client not found",
     "api.current password is wrong": "current password is wrong",
     "api.conflicting request with the same idempotency key is in progress": "conflicting request with the same idempotency key is in progress",
     "api.csrf token missing or mismatched": "csrf token missing or mismatched",

@@ -32,21 +32,14 @@ func TestClientInvoiceFlow(t *testing.T) {
 	assert.Equal(t, float64(0), detail["stats"].(map[string]interface{})["count"])
 
 	// Create an invoice: subtotal 250, discount 10, tax 10% -> total 264.
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"client_id": "`+clientID+`",
-		"status": "draft",
-		"issue_date": "2026-09-01",
-		"due_date": "2026-09-30",
-		"currency": "USD",
-		"tax_rate": 10,
-		"discount": 10,
-		"items": [
-			{"description": "Design", "quantity": 2, "rate": 100},
-			{"description": "Hosting", "quantity": 1, "rate": 50}
-		]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoice := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	spec := newInvoice()
+	spec.ClientID, spec.Status, spec.Currency = clientID, "draft", "USD"
+	spec.TaxRate, spec.Discount = 10, "10"
+	spec.Items = []invoiceLine{
+		{Description: "Design", Quantity: 2, Rate: "100"},
+		{Description: "Hosting", Quantity: 1, Rate: "50"},
+	}
+	invoice := createInvoice(t, app, cookies, spec)
 	assert.Equal(t, "264", invoice["total"])
 	assert.Equal(t, "draft", invoice["effective_status"])
 	assert.True(t, strings.HasPrefix(invoice["invoice_number"].(string), "INV-"))

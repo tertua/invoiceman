@@ -27,21 +27,12 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	userID := uuid.MustParse(decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string))
 	cookies := resp.Cookies()
 
-	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Acme","email":"billing@acme.test"}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
-
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"client_id":"`+clientID+`",
-		"status":"sent",
-		"issue_date":"2026-09-01",
-		"due_date":"2026-09-30",
-		"currency":"IDR",
-		"items":[{"description":"Service","quantity":1,"rate":100000}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoice := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	spec := newInvoice()
+	spec.ClientID = createClient(t, app, cookies, "Acme")
+	spec.Items = []invoiceLine{{Description: "Service", Quantity: 1, Rate: "100000"}}
+	invoice := createInvoice(t, app, cookies, spec)
 	invoiceID := invoice["id"].(string)
+	clientID := spec.ClientID
 	assert.Equal(t, "sent", invoice["effective_status"])
 
 	// The public link is minted before any money moves; it must stay usable
@@ -145,13 +136,10 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 
 	// While money is in flight the invoice is locked: editing totals or
 	// hard-deleting would orphan the provider payment, so both are 422.
-	editBody := `{
-		"status":"sent",
-		"issue_date":"2026-09-01",
-		"due_date":"2026-09-30",
-		"currency":"IDR",
-		"items":[{"description":"Service","quantity":1,"rate":100000}]
-	}`
+	edit := newInvoice()
+	edit.ClientID = clientID
+	edit.Items = []invoiceLine{{Description: "Service", Quantity: 1, Rate: "100000"}}
+	editBody := edit.body(t)
 	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID, editBody, cookies)
 	require.Equal(t, 422, resp.StatusCode)
 	assert.Equal(t, "invoice has a pending payment",

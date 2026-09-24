@@ -25,13 +25,9 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 		return nil, nil, errors.New("invalid due_date, expected YYYY-MM-DD")
 	}
 
-	var clientID *uuid.UUID
-	if input.ClientID != nil && *input.ClientID != "" {
-		parsed, err := uuid.Parse(*input.ClientID)
-		if err != nil {
-			return nil, nil, errors.New("invalid client_id")
-		}
-		clientID = &parsed
+	clientID, err := resolveClient(input)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	now := time.Now()
@@ -299,7 +295,7 @@ func CreateInvoice(c fiber.Ctx) error {
 
 	invoice, items, err := buildInvoice(userID, input)
 	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, err.Error(), nil)
+		return failInvoiceRule(c, err)
 	}
 
 	if invoice.ClientID != nil {

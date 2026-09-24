@@ -309,16 +309,10 @@ func TestLocalInvoiceWebhookSettlementIsAtomicAndIdempotent(t *testing.T) {
 	login := decodeBody(t, resp)
 	userID := uuid.MustParse(login["user"].(map[string]interface{})["id"].(string))
 	cookies := resp.Cookies()
-
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"status":"sent",
-		"issue_date":"2026-09-01",
-		"due_date":"2026-09-30",
-		"currency":"IDR",
-		"items":[{"description":"Settlement service","quantity":1,"rate":100000}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	spec := newInvoice()
+	spec.ClientID = createClient(t, app, cookies, "Settlement Payer")
+	spec.Items = []invoiceLine{{Description: "Settlement service", Quantity: 1, Rate: "100000"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	db, err := database.OpenDBConnection()
 	require.NoError(t, err)

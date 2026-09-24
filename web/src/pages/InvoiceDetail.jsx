@@ -136,12 +136,12 @@ export default function InvoiceDetail() {
           icon={Undo2}
           label={t("status.draft")}
         />
-        <StatusButton
+        {invoice.client_id ? <StatusButton
           active={invoice.status === "sent"}
           onClick={() => { if (window.confirm(t("invDetail.confirmMarkAs", { number: invoice.invoice_number, status: t("status.sent") }))) setStatus.mutate({ id, status: "sent" }); }}
           icon={Send}
           label={t("status.sent")}
-        />
+        /> : null}
         {setStatus.isPending && <Loader2 size={14} className="animate-spin text-[var(--ink-muted)]" />}
       </div>
       )}

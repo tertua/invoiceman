@@ -72,7 +72,7 @@ func UpdateInvoice(c fiber.Ctx) error {
 
 	invoice, items, err := buildInvoice(userID, input)
 	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, err.Error(), nil)
+		return failInvoiceRule(c, err)
 	}
 	invoice.ID = existing.ID
 	invoice.InvoiceNumber = existing.InvoiceNumber

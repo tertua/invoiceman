@@ -696,7 +696,7 @@ export const id = {
     "api.admin role cannot be changed": "Peran admin tidak dapat diubah.",
     "api.amount_idr or amount_decimal is required": "amount_idr atau amount_decimal wajib diisi.",
     "api.captcha verification failed": "Verifikasi captcha gagal.",
-    "api.client not found": "Klien tidak ditemukan.",
+    "api.client is required to send an invoice": "Klien wajib diisi untuk mengirim faktur.", "api.client not found": "Klien tidak ditemukan.",
     "api.current password is wrong": "Kata sandi saat ini salah.",
     "api.conflicting request with the same idempotency key is in progress": "Permintaan yang sama sedang diproses.",
     "api.csrf token missing or mismatched": "Token keamanan hilang atau tidak cocok.",

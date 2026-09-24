@@ -32,23 +32,13 @@ func TestDashboardCacheInvalidation(t *testing.T) {
 	countBefore := before["invoiceCount"]
 
 	// Create a client + invoice (both invalidate aggregates).
-	resp = doRequest(t, app, "POST", "/api/clients",
-		`{"name":"Cache Co","email":"c@cache.test"}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+	clientID := createClient(t, app, cookies, "Cache Co")
 
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"client_id": "`+clientID+`",
-		"status": "draft",
-		"issue_date": "2026-09-01",
-		"due_date": "2026-09-30",
-		"currency": "USD",
-		"tax_rate": 0,
-		"discount": 0,
-		"items": [{"description": "Work", "quantity": 1, "rate": 100}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	spec := newInvoice()
+	spec.ClientID, spec.Status, spec.Currency = clientID, "draft", "USD"
+	spec.TaxRate = 0
+	spec.Items = []invoiceLine{{Description: "Work", Quantity: 1, Rate: "100"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	after := dashboardStats()
 	assert.Equal(t, countBefore.(float64)+1, after["invoiceCount"])

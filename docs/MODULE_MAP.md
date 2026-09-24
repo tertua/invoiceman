@@ -18,7 +18,7 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 | Users (admin) | `admin_controller.go` | `admin_model.go`, `user_model.go` | private | `api/admin.js`, `hooks/useAdminUsers.js` | `AdminUsers.jsx` | `pkg/middleware/role_middleware.go` |
 | Clients | `client_controller.go` | `client_model.go` | private | `api/clients.js`, `hooks/useClients.js` | `Clients.jsx`, `ClientDetail.jsx`, `components/clients/ClientCharts.jsx` | — |
 | Items | `item_controller.go` | `item_model.go` | private | `api/items.js`, `hooks/useItems.js` | `Items.jsx` | — |
-| Invoices | `invoice_controller.go`, `invoice_delete_controller.go`, `invoice_update_controller.go`, `invoice_status_controller.go`, `invoice_status_helper.go` (pending edit/delete/status locked) | `invoice_model.go` | private | `api/invoices.js`, `hooks/useInvoices.js` | `Invoices.jsx`, `InvoiceDetail.jsx`, `InvoiceEditor.jsx`, `components/invoice/InvoiceDocument.jsx` + `InvoicePdfDownload*.jsx` | share-payment-link button on `InvoiceDetail.jsx`; `pending` effective status overlays a live gateway transaction (see Gateway relay) |
+| Invoices | `invoice_controller.go`, `invoice_delete_controller.go`, `invoice_update_controller.go`, `invoice_status_controller.go`, `invoice_status_helper.go`, `invoice_rules.go` (cross-field rules + pending edit/delete/status locks) | `invoice_model.go` | private | `api/invoices.js`, `hooks/useInvoices.js` | `Invoices.jsx`, `InvoiceDetail.jsx`, `InvoiceEditor.jsx`, `components/invoice/InvoiceDocument.jsx` + `InvoicePdfDownload*.jsx` | share-payment-link button on `InvoiceDetail.jsx`; `pending` effective status overlays a live gateway transaction (see Gateway relay) |
 | Expenses + receipts | `expense_controller.go` | `expense_model.go` (`receipt_url`) | private (`/expenses/:id/receipt`) | `api/expenses.js`, `hooks/useExpenses.js` | `Expenses.jsx` | `platform/storage` (local/S3, `logos/` public, `receipts/` private) |
 | Payments + links | `payment_controller.go`, `payment_public_controller.go` | `payment_model.go`, `payment_link_model.go` | private + public pay + webhooks | `api/payments.js`, `api/publicPay.js`, `hooks/usePayments.js` | `Payments.jsx`, `PublicPay.jsx` | `platform/mail` payment-link template, links are IDR-only, drafts blocked, pending lock on record/void/new link |
 | Gateway relay | `gateway_intent_controller.go`, `gateway_project_controller.go`, `gateway_shared.go`, `gateway_webhook_controller.go` | `gateway_project_model.go`, `gateway_transaction_model.go` | `gateway_routes.go` (`GatewayAuth`, API key) | `api/gateway.js`, `hooks/useGatewayAdmin.js` | `AdminGateway.jsx` | `platform/gateway` (provider iface), `platform/relay`, `platform/midtrans` (Snap + Core status API), `platform/nowpayments`, stale pendings reconciled by `platform/outbox` worker (`reconcile.go`) |
@@ -46,10 +46,13 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 
 `pkg/routes/routes_test.go` (`TestMain`, in-memory DB) plus:
 `flow_helpers_test.go` (shared `newTestApp`/`doRequest`/`decodeBody`),
-`flow_auth_test.go`, `flow_client_invoice_test.go`, `flow_catalog_test.go`,
-`flow_expense_test.go`, `flow_payment_test.go`, `flow_report_test.go`,
-`flow_misc_test.go`, `public_routes_test.go`, `private_routes_test.go`,
-`gateway_test.go`, `security_test.go`, `hardening_test.go`,
-`versioning_test.go`, `pagination_test.go`, `idempotency_test.go`,
-`metrics_test.go`, `storage_test.go`. Test data fixtures live in
-`pkg/routes/data/`. When behavior changes, extend the matching flow test.
+`flow_fixtures_test.go` (shared `newInvoice`/`createInvoice`/`createClient`
+builders — flow tests must not hand-write invoice JSON; `check:fixtures`
+enforces it), `flow_auth_test.go`, `flow_client_invoice_test.go`,
+`flow_catalog_test.go`, `flow_expense_test.go`, `flow_payment_test.go`,
+`flow_report_test.go`, `flow_send_rule_test.go`, `flow_misc_test.go`,
+`public_routes_test.go`, `private_routes_test.go`, `gateway_test.go`,
+`security_test.go`, `hardening_test.go`, `versioning_test.go`,
+`pagination_test.go`, `idempotency_test.go`, `metrics_test.go`,
+`storage_test.go`. Test data fixtures live in `pkg/routes/data/`. When
+behavior changes, extend the matching flow test.

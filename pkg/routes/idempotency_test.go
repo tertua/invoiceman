@@ -53,20 +53,12 @@ func TestPaymentIdempotency(t *testing.T) {
 	resp.Body.Close()
 	cookies := resp.Cookies()
 
-	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Idem Co"}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+	clientID := createClient(t, app, cookies, "Idem Co")
 
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"client_id": "`+clientID+`",
-		"status": "sent",
-		"issue_date": "2026-09-01",
-		"due_date": "2026-09-30",
-		"currency": "USD",
-		"items": [{"description": "Work", "quantity": 1, "rate": 100}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	spec := newInvoice()
+	spec.ClientID, spec.Currency = clientID, "USD"
+	spec.Items = []invoiceLine{{Description: "Work", Quantity: 1, Rate: "100"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	payload := fmt.Sprintf(`{"invoiceId":%q,"amount":40,"method":"cash","paid_on":"2026-09-10"}`, invoiceID)
 	key := "test-key-idempotency-1"

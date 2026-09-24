@@ -60,8 +60,8 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	if db.PendingInvoiceIDs(userID)[id] {
-		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
+	if err := guardInvoiceStatus(*db, userID, id, input.Status, existing.ClientID); err != nil {
+		return failInvoiceRule(c, err)
 	}
 
 	// Reopening a money-paid invoice must go through voiding payments so

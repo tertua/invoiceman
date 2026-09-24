@@ -27,20 +27,12 @@ func TestReportsFlow(t *testing.T) {
 	assert.Empty(t, emptyReport["topClients"])
 	assert.NotNil(t, emptyReport["statusBreakdown"])
 
-	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Report Client"}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+	clientID := createClient(t, app, cookies, "Report Client")
 
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"client_id":"`+clientID+`",
-		"status":"sent",
-		"issue_date":"`+today+`",
-		"due_date":"`+today+`",
-		"currency":"USD",
-		"items":[{"description":"Report work","quantity":1,"rate":100}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	spec := newInvoice()
+	spec.ClientID, spec.Currency, spec.Issue, spec.Due = clientID, "USD", today, today
+	spec.Items = []invoiceLine{{Description: "Report work", Quantity: 1, Rate: "100"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	resp = doRequest(t, app, "POST", "/api/payments", `{
 		"invoiceId":"`+invoiceID+`","amount":40,"method":"Cash","paid_on":"`+today+`"
@@ -64,15 +56,11 @@ func TestReportsFlow(t *testing.T) {
 	assert.Equal(t, "60", totals["outstanding"])
 
 	// A draft invoice must not inflate report outstanding or aging.
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"client_id":"`+clientID+`",
-		"status":"draft",
-		"issue_date":"`+today+`",
-		"due_date":"`+today+`",
-		"currency":"USD",
-		"items":[{"description":"Draft work","quantity":2,"rate":100}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
+	draft := newInvoice()
+	draft.ClientID, draft.Status, draft.Currency = clientID, "draft", "USD"
+	draft.Issue, draft.Due = today, today
+	draft.Items = []invoiceLine{{Description: "Draft work", Quantity: 2, Rate: "100"}}
+	createInvoice(t, app, cookies, draft)
 
 	resp = doRequest(t, app, "GET", "/api/reports", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)

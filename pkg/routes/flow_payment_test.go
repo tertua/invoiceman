@@ -17,17 +17,10 @@ func TestPaymentFlow(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	decodeBody(t, resp)
 	cookies := resp.Cookies()
-
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"status":"sent",
-		"issue_date":"2026-09-01",
-		"due_date":"2026-09-30",
-		"currency":"USD",
-		"items":[{"description":"Service","quantity":1,"rate":100}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoice := decodeBody(t, resp)["invoice"].(map[string]interface{})
-	invoiceID := invoice["id"].(string)
+	spec := newInvoice()
+	spec.ClientID, spec.Currency = createClient(t, app, cookies, "Payer"), "USD"
+	spec.Items = []invoiceLine{{Description: "Service", Quantity: 1, Rate: "100"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	resp = doRequest(t, app, "POST", "/api/payments", `{
 		"invoiceId":"`+invoiceID+`",
@@ -101,16 +94,10 @@ func TestPublicPaymentFlow(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	decodeBody(t, resp)
 	cookies := resp.Cookies()
-
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"status":"sent",
-		"issue_date":"2026-09-01",
-		"due_date":"2026-09-30",
-		"currency":"IDR",
-		"items":[{"description":"Public service","quantity":1,"rate":100000}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	spec := newInvoice()
+	spec.ClientID = createClient(t, app, cookies, "Public Payer")
+	spec.Items = []invoiceLine{{Description: "Public service", Quantity: 1, Rate: "100000"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
@@ -160,16 +147,11 @@ func TestPaidInvoiceLocked(t *testing.T) {
 	decodeBody(t, resp)
 	cookies := resp.Cookies()
 	today := time.Now().Format("2006-01-02")
-
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"status":"sent",
-		"issue_date":"`+today+`",
-		"due_date":"`+today+`",
-		"currency":"IDR",
-		"items":[{"description":"Locked service","quantity":1,"rate":50000}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	clientID := createClient(t, app, cookies, "Locked Payer")
+	spec := newInvoice()
+	spec.ClientID, spec.Issue, spec.Due = clientID, today, today
+	spec.Items = []invoiceLine{{Description: "Locked service", Quantity: 1, Rate: "50000"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
 
 	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
@@ -189,13 +171,10 @@ func TestPaidInvoiceLocked(t *testing.T) {
 	assert.NotNil(t, detail["payment_link"])
 
 	// Content edit is rejected.
-	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID, `{
-		"status":"sent",
-		"issue_date":"`+today+`",
-		"due_date":"`+today+`",
-		"currency":"IDR",
-		"items":[{"description":"Changed","quantity":1,"rate":1}]
-	}`, cookies)
+	edit := newInvoice()
+	edit.ClientID, edit.Issue, edit.Due = clientID, today, today
+	edit.Items = []invoiceLine{{Description: "Changed", Quantity: 1, Rate: "1"}}
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID, edit.body(t), cookies)
 	assert.Equal(t, 422, resp.StatusCode)
 	resp.Body.Close()
 
@@ -219,17 +198,13 @@ func TestDraftOnlinePaymentBlocked(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	decodeBody(t, resp)
 	cookies := resp.Cookies()
+	clientID := createClient(t, app, cookies, "Guarded Payer")
 
-	newInvoice := func(status string) string {
-		resp := doRequest(t, app, "POST", "/api/invoices", `{
-			"status":"`+status+`",
-			"issue_date":"2026-09-01",
-			"due_date":"2026-09-30",
-			"currency":"IDR",
-			"items":[{"description":"Guarded service","quantity":1,"rate":50000}]
-		}`, cookies)
-		require.Equal(t, 201, resp.StatusCode)
-		return decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	makeInvoice := func(status string) string {
+		spec := newInvoice()
+		spec.ClientID, spec.Status = clientID, status
+		spec.Items = []invoiceLine{{Description: "Guarded service", Quantity: 1, Rate: "50000"}}
+		return createInvoiceID(t, app, cookies, spec)
 	}
 	onlineErr := func(method, path, body string, cookies []*http.Cookie) (int, string) {
 		resp := doRequest(t, app, method, path, body, cookies)
@@ -241,7 +216,7 @@ func TestDraftOnlinePaymentBlocked(t *testing.T) {
 	}
 
 	// Draft invoices cannot get a public link at all.
-	draftID := newInvoice("draft")
+	draftID := makeInvoice("draft")
 	code, msg := onlineErr("POST", "/api/payments/online", `{"invoiceId":"`+draftID+`"}`, cookies)
 	assert.Equal(t, 422, code)
 	assert.Equal(t, "invoice is still a draft", msg)
@@ -250,7 +225,7 @@ func TestDraftOnlinePaymentBlocked(t *testing.T) {
 	assert.Equal(t, 422, code)
 
 	// A link created while sent stops working once the invoice goes back to draft.
-	sentID := newInvoice("sent")
+	sentID := makeInvoice("sent")
 	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+sentID+`"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	token := decodeBody(t, resp)["token"].(string)
@@ -265,7 +240,7 @@ func TestDraftOnlinePaymentBlocked(t *testing.T) {
 	assert.Equal(t, 422, code)
 
 	// Paid invoices cannot get new links...
-	paidID := newInvoice("sent")
+	paidID := makeInvoice("sent")
 	resp = doRequest(t, app, "POST", "/api/payments", `{
 		"invoiceId":"`+paidID+`","amount":50000,"method":"Cash","paid_on":"2026-09-21"
 	}`, cookies)
@@ -277,7 +252,7 @@ func TestDraftOnlinePaymentBlocked(t *testing.T) {
 	assert.Equal(t, "invoice is already paid", msg)
 
 	// ...but an existing link stays open as a receipt.
-	receiptID := newInvoice("sent")
+	receiptID := makeInvoice("sent")
 	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+receiptID+`"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	receiptToken := decodeBody(t, resp)["token"].(string)

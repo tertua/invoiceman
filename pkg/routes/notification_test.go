@@ -58,17 +58,11 @@ func TestNotificationFlow(t *testing.T) {
 	assert.Empty(t, decodeBody(t, resp)["endpoints"])
 
 	// Create an invoice: fans out invoice.created to the endpoint.
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"status": "draft",
-		"issue_date": "2026-09-01",
-		"due_date": "2026-09-30",
-		"currency": "IDR",
-		"tax_rate": 0,
-		"discount": 0,
-		"items": [{"description": "Design", "quantity": 1, "rate": 160000}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	invoiceID := decodeBody(t, resp)["invoice"].(map[string]interface{})["id"].(string)
+	clientID := createClient(t, app, cookies, "Notif Client")
+	first := newInvoice()
+	first.ClientID, first.Status, first.TaxRate = clientID, "draft", 0
+	first.Items = []invoiceLine{{Description: "Design", Quantity: 1, Rate: "160000"}}
+	invoiceID := createInvoiceID(t, app, cookies, first)
 
 	// Status change fans out invoice.status_updated.
 	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+"/status",
@@ -124,17 +118,11 @@ func TestNotificationFlow(t *testing.T) {
 	secondID = decodeBody(t, resp)["endpoint"].(map[string]interface{})["id"].(string)
 	calls = 0
 	targets = map[string]bool{}
-	resp = doRequest(t, app, "POST", "/api/invoices", `{
-		"status": "draft",
-		"issue_date": "2026-09-01",
-		"due_date": "2026-09-30",
-		"currency": "IDR",
-		"tax_rate": 0,
-		"discount": 0,
-		"items": [{"description": "Extra", "quantity": 1, "rate": 50000}]
-	}`, cookies)
-	require.Equal(t, 201, resp.StatusCode)
-	decodeBody(t, resp)
+	extra := newInvoice()
+	extra.ClientID, extra.Status = clientID, "draft"
+	extra.TaxRate = 0
+	extra.Items = []invoiceLine{{Description: "Extra", Quantity: 1, Rate: "50000"}}
+	createInvoice(t, app, cookies, extra)
 	w.ProcessOnce(context.Background())
 	assert.Equal(t, 1, calls, "only the all-events endpoint should receive invoice.created")
 	assert.True(t, targets["https://n8n.example/webhook/invoiceman"])
