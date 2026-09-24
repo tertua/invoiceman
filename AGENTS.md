@@ -37,7 +37,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI when a
 - `make test` runs clean, gocritic, gosec, golangci-lint, then coverage tests. After any `go.mod`/`go.sum` change, run `govulncheck ./...` before committing (CI also runs it on push/PR plus weekly on schedule). `make build` depends on `make test`; `make run` runs `swag init`, builds, then starts the API. Lint scope is intentional: `.golangci.yml` excludes vendored/test noise and the `critic` target lists packages explicitly with `hugeParam,rangeValCopy` disabled — don't revert to bare `./...`.
 - Swagger annotations changed: run `swag init`; generated `docs/` files are committed.
 - Frontend CI uses Node 22: `npm ci`, then `npm --prefix web run lint`, `npm --prefix web run build`, and `npm --prefix web run check:bundles:strict`. `make web.check` runs these frontend checks.
-- `VERSION` is canonical; after changing it run `npm --prefix web run sync:version` to sync `web/package.json`.
+- `VERSION` is canonical; after changing it run `npm --prefix web run sync:version`, which syncs `web/package.json` and ensures `web/CHANGELOG.md` has a `## [vX.Y.Z]` section (auto-inserts a stub, then fill in the notes). CI (`version-check.yml`) runs the same check and fails on a missing or still-stubbed section.
 
 ## Local dev run (this machine)
 

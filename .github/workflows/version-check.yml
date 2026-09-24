@@ -5,11 +5,15 @@ on:
     paths:
       - "VERSION"
       - "web/package.json"
+      - "web/CHANGELOG.md"
+      - "scripts/sync-version.mjs"
       - ".github/workflows/version-check.yml"
   pull_request:
     paths:
       - "VERSION"
       - "web/package.json"
+      - "web/CHANGELOG.md"
+      - "scripts/sync-version.mjs"
       - ".github/workflows/version-check.yml"
 
 jobs:
@@ -17,10 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          expected="$(tr -d ' \t\r\n' < VERSION)"
-          actual="$(node -p "require('./web/package.json').version")"
-          if [ "$expected" != "$actual" ]; then
-            echo "VERSION ($expected) != web/package.json ($actual). Run: npm --prefix web run sync:version"
-            exit 1
-          fi
+      # Fails when VERSION, web/package.json and web/CHANGELOG.md disagree:
+      # the changelog needs a "## [vX.Y.Z]" section with real notes.
+      - run: node scripts/sync-version.mjs --check
