@@ -156,6 +156,20 @@ definitions:
     - items
     - status
     type: object
+  models.GatewayMethod:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.GatewayMethodsResponse:
+    properties:
+      methods:
+        items:
+          $ref: '#/definitions/models.GatewayMethod'
+        type: array
+    type: object
   models.IntentInput:
     properties:
       amount_decimal:
@@ -180,6 +194,20 @@ definitions:
         maxLength: 32
         type: string
       payment_method:
+        description: Keep the oneof list in sync with gateway.IDs(); the enum test
+          guards it.
+        enum:
+        - bank_transfer
+        - qris
+        - gopay
+        - convenience_store
+        - credit_card
+        - crypto
+        - akulaku
+        - klik_bca
+        - bca_klikpay
+        - cimb_clicks
+        - danamon_online
         maxLength: 32
         type: string
     required:
@@ -1498,35 +1526,6 @@ paths:
       summary: get payment intent
       tags:
       - Gateway
-  /gateway/invoice-intents:
-    post:
-      consumes:
-      - application/json
-      description: Create a Snap transaction for a local invoice.
-      parameters:
-      - description: Invoice ID
-        in: body
-        name: request
-        required: true
-        schema:
-          additionalProperties:
-            type: string
-          type: object
-      - description: Replay protection key (uuid per payment intent)
-        in: header
-        name: Idempotency-Key
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-      summary: create invoice intent
-      tags:
-      - Gateway
   /gateway/invoices:
     post:
       consumes:
@@ -1564,8 +1563,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/models.GatewayMethodsResponse'
       summary: list payment methods
       tags:
       - Gateway
@@ -1746,6 +1744,30 @@ paths:
       security:
       - SessionCookie: []
       summary: update an invoice
+      tags:
+      - Invoices
+  /invoices/{id}/intents:
+    post:
+      description: Create a Snap transaction for a local invoice.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Replay protection key (uuid per payment intent)
+        in: header
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: create invoice intent
       tags:
       - Invoices
   /invoices/{id}/status:
@@ -2415,29 +2437,6 @@ paths:
             additionalProperties: true
             type: object
       summary: gateway webhook
-      tags:
-      - Webhooks
-  /webhooks/midtrans:
-    post:
-      consumes:
-      - application/json
-      description: Handle Midtrans payment notification.
-      parameters:
-      - description: Midtrans notification
-        in: body
-        name: request
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      summary: midtrans webhook
       tags:
       - Webhooks
 securityDefinitions:

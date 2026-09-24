@@ -38,9 +38,9 @@ func PublicRoutesAt(a *fiber.App, prefix string) {
 	route.Get("/config", controllers.AppConfig) // public branding for the SPA
 
 	// Provider webhooks (HMAC-verified, but still rate-limited per IP).
+	// One generic handler serves every provider: POST /webhooks/midtrans and
+	// POST /webhooks/nowpayments both resolve here, so per-provider URLs are
+	// stable without duplicate routes.
 	webhooks := middleware.WebhookLimiter()
-	// Single Midtrans notification URL for the whole account (central relay).
-	route.Post("/webhooks/midtrans", webhooks, controllers.HandleMidtransWebhook)
-	// Generic provider webhooks for current and future gateways (e.g. crypto).
 	route.Post("/webhooks/:gateway", webhooks, controllers.HandleGatewayWebhook)
 }

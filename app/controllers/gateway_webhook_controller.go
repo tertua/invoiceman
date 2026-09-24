@@ -18,19 +18,6 @@ import (
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
-// HandleMidtransWebhook is the single Midtrans notification URL.
-// @Description Handle Midtrans payment notification.
-// @Summary midtrans webhook
-// @Tags Webhooks
-// @Accept json
-// @Produce json
-// @Param request body object true "Midtrans notification"
-// @Success 200 {object} map[string]interface{}
-// @Router /webhooks/midtrans [post]
-func HandleMidtransWebhook(c fiber.Ctx) error {
-	return handleGatewayWebhook(c, "midtrans")
-}
-
 // HandleGatewayWebhook handles notifications for any registered gateway.
 // @Description Handle a payment gateway notification.
 // @Summary gateway webhook

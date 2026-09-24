@@ -1567,50 +1567,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/gateway/invoice-intents": {
-            "post": {
-                "description": "Create a Snap transaction for a local invoice.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Gateway"
-                ],
-                "summary": "create invoice intent",
-                "parameters": [
-                    {
-                        "description": "Invoice ID",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Replay protection key (uuid per payment intent)",
-                        "name": "Idempotency-Key",
-                        "in": "header"
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/gateway/invoices": {
             "post": {
                 "description": "Create an invoice using project-scoped external identifiers.",
@@ -1667,8 +1623,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/models.GatewayMethodsResponse"
                         }
                     }
                 }
@@ -1945,6 +1900,42 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{id}/intents": {
+            "post": {
+                "description": "Create a Snap transaction for a local invoice.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "create invoice intent",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay protection key (uuid per payment intent)",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2961,41 +2952,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/webhooks/midtrans": {
-            "post": {
-                "description": "Handle Midtrans payment notification.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "midtrans webhook",
-                "parameters": [
-                    {
-                        "description": "Midtrans notification",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/webhooks/{gateway}": {
             "post": {
                 "description": "Handle a payment gateway notification.",
@@ -3260,6 +3216,28 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GatewayMethod": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GatewayMethodsResponse": {
+            "type": "object",
+            "properties": {
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GatewayMethod"
+                    }
+                }
+            }
+        },
         "models.IntentInput": {
             "type": "object",
             "required": [
@@ -3295,8 +3273,22 @@ const docTemplate = `{
                     "maxLength": 32
                 },
                 "payment_method": {
+                    "description": "Keep the oneof list in sync with gateway.IDs(); the enum test guards it.",
                     "type": "string",
-                    "maxLength": 32
+                    "maxLength": 32,
+                    "enum": [
+                        "bank_transfer",
+                        "qris",
+                        "gopay",
+                        "convenience_store",
+                        "credit_card",
+                        "crypto",
+                        "akulaku",
+                        "klik_bca",
+                        "bca_klikpay",
+                        "cimb_clicks",
+                        "danamon_online"
+                    ]
                 }
             }
         },

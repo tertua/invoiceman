@@ -38,6 +38,11 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Patch("/invoices/:id", controllers.UpdateInvoice)              // update an invoice
 	route.Patch("/invoices/:id/status", controllers.UpdateInvoiceStatus) // update invoice status
 	route.Delete("/invoices/:id", controllers.DeleteInvoice)             // delete an invoice
+	// Local Snap intent for one invoice (session user, no service key).
+	// Kept under /invoices so the /gateway API-key group cannot shadow it.
+	route.Post("/invoices/:id/intents",
+		middleware.Idempotency(middleware.SessionIdempotencyScope),
+		middleware.WithAITimeout(controllers.CreateInvoiceIntent))
 
 	// Dashboard routes:
 	route.Get("/dashboard", controllers.GetDashboard) // get dashboard aggregates
@@ -87,11 +92,6 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Post("/ai/business-summary", middleware.WithAITimeout(controllers.BusinessSummary))
 	route.Post("/ai/payment-reminder", middleware.WithAITimeout(controllers.PaymentReminder))
 	route.Post("/ai/write-note", middleware.WithAITimeout(controllers.WriteNote))
-
-	// Local invoice Snap intents (session user, no service key needed).
-	route.Post("/gateway/invoice-intents",
-		middleware.Idempotency(middleware.SessionIdempotencyScope),
-		middleware.WithAITimeout(controllers.CreateInvoiceIntent))
 
 	admin := a.Group(prefix+"/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
 	admin.Get("/users", controllers.ListUsers)

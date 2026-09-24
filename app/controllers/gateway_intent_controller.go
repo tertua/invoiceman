@@ -242,28 +242,22 @@ func GatewayStatus(c fiber.Ctx) error {
 }
 
 // CreateInvoiceIntent creates a Snap transaction for a local invoice.
-// Uses the session user (dashboard), not a service API key.
+// Uses the session user (dashboard), not a service API key. It lives under the
+// invoices namespace so it is never swept by the API-key gateway middleware.
 // @Description Create a Snap transaction for a local invoice.
 // @Summary create invoice intent
-// @Tags Gateway
-// @Accept json
+// @Tags Invoices
 // @Produce json
-// @Param request body map[string]string true "Invoice ID"
+// @Param id path string true "Invoice ID"
 // @Success 201 {object} map[string]interface{}
 // @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
-// @Router /gateway/invoice-intents [post]
+// @Router /invoices/{id}/intents [post]
 func CreateInvoiceIntent(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	var input struct {
-		InvoiceID string `json:"invoiceId"`
-	}
-	if err := c.Bind().Body(&input); err != nil || input.InvoiceID == "" {
-		return utils.Fail(c, fiber.StatusBadRequest, "invoiceId is required", nil)
-	}
-	invoiceID, err := uuid.Parse(input.InvoiceID)
+	invoiceID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 	}

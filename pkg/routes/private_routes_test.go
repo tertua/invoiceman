@@ -63,7 +63,7 @@ func TestPrivateRoutes(t *testing.T) {
 		{
 			description:  "create invoice intent without cookie",
 			method:       "POST",
-			route:        "/api/gateway/invoice-intents",
+			route:        "/api/invoices/00000000-0000-0000-0000-000000000000/intents",
 			expectedCode: 401,
 		},
 		{
