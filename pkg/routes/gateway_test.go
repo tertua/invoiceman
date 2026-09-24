@@ -120,7 +120,6 @@ func TestGatewayRelayFlow(t *testing.T) {
 	assert.Equal(t, "snap-tok-1", intent["snap_token"])
 	assert.Equal(t, "midtrans", intent["gateway"])
 	resp.Body.Close()
-
 	// Service can create a customer and sent invoice atomically.
 	runGatewayInvoiceFlow(t, app, apiKey)
 

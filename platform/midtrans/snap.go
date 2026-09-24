@@ -57,7 +57,7 @@ type SnapResponse struct {
 
 // CreateSnapTransaction creates a Snap transaction for orderID/amountIDR.
 // Customer details are best-effort; empty email/phone are omitted.
-func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amountIDR int64, email, phone string) (*SnapResponse, error) {
+func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amountIDR int64, email, phone string, methods []string) (*SnapResponse, error) {
 	if cfg.ServerKey == "" {
 		return nil, ErrNotConfigured
 	}
@@ -73,21 +73,7 @@ func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amou
 		customer["phone"] = strings.TrimSpace(phone)
 	}
 
-	body, err := json.Marshal(map[string]interface{}{
-		"transaction_details": map[string]interface{}{
-			"order_id":     orderID,
-			"gross_amount": amountIDR,
-		},
-		"customer_details": customer,
-		"item_details": []map[string]interface{}{
-			{
-				"id":       orderID,
-				"price":    amountIDR,
-				"quantity": 1,
-				"name":     "Payment " + orderID,
-			},
-		},
-	})
+	body, err := snapPayload(orderID, amountIDR, customer, methods)
 	if err != nil {
 		return nil, err
 	}

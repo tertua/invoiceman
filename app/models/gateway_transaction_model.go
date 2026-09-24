@@ -23,9 +23,10 @@ const (
 // ExternalOrderID preserves the downstream id (e.g. one-api topup_*)
 // so downstream services can match without migrating their schema.
 type GatewayTransaction struct {
-	OrderID         string     `gorm:"primaryKey;size:128" db:"order_id" json:"order_id"`
-	ProjectSlug     string     `gorm:"size:64;index" db:"project_slug" json:"project_slug"`
-	Gateway         string     `gorm:"size:32;index;default:midtrans" db:"gateway" json:"gateway"`
+	OrderID     string `gorm:"primaryKey;size:128" db:"order_id" json:"order_id"`
+	ProjectSlug string `gorm:"size:64;index" db:"project_slug" json:"project_slug"`
+	Gateway     string `gorm:"size:32;index;default:midtrans" db:"gateway" json:"gateway"`
+	GatewayTransactionPayment
 	ExternalOrderID string     `gorm:"size:128;index" db:"external_order_id" json:"external_order_id"`
 	InvoiceID       *uuid.UUID `gorm:"type:uuid;index" db:"invoice_id" json:"invoice_id"`
 	UserID          *uuid.UUID `gorm:"type:uuid;index" db:"user_id" json:"user_id"`
@@ -46,21 +47,6 @@ type GatewayTransaction struct {
 	PaidAt          *time.Time `db:"paid_at" json:"paid_at"`
 	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
-}
-
-// IntentInput is the service-to-service payload for creating a payment.
-// Project identity comes from the API key header, not from this body.
-// Gateway defaults to the project's default_gateway ("midtrans").
-// Fiat flows use amount_idr; fractional/crypto flows use amount_decimal
-// with currency (e.g. "0.0005", "BTC").
-type IntentInput struct {
-	ExternalOrderID string `json:"external_order_id" validate:"required,lte=128"`
-	Gateway         string `json:"gateway" validate:"omitempty,lte=32"`
-	AmountIDR       int64  `json:"amount_idr" validate:"gte=0"`
-	AmountDecimal   string `json:"amount_decimal" validate:"omitempty,lte=64"`
-	Currency        string `json:"currency" validate:"omitempty,lte=8"`
-	CustomerEmail   string `json:"customer_email" validate:"omitempty,email,lte=255"`
-	CustomerPhone   string `json:"customer_phone" validate:"omitempty,lte=64"`
 }
 
 // GatewayEvent stores the raw Midtrans notification for audit.

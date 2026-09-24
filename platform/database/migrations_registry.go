@@ -89,4 +89,11 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.Invoice{}, "external_id")
 		},
 	},
+	{
+		Version:     10,
+		Description: "gateway transaction payment method",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "payment_method")
+		},
+	},
 }

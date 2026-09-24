@@ -1,11 +1,6 @@
 package midtrans
 
-import (
-	"context"
-	"errors"
-
-	"github.com/tertua/invoiceman/platform/gateway"
-)
+import "github.com/tertua/invoiceman/platform/gateway"
 
 // GatewayName is the registry name for Midtrans.
 const GatewayName = "midtrans"
@@ -16,18 +11,8 @@ type Gateway struct{}
 // Name returns the registry name.
 func (Gateway) Name() string { return GatewayName }
 
-// CreateTransaction creates a Snap transaction via the gateway-agnostic request.
-func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxRequest) (*gateway.CreateTxResponse, error) {
-	cfg := FromEnv()
-	snap, err := CreateSnapTransaction(ctx, cfg, req.OrderID, req.AmountMinor, req.Email, req.Phone)
-	if err != nil {
-		if errors.Is(err, ErrNotConfigured) {
-			return nil, gateway.ErrNotConfigured
-		}
-		return nil, err
-	}
-	return &gateway.CreateTxResponse{Token: snap.Token, RedirectURL: snap.RedirectURL}, nil
-}
+// Configured reports whether Midtrans credentials are present.
+func (Gateway) Configured() bool { return FromEnv().ServerKey != "" }
 
 // ParseAndVerify decodes and verifies a Midtrans notification body.
 func (Gateway) ParseAndVerify(raw []byte) (*gateway.NotificationResult, error) {
@@ -47,6 +32,7 @@ func (Gateway) ParseAndVerify(raw []byte) (*gateway.NotificationResult, error) {
 		TransactionID: notif.TransactionID,
 		Status:        MapStatus(notif.TransactionStatus),
 		PaymentType:   notif.PaymentType,
+		PaymentMethod: StandardizePaymentType(notif.PaymentType),
 		GrossMinor:    notif.GrossAmountValue().IntPart(),
 		GrossDecimal:  notif.GrossAmount,
 		Currency:      "IDR",

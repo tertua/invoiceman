@@ -48,17 +48,9 @@ func relayOrderID(slug, external string) (string, error) {
 // localOrderID builds the gateway order id for a local invoice. The PAY-
 // prefix keeps it distinct from the user-configurable invoice number prefix
 // (default INV-), avoiding stutter like INV-INV-000042.
-
-// localOrderID builds the gateway order id for a local invoice. The PAY-
-// prefix keeps it distinct from the user-configurable invoice number prefix
-// (default INV-), avoiding stutter like INV-INV-000042.
 func localOrderID(invoiceNumber, suffix string) string {
 	return "PAY-" + strings.ReplaceAll(invoiceNumber, " ", "") + "-" + suffix
 }
-
-// legacyLocalOrderID is the pre-rename order id format (INV- prefix). It is
-// only used to reuse intents created before the rename instead of
-// duplicating them at the gateway.
 
 // legacyLocalOrderID is the pre-rename order id format (INV- prefix). It is
 // only used to reuse intents created before the rename instead of
@@ -73,6 +65,7 @@ func intentResponse(t models.GatewayTransaction) fiber.Map {
 		"external_order_id": t.ExternalOrderID,
 		"project_slug":      t.ProjectSlug,
 		"gateway":           t.Gateway,
+		"payment_method":    t.PaymentMethod,
 		"amount_idr":        t.AmountIDR,
 		"amount_decimal":    t.AmountDecimal,
 		"currency":          t.Currency,
@@ -85,8 +78,6 @@ func intentResponse(t models.GatewayTransaction) fiber.Map {
 }
 
 // resolveGateway picks the provider: explicit request > project default > midtrans.
-
-// resolveGateway picks the provider: explicit request > project default > midtrans.
 func resolveGateway(requested, projectDefault string) string {
 	if name := strings.ToLower(strings.TrimSpace(requested)); name != "" {
 		return name
@@ -96,15 +87,3 @@ func resolveGateway(requested, projectDefault string) string {
 	}
 	return "midtrans"
 }
-
-// CreateIntent creates a Midtrans Snap transaction for a downstream project.
-// Project identity is taken from the API key (GatewayAuth), never from the body.
-// @Description Create a relayed payment intent.
-// @Summary create payment intent
-// @Tags Gateway
-// @Accept json
-// @Produce json
-// @Param request body models.IntentInput true "Intent payload"
-// @Success 201 {object} map[string]interface{}
-// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
-// @Router /gateway/intents [post]

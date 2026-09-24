@@ -1653,6 +1653,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/gateway/methods": {
+            "get": {
+                "description": "List payment methods without exposing provider names.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gateway"
+                ],
+                "summary": "list payment methods",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/gateway/transactions": {
             "get": {
                 "description": "List own payment intents.",
@@ -3270,6 +3291,10 @@ const docTemplate = `{
                     "maxLength": 128
                 },
                 "gateway": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "payment_method": {
                     "type": "string",
                     "maxLength": 32
                 }

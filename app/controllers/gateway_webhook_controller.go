@@ -18,24 +18,6 @@ import (
 	"github.com/tertua/invoiceman/platform/relay"
 )
 
-// RelayPayload is the normalized v1 payload forwarded to downstream projects.
-// Gateway identifies the provider (midtrans today, crypto tomorrow);
-// fiat flows use gross_amount_idr, fractional flows use amount_decimal+currency.
-type RelayPayload struct {
-	EventID         string  `json:"event_id"`
-	OrderID         string  `json:"order_id"`
-	ProjectSlug     string  `json:"project_slug"`
-	Gateway         string  `json:"gateway"`
-	ExternalOrderID string  `json:"external_order_id"`
-	Status          string  `json:"status"`
-	GrossAmountIDR  float64 `json:"gross_amount_idr"`
-	AmountDecimal   string  `json:"amount_decimal"`
-	Currency        string  `json:"currency"`
-	TransactionID   string  `json:"transaction_id"`
-	PaymentType     string  `json:"payment_type"`
-	PaidAt          string  `json:"paid_at"`
-}
-
 // HandleMidtransWebhook is the single Midtrans notification URL.
 // @Description Handle Midtrans payment notification.
 // @Summary midtrans webhook
@@ -119,6 +101,9 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 	txn.Status = status
 	txn.MidtransTxnID = notif.TransactionID
 	txn.PaymentType = notif.PaymentType
+	if txn.PaymentMethod == "" {
+		txn.PaymentMethod = notif.PaymentMethod
+	}
 	txn.RawNotification = string(raw)
 	txn.UpdatedAt = time.Now()
 	if status == models.GatewayStatusSuccess {
@@ -126,7 +111,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		txn.PaidAt = &now
 	}
 	if status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
-		if err := db.SaveTransactionAndSettleInvoice(&txn, models.MoneyFromFloat(float64(notif.GrossMinor)), gatewayDisplayName(gatewayName)); err != nil {
+		if err := db.SaveTransactionAndSettleInvoice(&txn, models.MoneyFromMinor(notif.GrossMinor), gatewayDisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
 		_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
@@ -150,18 +135,19 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true})
 	}
 
-	payload, _ := json.Marshal(RelayPayload{
+	payload, _ := json.Marshal(relay.Payload{
 		EventID:         "evt_" + eventID,
 		OrderID:         txn.OrderID,
 		ProjectSlug:     txn.ProjectSlug,
 		Gateway:         gatewayName,
 		ExternalOrderID: txn.ExternalOrderID,
 		Status:          status,
-		GrossAmountIDR:  float64(notif.GrossMinor),
+		GrossAmountIDR:  notif.GrossMinor,
 		AmountDecimal:   notif.GrossDecimal,
 		Currency:        notif.Currency,
 		TransactionID:   notif.TransactionID,
 		PaymentType:     notif.PaymentType,
+		PaymentMethod:   txn.PaymentMethod,
 		PaidAt:          time.Now().UTC().Format(time.RFC3339),
 	})
 	delivery := &models.WebhookDelivery{

@@ -7,23 +7,21 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 // payment is a NOWPayments payment object (IPN body and status fetch share
-// the shape). Amounts decode with UseNumber so crypto precision is kept.
+// the shape). Amounts decode as exact decimals so crypto precision is kept.
 type payment struct {
 	PaymentID     string
 	OrderID       string
 	Status        string
-	PayAddress    string
-	PriceAmount   float64
+	PriceAmount   decimal.Decimal
 	PriceCurrency string
 	PayAmount     string
 	PayCurrency   string
@@ -70,13 +68,14 @@ func VerifyNotification(ctx context.Context, cfg Config, raw []byte) (*gateway.N
 
 	paymentType := strings.ToLower(strings.TrimSpace(confirmed.PayCurrency))
 	if paymentType == "" {
-		paymentType = "crypto"
+		paymentType = gateway.MethodCrypto
 	}
 	return &gateway.NotificationResult{
 		OrderID:       confirmed.OrderID,
 		TransactionID: confirmed.PaymentID,
 		Status:        MapStatus(confirmed.Status),
 		PaymentType:   paymentType,
+		PaymentMethod: gateway.MethodCrypto,
 		GrossMinor:    priceMinor(confirmed.PriceAmount, confirmed.PriceCurrency),
 		GrossDecimal:  confirmed.PayAmount,
 		Currency:      strings.ToUpper(strings.TrimSpace(confirmed.PayCurrency)),
@@ -91,12 +90,11 @@ func decodePayment(raw []byte) (*payment, error) {
 	if err := dec.Decode(&doc); err != nil {
 		return nil, gateway.ErrInvalidPayload
 	}
-	price, _ := toFloat(doc["price_amount"])
+	price, _ := toDecimal(doc["price_amount"])
 	return &payment{
 		PaymentID:     stringValue(doc["payment_id"]),
 		OrderID:       stringValue(doc["order_id"]),
 		Status:        stringValue(doc["payment_status"]),
-		PayAddress:    stringValue(doc["pay_address"]),
 		PriceAmount:   price,
 		PriceCurrency: strings.ToUpper(stringValue(doc["price_currency"])),
 		PayAmount:     stringValue(doc["pay_amount"]),
@@ -104,20 +102,20 @@ func decodePayment(raw []byte) (*payment, error) {
 	}, nil
 }
 
-// toFloat converts numeric JSON values (json.Number, float64, numeric
-// strings) without panicking on missing or mistyped input.
-func toFloat(v any) (float64, error) {
+// toDecimal converts numeric JSON values (json.Number, float64, numeric
+// strings) to an exact decimal without panicking on missing or mistyped input.
+func toDecimal(v any) (decimal.Decimal, error) {
 	switch t := v.(type) {
 	case nil:
-		return 0, nil
+		return decimal.Zero, nil
 	case json.Number:
-		return t.Float64()
+		return decimal.NewFromString(t.String())
 	case float64:
-		return t, nil
+		return decimal.NewFromFloat(t), nil
 	case string:
-		return strconv.ParseFloat(strings.TrimSpace(t), 64)
+		return decimal.NewFromString(strings.TrimSpace(t))
 	default:
-		return 0, errors.New("not a number")
+		return decimal.Zero, errors.New("not a number")
 	}
 }
 
@@ -159,9 +157,9 @@ func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*pay
 // Only IDR is scaled 1:1 here; other fiats leave GrossMinor at zero and
 // settlement credits the full balance on 'finished' (which guarantees the
 // full expected amount arrived).
-func priceMinor(amount float64, currency string) int64 {
+func priceMinor(amount decimal.Decimal, currency string) int64 {
 	if strings.ToUpper(strings.TrimSpace(currency)) != "IDR" {
 		return 0
 	}
-	return int64(math.Round(amount))
+	return amount.Round(0).IntPart()
 }

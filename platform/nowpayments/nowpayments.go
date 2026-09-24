@@ -41,7 +41,7 @@ func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxReque
 		}
 		return nil, err
 	}
-	return &gateway.CreateTxResponse{Token: inv.ID, PaymentURL: inv.InvoiceURL}, nil
+	return nowPaymentsResponse(inv), nil
 }
 
 // ParseAndVerify decodes and verifies a NOWPayments IPN body.

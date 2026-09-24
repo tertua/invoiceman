@@ -73,7 +73,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 		if entry.Rate.IsNegative() {
 			return utils.Fail(c, fiber.StatusBadRequest, "money values cannot be negative", nil)
 		}
-		amount := models.MoneyFromFloat(entry.Quantity).Mul(entry.Rate)
+		amount := models.DecimalFromFloat(entry.Quantity).Mul(entry.Rate)
 		invoice.Subtotal = invoice.Subtotal.Add(amount)
 		items = append(items, models.InvoiceItem{ID: uuid.New(), InvoiceID: invoice.ID, Description: entry.Description,
 			Quantity: entry.Quantity, Rate: entry.Rate, Amount: amount, Position: position})
@@ -82,7 +82,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 	if taxable.IsNegative() {
 		taxable = models.ZeroMoney
 	}
-	invoice.TaxAmount = taxable.Mul(models.MoneyFromFloat(invoice.TaxRate)).Div(models.MoneyFromFloat(100))
+	invoice.TaxAmount = taxable.Mul(models.DecimalFromFloat(invoice.TaxRate)).Div(models.DecimalFromFloat(100))
 	invoice.Total = taxable.Add(invoice.TaxAmount)
 	err = db.InvoiceQueries.Transaction(func(tx *gorm.DB) error {
 		client := models.Client{}

@@ -52,7 +52,7 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 		if entry.Rate.IsNegative() || input.Discount.IsNegative() {
 			return nil, nil, errors.New("money values cannot be negative")
 		}
-		amount := models.MoneyFromFloat(entry.Quantity).Mul(entry.Rate)
+		amount := models.DecimalFromFloat(entry.Quantity).Mul(entry.Rate)
 		invoice.Subtotal = invoice.Subtotal.Add(amount)
 		items = append(items, models.InvoiceItem{
 			ID:          uuid.New(),
@@ -69,7 +69,7 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 	if taxable.IsNegative() {
 		taxable = decimal.Zero
 	}
-	invoice.TaxAmount = taxable.Mul(models.MoneyFromFloat(invoice.TaxRate)).Div(decimal.NewFromInt(100))
+	invoice.TaxAmount = taxable.Mul(models.DecimalFromFloat(invoice.TaxRate)).Div(decimal.NewFromInt(100))
 	invoice.Total = taxable.Add(invoice.TaxAmount)
 
 	return invoice, items, nil

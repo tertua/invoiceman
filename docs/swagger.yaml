@@ -179,6 +179,9 @@ definitions:
       gateway:
         maxLength: 32
         type: string
+      payment_method:
+        maxLength: 32
+        type: string
     required:
     - external_order_id
     type: object
@@ -1550,6 +1553,20 @@ paths:
             additionalProperties: true
             type: object
       summary: create integration invoice
+      tags:
+      - Gateway
+  /gateway/methods:
+    get:
+      description: List payment methods without exposing provider names.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: list payment methods
       tags:
       - Gateway
   /gateway/transactions:

@@ -51,22 +51,26 @@ func CreateIntent(c fiber.Ctx) error {
 	}
 
 	// Reuse a pending intent for the same external id + amount (safe retry).
+	// The method only has to match when the retry asks for one explicitly, so
+	// provider-resolved defaults (e.g. NOWPayments "crypto") still reuse.
 	if existing, err := db.GetTransactionByExternal(project.Slug, input.ExternalOrderID); err == nil {
+		requested := normalizedPaymentMethod(input.PaymentMethod)
+		methodMatches := requested == "" || existing.PaymentMethod == requested
 		if existing.Status == models.GatewayStatusPending && existing.AmountIDR == input.AmountIDR &&
-			existing.AmountDecimal == strings.TrimSpace(input.AmountDecimal) && existing.SnapToken != "" {
+			existing.AmountDecimal == strings.TrimSpace(input.AmountDecimal) &&
+			methodMatches && existing.SnapToken != "" {
 			return utils.OK(c, fiber.StatusOK, intentResponse(existing))
 		}
 	}
 
-	gatewayName := resolveGateway(input.Gateway, project.DefaultGateway)
-	gw, err := gateway.Get(gatewayName)
+	gw, err := routeIntentGateway(input, project.DefaultGateway)
 	if err != nil {
+		if errors.Is(err, gateway.ErrUnsupportedPaymentMethod) {
+			return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
+		}
 		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
 	}
-	// NOWPayments invoices are priced from amount_decimal (fiat major units).
-	// AmountMinor-only requests are rejected here so a minor value can never
-	// be misread as major units (e.g. 100000 minor as "100000 USD").
-	if gatewayName == "nowpayments" && strings.TrimSpace(input.AmountDecimal) == "" {
+	if gw.Name() == "nowpayments" && strings.TrimSpace(input.AmountDecimal) == "" {
 		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for nowpayments", nil)
 	}
 	orderID, err := relayOrderID(project.Slug, input.ExternalOrderID)
@@ -84,6 +88,7 @@ func CreateIntent(c fiber.Ctx) error {
 		Currency:      currency,
 		Email:         input.CustomerEmail,
 		Phone:         input.CustomerPhone,
+		PaymentMethod: normalizedPaymentMethod(input.PaymentMethod),
 	})
 	if err != nil {
 		if errors.Is(err, gateway.ErrNotConfigured) {
@@ -96,7 +101,8 @@ func CreateIntent(c fiber.Ctx) error {
 	txn := &models.GatewayTransaction{
 		OrderID:         orderID,
 		ProjectSlug:     project.Slug,
-		Gateway:         gatewayName,
+		Gateway:         gw.Name(),
+		PaymentMethod:   created.PaymentMethod,
 		ExternalOrderID: input.ExternalOrderID,
 		AmountIDR:       input.AmountIDR,
 		AmountDecimal:   strings.TrimSpace(input.AmountDecimal),
@@ -117,15 +123,6 @@ func CreateIntent(c fiber.Ctx) error {
 	}
 	return utils.OK(c, fiber.StatusCreated, intentResponse(*txn))
 }
-
-// GetIntent returns one intent owned by the calling project.
-// @Description Get a payment intent status.
-// @Summary get payment intent
-// @Tags Gateway
-// @Produce json
-// @Param order_id path string true "Global order ID"
-// @Success 200 {object} map[string]interface{}
-// @Router /gateway/intents/{order_id} [get]
 
 // GetIntent returns one intent owned by the calling project.
 // @Description Get a payment intent status.
@@ -156,16 +153,6 @@ func GetIntent(c fiber.Ctx) error {
 	}
 	return utils.OK(c, fiber.StatusOK, intentResponse(txn))
 }
-
-// ListMyTransactions returns one page of recent intents for the calling project.
-// @Description List own payment intents.
-// @Summary list own intents
-// @Tags Gateway
-// @Produce json
-// @Param page query int false "Page number (default 1)"
-// @Param per_page query int false "Items per page (default 20, max 100)"
-// @Success 200 {object} map[string]interface{}
-// @Router /gateway/transactions [get]
 
 // ListMyTransactions returns one page of recent intents for the calling project.
 // @Description List own payment intents.
@@ -210,16 +197,6 @@ func ListMyTransactions(c fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /gateway/config [get]
-
-// GatewayConfig returns public browser configuration for the active gateway.
-// Server credentials are never exposed here; the client key is intentionally
-// public and is required by the provider's browser SDK.
-// @Description Get public payment gateway browser configuration.
-// @Summary get gateway browser config
-// @Tags Gateway
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /gateway/config [get]
 func GatewayConfig(c fiber.Ctx) error {
 	cfg := midtrans.FromEnv()
 	return utils.OK(c, fiber.StatusOK, fiber.Map{
@@ -229,16 +206,6 @@ func GatewayConfig(c fiber.Ctx) error {
 		"configured":    cfg.ServerKey != "",
 	})
 }
-
-// GatewayStatus returns public per-gateway availability for admins and
-// downstream services. Only booleans are exposed here, never keys or
-// secrets, so this endpoint is safe to call without authentication.
-// @Description Get public payment gateway availability.
-// @Summary get gateway status
-// @Tags Gateway
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /public/gateway/status [get]
 
 // GatewayStatus returns public per-gateway availability for admins and
 // downstream services. Only booleans are exposed here, never keys or
@@ -273,18 +240,6 @@ func GatewayStatus(c fiber.Ctx) error {
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"gateways": out})
 }
-
-// CreateInvoiceIntent creates a Snap transaction for a local invoice.
-// Uses the session user (dashboard), not a service API key.
-// @Description Create a Snap transaction for a local invoice.
-// @Summary create invoice intent
-// @Tags Gateway
-// @Accept json
-// @Produce json
-// @Param request body map[string]string true "Invoice ID"
-// @Success 201 {object} map[string]interface{}
-// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
-// @Router /gateway/invoice-intents [post]
 
 // CreateInvoiceIntent creates a Snap transaction for a local invoice.
 // Uses the session user (dashboard), not a service API key.

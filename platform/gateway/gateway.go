@@ -30,41 +30,6 @@ const (
 	StatusPartialRefunded = "partially_refunded"
 )
 
-// CreateTxRequest is the gateway-agnostic payment creation request.
-// Fiat gateways use AmountMinor (e.g. IDR); crypto/fractional gateways use
-// AmountDecimal with Currency (e.g. "0.0005", "BTC"). At least one must set.
-type CreateTxRequest struct {
-	OrderID       string
-	AmountMinor   int64
-	AmountDecimal string
-	Currency      string
-	Email         string
-	Phone         string
-}
-
-// CreateTxResponse is the gateway-agnostic creation result.
-// Token/RedirectURL fit QRIS/Snap-style flows; PaymentURL/Address cover
-// crypto-style flows (deposit address, invoice URL). Unused stays empty.
-type CreateTxResponse struct {
-	Token       string
-	RedirectURL string
-	PaymentURL  string
-	Address     string
-	ExpiresAt   string
-	RawPayload  string
-}
-
-// NotificationResult is the verified, normalized provider notification.
-type NotificationResult struct {
-	OrderID       string
-	TransactionID string
-	Status        string
-	PaymentType   string
-	GrossMinor    int64
-	GrossDecimal  string
-	Currency      string
-}
-
 // Gateway is implemented once per provider (midtrans, xendit, coinpayments...).
 // Adding a gateway = new package under platform/ implementing this +
 // one Register call. Controllers and relay never touch provider SDKs.

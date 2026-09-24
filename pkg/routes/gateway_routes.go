@@ -18,6 +18,7 @@ func GatewayRoutes(a *fiber.App) {
 func GatewayRoutesAt(a *fiber.App, prefix string) {
 	gateway := a.Group(prefix+"/gateway", middleware.GatewayLimiter(), middleware.GatewayAuth())
 	gateway.Post("/intents", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateIntent)
+	gateway.Get("/methods", controllers.ListGatewayMethods)
 	gateway.Post("/invoices", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateGatewayInvoice)
 	gateway.Get("/intents/:order_id", controllers.GetIntent)
 	gateway.Get("/transactions", controllers.ListMyTransactions)

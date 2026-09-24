@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -35,9 +36,8 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 	if err != nil {
 		return nil, err
 	}
-
 	body, err := json.Marshal(map[string]interface{}{
-		"price_amount":      priceAmount,
+		"price_amount":      json.Number(priceAmount.String()),
 		"price_currency":    priceCurrency,
 		"order_id":          strings.TrimSpace(req.OrderID),
 		"order_description": "Payment " + strings.TrimSpace(req.OrderID),
@@ -83,22 +83,22 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 }
 
 // priceFromRequest resolves the fiat price for an invoice request.
-func priceFromRequest(req *gateway.CreateTxRequest) (amount float64, currency string, err error) {
+func priceFromRequest(req *gateway.CreateTxRequest) (amount decimal.Decimal, currency string, err error) {
 	currency = strings.ToUpper(strings.TrimSpace(req.Currency))
 	if currency == "" {
 		currency = "IDR"
 	}
 	if raw := strings.TrimSpace(req.AmountDecimal); raw != "" {
-		value, parseErr := strconv.ParseFloat(raw, 64)
-		if parseErr != nil || value <= 0 {
-			return 0, "", errors.New("nowpayments: invalid amount_decimal")
+		value, parseErr := decimal.NewFromString(raw)
+		if parseErr != nil || !value.GreaterThan(decimal.Zero) {
+			return decimal.Zero, "", errors.New("nowpayments: invalid amount_decimal")
 		}
 		return value, currency, nil
 	}
 	if req.AmountMinor <= 0 {
-		return 0, "", errors.New("nowpayments: amount_decimal or amount_minor is required")
+		return decimal.Zero, "", errors.New("nowpayments: amount_decimal or amount_minor is required")
 	}
-	return float64(req.AmountMinor), currency, nil
+	return decimal.NewFromInt(req.AmountMinor), currency, nil
 }
 
 // stringValue converts string or numeric JSON values to string.

@@ -10,6 +10,7 @@ import (
 
 func runGatewayInvoiceFlow(t *testing.T, app *fiber.App, apiKey string) {
 	t.Helper()
+	runGatewayMethodsFlow(t, app, apiKey)
 
 	// Happy path: create sent invoice with customer.
 	headers := map[string]string{"X-Api-Key": apiKey, "Idempotency-Key": "invoice-create-1"}
