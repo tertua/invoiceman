@@ -60,4 +60,70 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	listed := decodeBody(t, resp)["invoices"].([]interface{})
 	require.Len(t, listed, 1)
 	assert.Equal(t, "pending", listed[0].(map[string]interface{})["effective_status"])
+
+	// Pending still owes: it counts toward outstanding on both dashboard
+	// and reports, and shows its own donut slice.
+	resp = doRequest(t, app, "GET", "/api/dashboard?currency=IDR", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "100000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	resp = doRequest(t, app, "GET", "/api/reports?currency=IDR", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	body := decodeBody(t, resp)
+	assert.Equal(t, "100000", body["totals"].(map[string]interface{})["outstanding"])
+	slices := map[string]string{}
+	for _, s := range body["statusBreakdown"].([]interface{}) {
+		m := s.(map[string]interface{})
+		slices[m["key"].(string)] = m["value"].(string)
+	}
+	assert.Equal(t, "100000", slices["pending"])
+
+	// Legacy flipped-back draft with money in flight: both outstanding
+	// cards still count it (the Snap intent stays live at the provider).
+	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "draft"))
+	resp = doRequest(t, app, "GET", "/api/dashboard?currency=IDR", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "100000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	resp = doRequest(t, app, "GET", "/api/reports?currency=IDR", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "100000", decodeBody(t, resp)["totals"].(map[string]interface{})["outstanding"])
+	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "sent"))
+
+	// While money is in flight the invoice is locked: editing totals or
+	// hard-deleting would orphan the provider payment, so both are 422.
+	editBody := `{
+		"status":"sent",
+		"issue_date":"2026-09-01",
+		"due_date":"2026-09-30",
+		"currency":"IDR",
+		"items":[{"description":"Service","quantity":1,"rate":100000}]
+	}`
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID, editBody, cookies)
+	require.Equal(t, 422, resp.StatusCode)
+	assert.Equal(t, "invoice has a pending payment",
+		decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+	resp = doRequest(t, app, "DELETE", "/api/invoices/"+invoiceID, "", cookies)
+	require.Equal(t, 422, resp.StatusCode)
+	assert.Equal(t, "invoice has a pending payment",
+		decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+
+	// Flipping sent/draft mid-flight is locked too: it cannot cancel the
+	// Snap intent at the provider, so the payment could still settle.
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+"/status", `{"status":"draft"}`, cookies)
+	require.Equal(t, 422, resp.StatusCode)
+	assert.Equal(t, "invoice has a pending payment",
+		decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+
+	// Once the transaction resolves the lock lifts and the invoice is
+	// editable/deletable again.
+	txn, err := db.GetTransaction(orderID)
+	require.NoError(t, err)
+	txn.Status = models.GatewayStatusExpired
+	require.NoError(t, db.SaveTransaction(&txn))
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID, editBody, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "sent", decodeBody(t, resp)["invoice"].(map[string]interface{})["effective_status"])
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+"/status", `{"status":"draft"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	resp = doRequest(t, app, "DELETE", "/api/invoices/"+invoiceID, "", cookies)
+	require.Equal(t, 204, resp.StatusCode)
 }

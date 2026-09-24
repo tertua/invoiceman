@@ -796,7 +796,7 @@ export const en = {
     "api.invalid signature": "invalid signature",
     "api.invalid slug, use lowercase letters, numbers and dashes": "invalid slug, use lowercase letters, numbers and dashes",
     "api.invalid user id": "invalid user id",
-    "api.invoice is already paid": "invoice is already paid",
+    "api.invoice is already paid": "invoice is already paid", "api.invoice has a pending payment": "invoice has a pending payment",
     "api.invoice not found": "invoice not found",
     "api.invoice is still a draft": "invoice is still a draft",
     "api.invoiceId is required": "invoiceId is required",

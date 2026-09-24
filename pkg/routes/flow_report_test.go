@@ -100,7 +100,7 @@ func TestReportsFlow(t *testing.T) {
 	}
 	assert.Equal(t, []string{"current", "d1_30", "d31_60", "d61_90", "d90_plus"}, agingKeys)
 	assert.Len(t, report["topClients"].([]interface{}), 1)
-	assert.Len(t, report["statusBreakdown"].([]interface{}), 4)
+	assert.Len(t, report["statusBreakdown"].([]interface{}), 5)
 }
 
 // TestPublicPaymentFlow covers public payment links and unconfigured gateway behavior.

@@ -171,7 +171,7 @@ export default function Invoices() {
                 <div className="flex items-center justify-end gap-1">
                   <StatusBadge status={inv.effective_status} />
                   <div className="flex md:hidden md:group-hover:flex md:group-focus-within:flex items-center gap-0.5 ml-1">
-                    {inv.effective_status !== "paid" && (
+                    {inv.effective_status !== "paid" && inv.effective_status !== "pending" && (
                     <button type="button"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -183,7 +183,7 @@ export default function Invoices() {
                       <Pencil size={13} />
                     </button>
                     )}
-                    {inv.effective_status !== "paid" && (
+                    {inv.effective_status !== "paid" && inv.effective_status !== "pending" && (
                     <button type="button"
                       onClick={(e) => onDelete(e, inv)}
                       title={t("invoices.deleteTitle")}

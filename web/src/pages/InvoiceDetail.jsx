@@ -53,8 +53,8 @@ export default function InvoiceDetail() {
   // Money-paid (real cash covering total) is fully locked; a manually-marked
   // paid invoice with no money can still be reopened via status.
   const isMoneyPaid = isPaid && total > 0 && paidAmount >= total;
-  const canEdit = !isPaid;
-  const canDelete = !isPaid;
+  const canEdit = !isPaid && st !== "pending";
+  const canDelete = !isPaid && st !== "pending";
   const lockStatus = isMoneyPaid;
 
   async function onDelete() {
@@ -63,7 +63,7 @@ export default function InvoiceDetail() {
       await del.mutateAsync(id);
       nav("/invoices");
     } catch {
-      // Backend rejects paid deletes (422); the locked banner already explains.
+      // Backend rejects paid/pending edits+deletes (422); the banner above explains.
     }
   }
 
@@ -99,7 +99,7 @@ export default function InvoiceDetail() {
           </Button>
           ) : (
           <span
-            title={t("invDetail.paidLocked")}
+            title={st === "pending" ? t("status.pending") : t("invDetail.paidLocked")}
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-semibold border border-[var(--border)] text-[var(--ink-muted)] opacity-60 cursor-not-allowed"
           >
             <Pencil size={15} /> {t("common.edit")}
@@ -117,17 +117,17 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      {isPaid && (
+      {isPaid || st === "pending" ? (
         <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-          <div className="text-xs font-semibold text-[var(--ink)]">{t("invDetail.paidLocked")}</div>
+          <div className="text-xs font-semibold text-[var(--ink)]">{st === "pending" ? t("status.pending") : t("invDetail.paidLocked")}</div>
           <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-            {isMoneyPaid ? t("invDetail.paidLockedDesc") : t("invDetail.manuallyPaidDesc")}
+            {st === "pending" ? t("payments.onlineActive") : isMoneyPaid ? t("invDetail.paidLockedDesc") : t("invDetail.manuallyPaidDesc")}
           </p>
         </div>
-      )}
+      ) : null}
 
-      {/* status controls */}
-      {lockStatus ? null : (
+      {/* status controls (hidden while paid-locked or money in flight) */}
+      {lockStatus || st === "pending" ? null : (
       <div className="flex items-center gap-2 mb-6 flex-wrap">
         <span className="text-xs text-[var(--ink-muted)] mr-1">{t("invDetail.markAs")}</span>
         <StatusButton

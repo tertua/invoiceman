@@ -139,8 +139,8 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	}
 	report.Monthly = monthly
 
-	statusNames := map[string]string{"draft": "Draft", "sent": "Sent", "overdue": "Overdue", "paid": "Paid"}
-	for _, key := range []string{"draft", "sent", "overdue", "paid"} {
+	statusNames := map[string]string{"draft": "Draft", "sent": "Sent", "overdue": "Overdue", "paid": "Paid", "pending": "Pending"}
+	for _, key := range []string{"draft", "sent", "overdue", "paid", "pending"} {
 		report.StatusBreakdown = append(report.StatusBreakdown, models.ReportValuePoint{Key: key, Name: statusNames[key], Value: statusValues[key]})
 	}
 	// Aging buckets use stable keys; the frontend localizes them for display.

@@ -795,7 +795,7 @@ export const id = {
     "api.invalid signature": "Tanda tangan tidak valid.",
     "api.invalid slug, use lowercase letters, numbers and dashes": "Slug tidak valid, gunakan huruf kecil, angka, dan strip.",
     "api.invalid user id": "ID pengguna tidak valid.",
-    "api.invoice is already paid": "Invoice sudah lunas.",
+    "api.invoice is already paid": "Invoice sudah lunas.", "api.invoice has a pending payment": "Invoice masih menunggu pembayaran dan dikunci untuk sementara.",
     "api.invoice not found": "Invoice tidak ditemukan.",
     "api.invoice is still a draft": "Invoice masih berupa draft.",
     "api.invoiceId is required": "invoiceId wajib diisi.",
