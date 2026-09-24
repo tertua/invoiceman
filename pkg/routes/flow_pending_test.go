@@ -27,7 +27,12 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	userID := uuid.MustParse(decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string))
 	cookies := resp.Cookies()
 
+	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Acme","email":"billing@acme.test"}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	clientID := decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+
 	resp = doRequest(t, app, "POST", "/api/invoices", `{
+		"client_id":"`+clientID+`",
 		"status":"sent",
 		"issue_date":"2026-09-01",
 		"due_date":"2026-09-30",
@@ -89,6 +94,20 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	// read zero otherwise), so pending shows the full 100000 here.
 	assert.Equal(t, "100000", slices["pending"])
 
+	// Client billing agrees too: a pending overlay is a receivable on both
+	// the client list and the client detail.
+	resp = doRequest(t, app, "GET", "/api/clients", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	clients := decodeBody(t, resp)["clients"].([]interface{})
+	require.Len(t, clients, 1)
+	assert.Equal(t, "100000", clients[0].(map[string]interface{})["total_billed"])
+	assert.Equal(t, "90000", clients[0].(map[string]interface{})["outstanding"])
+	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	clientStats := decodeBody(t, resp)["stats"].(map[string]interface{})
+	assert.Equal(t, "100000", clientStats["totalBilled"])
+	assert.Equal(t, "90000", clientStats["outstanding"])
+
 	// Legacy flipped-back draft with money in flight: both outstanding
 	// cards still count it (the Snap intent stays live at the provider).
 	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "draft"))
@@ -98,6 +117,15 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	resp = doRequest(t, app, "GET", "/api/reports?currency=IDR", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "90000", decodeBody(t, resp)["totals"].(map[string]interface{})["outstanding"])
+	// Client billing tracks the same overlay, not the flipped-back stored status.
+	resp = doRequest(t, app, "GET", "/api/clients", "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	draftClients := decodeBody(t, resp)["clients"].([]interface{})
+	require.Len(t, draftClients, 1)
+	assert.Equal(t, "90000", draftClients[0].(map[string]interface{})["outstanding"])
+	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "90000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
 	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "sent"))
 
 	// While money is in flight the invoice is locked: editing totals or

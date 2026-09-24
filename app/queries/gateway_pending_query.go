@@ -29,10 +29,20 @@ func (q *GatewayQueries) PendingInvoiceIDs(userID uuid.UUID) map[uuid.UUID]bool 
 }
 
 // pendingInvoiceSet collects invoice IDs with a pending gateway transaction
-// for any query struct sharing the same database handle. Invoice IDs go
-// through string parsing so SQLite and PostgreSQL UUID forms both decode.
+// for any query struct sharing the same database handle.
 func pendingInvoiceSet(db *gorm.DB, userID uuid.UUID) map[uuid.UUID]bool {
 	out := map[uuid.UUID]bool{}
+	for _, id := range pendingInvoiceIDs(db, userID) {
+		out[id] = true
+	}
+	return out
+}
+
+// pendingInvoiceIDs lists invoice IDs with a pending gateway transaction.
+// Invoice IDs go through string parsing so SQLite and PostgreSQL UUID forms
+// both decode.
+func pendingInvoiceIDs(db *gorm.DB, userID uuid.UUID) []uuid.UUID {
+	out := []uuid.UUID{}
 	var found []string
 	if err := db.Model(&models.GatewayTransaction{}).
 		Where("user_id = ? AND invoice_id IS NOT NULL AND status = ?", userID, models.GatewayStatusPending).
@@ -41,7 +51,7 @@ func pendingInvoiceSet(db *gorm.DB, userID uuid.UUID) map[uuid.UUID]bool {
 	}
 	for _, raw := range found {
 		if id, err := uuid.Parse(raw); err == nil {
-			out[id] = true
+			out = append(out, id)
 		}
 	}
 	return out

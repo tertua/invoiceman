@@ -92,8 +92,8 @@ func GetClient(c fiber.Ctx) error {
 	pending := db.PendingInvoiceIDs(userID)
 	for _, row := range rows {
 		paid := row.PaidAmount
-		// Billed invoices are sent + paid; drafts are not billed yet.
-		if row.Status == models.InvoiceStatusSent || row.Status == models.InvoiceStatusPaid {
+		// Anything not still a draft is billed: sent, overdue, paid, pending.
+		if row.EffectiveStatus(pending[row.ID]) != models.InvoiceStatusDraft {
 			totalBilled = totalBilled.Add(row.Total)
 			paidTotal = paidTotal.Add(paid)
 		}
