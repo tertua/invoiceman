@@ -6,7 +6,7 @@ Service integrations authenticate with a project API key and can create an invoi
 
 ```http
 POST /api/v1/gateway/invoices
-Authorization: Bearer <project-api-key>
+X-Api-Key: <project-api-key>
 Idempotency-Key: <unique-request-key>
 ```
 

@@ -1,7 +1,6 @@
 package queries
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -212,7 +211,7 @@ func (q *InvoiceQueries) CreateInvoice(userID uuid.UUID, invoice *models.Invoice
 			if err := tx.Where("user_id = ?", userID).First(&settings).Error; err != nil {
 				return err
 			}
-			invoice.InvoiceNumber = fmt.Sprintf("%s%06d", settings.InvoicePrefix, settings.InvoiceSeq)
+			invoice.InvoiceNumber = models.FormatInvoiceSeq(settings.InvoicePrefix, settings.InvoiceSeq)
 
 			if err := tx.Create(invoice).Error; err != nil {
 				return err

@@ -7,7 +7,7 @@ import "time"
 // never from client-supplied fields.
 type GatewayProject struct {
 	Slug string `gorm:"primaryKey;size:64" db:"slug" json:"slug" validate:"required,lte=64"`
-	GatewayOwner
+	GatewayProjectOwner
 	Name           string    `gorm:"size:255" db:"name" json:"name" validate:"required,lte=255"`
 	APIKeyHash     string    `gorm:"size:128;uniqueIndex" db:"api_key_hash" json:"-"`
 	WebhookURL     string    `gorm:"size:1024" db:"webhook_url" json:"webhook_url" validate:"required,lte=1024"`

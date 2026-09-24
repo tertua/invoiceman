@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -85,7 +84,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 	}
 	invoice.TaxAmount = taxable.Mul(models.MoneyFromFloat(invoice.TaxRate)).Div(models.MoneyFromFloat(100))
 	invoice.Total = taxable.Add(invoice.TaxAmount)
-	err = db.InvoiceQueries.DB.Transaction(func(tx *gorm.DB) error {
+	err = db.InvoiceQueries.Transaction(func(tx *gorm.DB) error {
 		client := models.Client{}
 		if lookupErr := tx.Where("gateway_project_slug = ? AND external_id = ?", project.Slug, input.Customer.ExternalID).First(&client).Error; errors.Is(lookupErr, gorm.ErrRecordNotFound) {
 			customerID := input.Customer.ExternalID
@@ -108,7 +107,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 		if err := tx.Where("user_id = ?", *project.OwnerUserID).First(&settings).Error; err != nil {
 			return err
 		}
-		invoice.InvoiceNumber = settings.InvoicePrefix + formatInvoiceSequence(settings.InvoiceSeq)
+		invoice.InvoiceNumber = models.FormatInvoiceSeq(settings.InvoicePrefix, settings.InvoiceSeq)
 		if err := tx.Create(invoice).Error; err != nil {
 			return err
 		}
@@ -122,8 +121,6 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 	}
 	return gatewayInvoiceResponse(c, *db, *project.OwnerUserID, *invoice, fiber.StatusCreated)
 }
-
-func formatInvoiceSequence(seq int) string { return fmt.Sprintf("%06d", seq) }
 
 func gatewayInvoiceResponse(c fiber.Ctx, db database.Queries, userID uuid.UUID, invoice models.Invoice, status int) error {
 	detail, err := invoiceDetail(db, userID, invoice.ID)

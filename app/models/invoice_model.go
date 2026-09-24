@@ -1,10 +1,15 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+func FormatInvoiceSeq(prefix string, seq int) string {
+	return prefix + fmt.Sprintf("%06d", seq)
+}
 
 // Invoice statuses used by the frontend.
 const (

@@ -43,7 +43,7 @@ func projectResponse(p models.GatewayProject, revealSecrets bool, apiKey string)
 // @Success 201 {object} map[string]interface{}
 // @Router /admin/gateway/projects [post]
 func CreateProject(c fiber.Ctx) error {
-	ownerID, err := currentGatewayOwner(c)
+	ownerID, err := utils.CurrentUserID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
