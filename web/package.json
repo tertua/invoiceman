@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
+    "check:charts": "node scripts/check-charts.mjs",
     "check:bundles": "node scripts/check-bundles.mjs",
     "check:bundles:strict": "BUNDLE_BUDGET=strict node scripts/check-bundles.mjs",
     "sync:version": "node ../scripts/sync-version.mjs",

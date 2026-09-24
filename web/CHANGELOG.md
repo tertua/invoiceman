@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Status donuts on the dashboard and reports render again: money arrives as
   decimal strings, which Recharts' `Pie` ignores when summing slices.
 
+### Added
+- Frontend unit tests (`npm test`, Node's built-in runner) and a `check:charts`
+  guard that fails when a `<Pie>` renders un-coerced money.
+
 ## [v0.2.2] - 2026-09-24
 
 ### Added

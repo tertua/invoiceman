@@ -50,3 +50,4 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI when a
 - Axios imports belong only in `web/src/api/http.js`. Vite aliases `@` to `web/src` and proxies `/api` and `/uploads` to `localhost:5000` on port 5173.
 - Keep `@react-pdf/renderer` imports in `InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`; keep `recharts` in the Dashboard, Client, and Reports chart components. Bundle limits are checked by `check:bundles:strict`.
 - User-visible strings belong in `web/src/lib/i18n.en.js` (`en`) and `web/src/lib/i18n.id.js` (`id`) — `web/src/lib/i18n.js` is only the re-export entrypoint — not hardcoded in components.
+- Money crosses the API as decimal **strings** (`models.Money`); Recharts `Pie` silently draws nothing for strings. Route pie data through `chartNumbers` (`web/src/lib/chartData.js`); `check:charts` enforces it and `npm test` covers the helper.
