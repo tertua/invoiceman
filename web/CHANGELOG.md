@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-09-24
+
+### Added
+- Provider-neutral payment methods: payment intents accept an optional
+  `payment_method` (`qris`, `bank_transfer`, `gopay`, `crypto`, ...), routed to
+  a provider that supports it, and a new `GET /api/v1/gateway/methods` lists
+  the available methods without exposing provider names.
+- Gateway transactions persist the chosen `payment_method`, expose it on intent
+  responses, and forward it in the relay webhook payload.
+
+### Changed
+- Relay webhook payload keeps the provider-specific `payment_type` and now also
+  carries the neutral `payment_method`; `gross_amount_idr` is an integer number
+  of fiat minor units.
+
+### Fixed
+- Money no longer round-trips through `float64` on the gateway path: NOWPayments
+  prices and verifies amounts as exact decimals and local settlement builds the
+  amount from integer minor units, so fractional amounts stay precise.
+
 ## [v0.2.3] - 2026-09-24
 
 ### Added
