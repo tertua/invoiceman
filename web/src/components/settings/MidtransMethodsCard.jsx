@@ -1,43 +1,28 @@
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useLang } from "@/context/LangContext";
 import { useMidtransMethods } from "@/hooks/useMidtransMethods";
 
-// parseMethods turns the stored CSV into a set. Empty means "all enabled".
-function parseMethods(csv) {
-  return new Set(
-    String(csv || "")
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean)
-  );
+// firstMethod picks the stored id when known, defaulting to gopay for empty
+// or legacy multi-method values. The public pay page then offers exactly one
+// method, so one payer click can only open one gateway intent.
+function firstMethod(csv, methods) {
+  const ids = String(csv || "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const known = new Set((methods || []).map((m) => m.id));
+  return ids.find((id) => known.has(id)) || "gopay";
 }
 
-// MidtransMethodsCard lets an owner limit which methods Midtrans offers (and
-// the public pay page shows). An empty selection means "all Midtrans
-// methods", which is the default, so accounts that never touch this keep
-// every method. The last checked method can't be removed: an empty list
-// would silently mean "all".
+// MidtransMethodsCard lets an owner pick the single method Midtrans offers
+// (and the public pay page shows). One method means one intent: payers can no
+// longer open a separate pending Midtrans transaction per method.
 export default function MidtransMethodsCard({ value, onChange }) {
   const { t } = useLang();
   const { data: methods, isLoading } = useMidtransMethods();
   const all = methods || [];
-  const selected = parseMethods(value);
-  const allOn = selected.size === 0;
-  const isOn = (id) => allOn || selected.has(id);
-
-  function toggle(id) {
-    const next = new Set(allOn ? all.map((m) => m.id) : selected);
-    if (next.has(id)) {
-      if (next.size === 1) return;
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    const coversAll = all.length > 0 && all.every((m) => next.has(m.id));
-    onChange(coversAll ? "" : all.filter((m) => next.has(m.id)).map((m) => m.id).join(","));
-  }
+  const selected = firstMethod(value, all);
 
   return (
     <Card padding="lg">
@@ -50,11 +35,17 @@ export default function MidtransMethodsCard({ value, onChange }) {
       {isLoading ? (
         <Skeleton className="h-10 w-full" />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+        <select
+          className="h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
+          value={selected}
+          onChange={(e) => onChange(e.target.value)}
+        >
           {all.map((m) => (
-            <Checkbox key={m.id} checked={isOn(m.id)} onChange={() => toggle(m.id)} label={m.name} />
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
           ))}
-        </div>
+        </select>
       )}
       <p className="text-[11px] text-[var(--ink-muted)] mt-3">{t("settings.midtransMethodsHint")}</p>
     </Card>

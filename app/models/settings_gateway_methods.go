@@ -1,12 +1,9 @@
 package models
 
-// SettingsGatewayMethods holds the per-account allowlist of provider-neutral
-// payment methods exposed through Midtrans. Empty means "all Midtrans
-// methods": an owner that never touched the setting keeps the previous
-// behaviour.
+// SettingsGatewayMethods holds the per-account Midtrans payment method shown
+// on payment links. It stores a single gateway method id; legacy empty or
+// multi-method values normalize to gopay.
 type SettingsGatewayMethods struct {
-	// MidtransMethods is a comma-separated list of gateway method ids. Only
-	// ids Midtrans actually supports can be stored; the UI uses an empty
-	// value to mean "all".
+	// MidtransMethods is a single gateway method id (e.g. gopay).
 	MidtransMethods string `gorm:"size:255" db:"midtrans_methods" json:"midtrans_methods"`
 }

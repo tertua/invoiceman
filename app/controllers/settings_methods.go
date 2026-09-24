@@ -10,30 +10,24 @@ import (
 	"github.com/tertua/invoiceman/platform/midtrans"
 )
 
-// normalizeMidtransMethods cleans a CSV of gateway ids down to the ones
-// Midtrans actually supports, preserving request order and dropping
-// duplicates. An empty result means "all methods", so unknown ids silently
-// disappear rather than being stored.
+// normalizeMidtransMethods reduces a raw CSV to the single Midtrans method
+// the settings dropdown stores. It keeps the first supported id and falls
+// back to gopay for empty, unknown, or legacy multi-method values so the
+// public pay page always offers exactly one method.
 func normalizeMidtransMethods(raw string) string {
-	supported := make(map[string]bool)
-	for _, method := range (midtrans.Gateway{}).Methods() {
-		supported[method] = true
-	}
-	seen := make(map[string]bool)
-	out := make([]string, 0)
 	for _, part := range strings.Split(raw, ",") {
 		method := strings.ToLower(strings.TrimSpace(part))
-		if method == "" || seen[method] || !supported[method] {
-			continue
+		for _, supported := range (midtrans.Gateway{}).Methods() {
+			if method == supported {
+				return method
+			}
 		}
-		seen[method] = true
-		out = append(out, method)
 	}
-	return strings.Join(out, ",")
+	return gateway.MethodGopay
 }
 
-// midtransMethodAllowlist parses the stored CSV into a lookup the router
-// consults. An empty list allows every method.
+// midtransMethodAllowlist parses the stored single method id into a lookup
+// the router consults. Empty (legacy) allows every method.
 func midtransMethodAllowlist(settings models.Settings) map[string]bool {
 	raw := strings.TrimSpace(settings.MidtransMethods)
 	if raw == "" {
@@ -51,18 +45,22 @@ func midtransMethodAllowlist(settings models.Settings) map[string]bool {
 	return allow
 }
 
-// enabledMidtransMethods returns the allowlisted methods in Midtrans'
-// canonical order, or nil when the owner never restricted them.
+// enabledMidtransMethods returns the single configured method, defaulting to
+// gopay for legacy empty settings so the public page always offers exactly
+// one method.
 func enabledMidtransMethods(settings models.Settings) []string {
 	allow := midtransMethodAllowlist(settings)
 	if allow == nil {
-		return nil
+		return []string{gateway.MethodGopay}
 	}
 	out := make([]string, 0, len(allow))
 	for _, method := range (midtrans.Gateway{}).Methods() {
 		if allow[method] {
 			out = append(out, method)
 		}
+	}
+	if len(out) == 0 {
+		return []string{gateway.MethodGopay}
 	}
 	return out
 }

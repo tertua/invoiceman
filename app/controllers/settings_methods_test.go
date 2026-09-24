@@ -10,14 +10,14 @@ func settingsWithMethods(csv string) models.Settings {
 	return models.Settings{SettingsGatewayMethods: models.SettingsGatewayMethods{MidtransMethods: csv}}
 }
 
-// normalizeMidtransMethods keeps only Midtrans-supported ids, preserves
-// order, and drops duplicates/unknowns. Empty means "all methods".
+// normalizeMidtransMethods keeps the first supported id and falls back to
+// gopay for empty, unknown, or legacy multi-method values.
 func TestNormalizeMidtransMethods(t *testing.T) {
 	cases := []struct{ in, want string }{
-		{"qris,nonsense,gopay,qris", "qris,gopay"},
-		{"", ""},
-		{"nonsense", ""},
-		{" QRIS , Gopay ", "qris,gopay"},
+		{"qris,nonsense,gopay,qris", "qris"},
+		{"", "gopay"},
+		{"nonsense", "gopay"},
+		{" QRIS , Gopay ", "qris"},
 	}
 	for _, tc := range cases {
 		if got := normalizeMidtransMethods(tc.in); got != tc.want {

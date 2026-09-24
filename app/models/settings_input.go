@@ -10,7 +10,7 @@ type SettingsInput struct {
 	Currency      string  `json:"currency" validate:"required,lte=3"`
 	TaxRate       float64 `json:"tax_rate" validate:"gte=0"`
 	UsdToIdr      Money   `json:"usd_to_idr"`
-	// MidtransMethods is a CSV of gateway method ids. Empty = all methods.
+	// MidtransMethods is a single gateway method id; it normalizes to gopay when empty or unknown.
 	MidtransMethods string `json:"midtrans_methods" validate:"omitempty,lte=255"`
 	InvoicePrefix   string `json:"invoice_prefix" validate:"required,lte=20"`
 	Language      string  `json:"language" validate:"omitempty,oneof=en id"`

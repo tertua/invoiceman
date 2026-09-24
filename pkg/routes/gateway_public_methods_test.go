@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The public pay page lists provider-neutral methods and only opens the
-// gateway intent after a method is chosen. A USD invoice is shown converted
-// (IDR via the manual rate) for the IDR-only provider, and unconverted for
-// the crypto provider.
+// The public pay page lists the single configured Midtrans method (gopay by
+// default) and only opens the gateway intent after it is chosen. A USD
+// invoice is shown converted (IDR via the manual rate) for the IDR-only
+// provider, and unconverted for the crypto provider.
 func TestPublicPayMethodSelection(t *testing.T) {
 	snapServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -64,16 +64,16 @@ func TestPublicPayMethodSelection(t *testing.T) {
 		entry := m.(map[string]interface{})
 		byID[entry["id"].(string)] = entry
 	}
-	require.Contains(t, byID, "qris")
-	assert.Equal(t, "IDR", byID["qris"]["currency"])
-	assert.Equal(t, "1800000", byID["qris"]["amount"]) // $100 × 18000
+	require.Contains(t, byID, "gopay")
+	assert.Equal(t, "IDR", byID["gopay"]["currency"])
+	assert.Equal(t, "1800000", byID["gopay"]["amount"]) // $100 × 18000
 	require.Contains(t, byID, "crypto")
 	assert.Equal(t, "USD", byID["crypto"]["currency"])
 	assert.Equal(t, "100", byID["crypto"]["amount"])
 	resp.Body.Close()
 
-	// Choosing QRIS routes to the configured Midtrans and returns a Snap token.
-	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"qris"}`, nil)
+	// Choosing gopay routes to the configured Midtrans and returns a Snap token.
+	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"gopay"}`, nil)
 	require.Equal(t, 200, resp.StatusCode)
 	qrisIntent := decodeBody(t, resp)
 	assert.Equal(t, "snap-pub", qrisIntent["snap_token"])

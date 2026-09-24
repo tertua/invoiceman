@@ -3623,7 +3623,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "midtrans_methods": {
-                    "description": "MidtransMethods is a CSV of gateway method ids. Empty = all methods.",
+                    "description": "MidtransMethods is a single gateway method id; it normalizes to gopay when empty or unknown.",
                     "type": "string",
                     "maxLength": 255
                 },

@@ -25,7 +25,7 @@ export const settingsId = {
     "settings.usdToIdrHint": "Kurs manual untuk pembayaran online (mis. 18000). Dipakai saat gateway menagih mata uang berbeda dari faktur; tidak pernah diambil realtime.",
     "settings.midtransMethods": "Metode pembayaran Midtrans",
     "settings.midtransMethodsDesc": "Pilih metode yang ditawarkan akun Midtrans Anda di tautan pembayaran.",
-    "settings.midtransMethodsHint": "Minimal satu metode harus tetap tercentang. Hanya metode yang aktif di dashboard Midtrans yang benar-benar berfungsi.",
+    "settings.midtransMethodsHint": "Hanya metode yang aktif di dashboard Midtrans yang benar-benar berfungsi.",
     "settings.saveCompany": "Simpan pengaturan perusahaan",
     "settings.moderatorReadOnly": "Moderator dapat mengelola operasional penagihan, tetapi tidak dapat mengubah pengaturan perusahaan.",
     "settings.companySaved": "Pengaturan perusahaan disimpan",
