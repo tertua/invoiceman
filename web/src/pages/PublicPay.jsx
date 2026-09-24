@@ -139,7 +139,7 @@ export default function PublicPay() {
 
   const { invoice, branding, can_pay } = data;
   const cur = invoice.currency || "IDR";
-  const isPaid = invoice.effective_status === "paid";
+  const isPaid = invoice.effective_status === "paid", isPending = invoice.effective_status === "pending";
 
   return (
     <PublicShell branding={branding} lang={lang} onLang={changeLang}>
@@ -157,9 +157,9 @@ export default function PublicPay() {
               {t(lang, "common.invoice").toUpperCase()}
             </div>
             <div className="text-sm text-[var(--ink-muted)] mt-0.5 tabular">{invoice.invoice_number}</div>
-            <div className={`mt-2 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full ${isPaid ? "bg-[var(--success)]/12 text-[var(--success)]" : "bg-[var(--danger)]/10 text-[var(--danger)]"}`}>
+            <div className={`mt-2 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full ${isPaid ? "bg-[var(--success)]/12 text-[var(--success)]" : isPending ? "bg-[var(--warning)]/12 text-[var(--warning)]" : "bg-[var(--danger)]/10 text-[var(--danger)]"}`}>
               {isPaid ? <CheckCircle2 size={12} /> : null}
-              {isPaid ? t(lang, "public.paid") : t(lang, "public.unpaid")}
+              {isPaid ? t(lang, "public.paid") : isPending ? t(lang, "status.pending") : t(lang, "public.unpaid")}
             </div>
           </div>
         </div>

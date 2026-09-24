@@ -74,7 +74,7 @@ func GetPublicPayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
-	if invoice.Status == models.InvoiceStatusDraft {
+	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
 	data, err := publicPaymentData(*db, link)
@@ -106,7 +106,7 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
-	if invoice.Status == models.InvoiceStatusDraft {
+	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
 	paid, err := db.PaidAmount(invoice.ID)

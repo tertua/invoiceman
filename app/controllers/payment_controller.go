@@ -315,7 +315,7 @@ func CreateOnlineLink(c fiber.Ctx) error {
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
-	if invoice.Status == models.InvoiceStatusDraft {
+	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
 	// A second link would open a second Snap intent for the same invoice;
@@ -392,7 +392,7 @@ func SendOnlineLink(c fiber.Ctx) error {
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
-	if invoice.Status == models.InvoiceStatusDraft {
+	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
 	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)

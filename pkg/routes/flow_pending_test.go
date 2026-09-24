@@ -44,6 +44,12 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	invoiceID := invoice["id"].(string)
 	assert.Equal(t, "sent", invoice["effective_status"])
 
+	// The public link is minted before any money moves; it must stay usable
+	// while the payment is in flight.
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	token := decodeBody(t, resp)["token"].(string)
+
 	// A partial manual payment lands before the Snap intent opens.
 	resp = doRequest(t, app, "POST", "/api/payments", `{
 		"invoiceId":"`+invoiceID+`",
@@ -126,6 +132,15 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	resp = doRequest(t, app, "GET", "/api/clients/"+clientID, "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "90000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	// The public pay page tracks the overlay too: a stored draft with money
+	// in flight is payable, not "still a draft".
+	resp = doRequest(t, app, "GET", "/api/public/pay/"+token, "", nil)
+	require.Equal(t, 200, resp.StatusCode)
+	pub := decodeBody(t, resp)["invoice"].(map[string]interface{})
+	assert.Equal(t, "pending", pub["effective_status"])
+	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", "", nil)
+	assert.Equal(t, 501, resp.StatusCode) // gateway unconfigured, not draft-blocked
+	resp.Body.Close()
 	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "sent"))
 
 	// While money is in flight the invoice is locked: editing totals or
