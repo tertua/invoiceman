@@ -40,6 +40,7 @@ web.check:
 	npm --prefix web run lint
 	npm --prefix web test
 	npm --prefix web run check:charts
+	npm --prefix web run check:fixtures
 	npm --prefix web run build
 	npm --prefix web run check:bundles:strict
 

@@ -1,0 +1,20 @@
+name: Test Fixture Check
+
+on:
+  push:
+    paths:
+      - "scripts/check-fixtures.mjs"
+      - "pkg/routes/**"
+      - ".github/workflows/fixture-check.yml"
+  pull_request:
+    paths:
+      - "scripts/check-fixtures.mjs"
+      - "pkg/routes/**"
+      - ".github/workflows/fixture-check.yml"
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm --prefix web run check:fixtures
