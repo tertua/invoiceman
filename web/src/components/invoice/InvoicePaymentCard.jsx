@@ -47,7 +47,7 @@ export function InvoicePaymentCard({ invoice }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [sendErr, setSendErr] = useState("");
-  const canShareOnline = balance > 0 && invoice.effective_status !== "draft" && currency === "IDR";
+  const canShareOnline = balance > 0 && invoice.effective_status !== "draft" && invoice.effective_status !== "pending" && currency === "IDR";
   const showIdrHint = balance > 0 && invoice.effective_status !== "draft" && currency !== "IDR" && !shareLink;
   const shareUrl = shareLink ? new URL(shareLink.url, window.location.origin).href : "";
 
@@ -113,7 +113,7 @@ export function InvoicePaymentCard({ invoice }) {
           </div>
           <CardTitle>{t("invDetail.payments")}</CardTitle>
         </div>
-        {balance > 0 && (
+        {balance > 0 && invoice.effective_status !== "pending" && (
           <Button variant="accent" size="sm" onClick={() => setModalOpen(true)}>
             <Plus size={13} /> {t("invDetail.recordPayment")}
           </Button>

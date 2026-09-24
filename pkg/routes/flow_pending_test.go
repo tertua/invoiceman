@@ -39,6 +39,16 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	invoiceID := invoice["id"].(string)
 	assert.Equal(t, "sent", invoice["effective_status"])
 
+	// A partial manual payment lands before the Snap intent opens.
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+invoiceID+`",
+		"amount":10000,
+		"method":"Cash",
+		"paid_on":"2026-09-05"
+	}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	paymentID := decodeBody(t, resp)["payment"].(map[string]interface{})["id"].(string)
+
 	db, err := database.OpenDBConnection()
 	require.NoError(t, err)
 	invoiceUUID := uuid.MustParse(invoiceID)
@@ -65,16 +75,18 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	// and reports, and shows its own donut slice.
 	resp = doRequest(t, app, "GET", "/api/dashboard?currency=IDR", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, "100000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "90000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
 	resp = doRequest(t, app, "GET", "/api/reports?currency=IDR", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	body := decodeBody(t, resp)
-	assert.Equal(t, "100000", body["totals"].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "90000", body["totals"].(map[string]interface{})["outstanding"])
 	slices := map[string]string{}
 	for _, s := range body["statusBreakdown"].([]interface{}) {
 		m := s.(map[string]interface{})
 		slices[m["key"].(string)] = m["value"].(string)
 	}
+	// The donut breaks down invoiced totals per status (a paid slice would
+	// read zero otherwise), so pending shows the full 100000 here.
 	assert.Equal(t, "100000", slices["pending"])
 
 	// Legacy flipped-back draft with money in flight: both outstanding
@@ -82,10 +94,10 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "draft"))
 	resp = doRequest(t, app, "GET", "/api/dashboard?currency=IDR", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, "100000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "90000", decodeBody(t, resp)["stats"].(map[string]interface{})["outstanding"])
 	resp = doRequest(t, app, "GET", "/api/reports?currency=IDR", "", cookies)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, "100000", decodeBody(t, resp)["totals"].(map[string]interface{})["outstanding"])
+	assert.Equal(t, "90000", decodeBody(t, resp)["totals"].(map[string]interface{})["outstanding"])
 	require.NoError(t, db.UpdateInvoiceStatus(userID, invoiceUUID, "sent"))
 
 	// While money is in flight the invoice is locked: editing totals or
@@ -109,6 +121,27 @@ func TestPendingEffectiveStatusFlow(t *testing.T) {
 	// Flipping sent/draft mid-flight is locked too: it cannot cancel the
 	// Snap intent at the provider, so the payment could still settle.
 	resp = doRequest(t, app, "PATCH", "/api/invoices/"+invoiceID+"/status", `{"status":"draft"}`, cookies)
+	require.Equal(t, 422, resp.StatusCode)
+	assert.Equal(t, "invoice has a pending payment",
+		decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+
+	// Money movement is locked too: a manual record, a void, or a second
+	// link would settle against a different balance than the live intent.
+	// (The existing public link stays usable — no new link is made here.)
+	resp = doRequest(t, app, "POST", "/api/payments", `{
+		"invoiceId":"`+invoiceID+`",
+		"amount":10000,
+		"method":"Cash",
+		"paid_on":"2026-09-06"
+	}`, cookies)
+	require.Equal(t, 422, resp.StatusCode)
+	assert.Equal(t, "invoice has a pending payment",
+		decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+	resp = doRequest(t, app, "DELETE", "/api/payments/"+paymentID+"?reason=duplicate", "", cookies)
+	require.Equal(t, 422, resp.StatusCode)
+	assert.Equal(t, "invoice has a pending payment",
+		decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
 	require.Equal(t, 422, resp.StatusCode)
 	assert.Equal(t, "invoice has a pending payment",
 		decodeBody(t, resp)["error"].(map[string]interface{})["message"])

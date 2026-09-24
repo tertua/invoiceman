@@ -155,7 +155,7 @@ export default function InvoiceDetail() {
         {/* Side: payment + reminder + client */}
         <div className="space-y-5">
           <InvoicePaymentCard invoice={invoice} />
-          {!isPaid && <InvoiceReminderCard invoiceId={id} />}
+          {!isPaid && st !== "pending" && <InvoiceReminderCard invoiceId={id} />}
           <ClientCard invoice={invoice} />
         </div>
       </div>

@@ -51,7 +51,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
 
   const options = useMemo(() => {
     const all = invoices || [];
-    return all.filter((i) => i.effective_status !== "paid").concat(all.filter((i) => i.effective_status === "paid"));
+    return all.filter((i) => i.effective_status !== "paid" && i.effective_status !== "pending").concat(all.filter((i) => i.effective_status === "paid" || i.effective_status === "pending"));
   }, [invoices]);
 
   const selectedInvoice = useMemo(
