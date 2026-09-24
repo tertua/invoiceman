@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.1] - 2026-09-24
+
+### Fixed
+- The local Snap intent for an invoice works again. It moved out of the
+  API-key `/gateway` namespace to `POST /api/v1/invoices/{id}/intents`, so a
+  signed-in session is no longer rejected with "missing api key".
+- Provider webhooks no longer register a duplicate route: `/webhooks/midtrans`
+  and `/webhooks/nowpayments` are both served by the single generic
+  `/webhooks/{gateway}` handler.
+
+### Changed
+- `payment_method` is validated against the known method ids and
+  `GET /gateway/methods` now returns a typed `{ id, name }` list. The optional
+  `gateway` field is documented as a legacy override; new integrations should
+  send only `payment_method`.
+
 ## [v0.3.0] - 2026-09-24
 
 ### Added
