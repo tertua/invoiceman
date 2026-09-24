@@ -1,0 +1,31 @@
+name: Branch Flow Check
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  flow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          git fetch origin main dev --prune
+          echo "count (main behind, dev ahead): $(git rev-list --left-right --count origin/main...origin/dev)"
+          git merge-base --is-ancestor origin/main origin/dev || {
+            echo "FAIL: origin/main is not ancestor of origin/dev."
+            echo "Keep dev strictly ahead of main; promote via fast-forward only (make promote). No merge-commit, no force-push."
+            exit 1
+          }
+          merges="$(git log --merges --format=%H origin/main..origin/dev)"
+          if [ -n "$merges" ]; then
+            echo "FAIL: merge commits found in origin/main..origin/dev:"
+            git log --merges --oneline origin/main..origin/dev
+            echo "Keep history linear via rebase (git pull --rebase / --ff-only)."
+            exit 1
+          fi
+          echo "OK: main ancestor of dev, no merge commits."

@@ -23,6 +23,14 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI when a
 - Gemini 429 surfaces as `ErrRateLimited` → HTTP 429 (`ai.rateLimited`). The free-tier quota is tiny (limit 20 requests), so verify AI with single calls, never probe loops. `GEMINI_MODEL` default lives in `.env.example`.
 - `.env` is loaded automatically for local runs; empty `SQL_DSN` selects auto-created SQLite and empty `REDIS_HOST` selects in-memory stores. Local settings live in gitignored `.env.build`, symlinked as `.env` (godotenv autoload only reads that exact name). Sessions are in-memory when `REDIS_HOST` is empty, so every BE restart invalidates all logins (expect 401s until re-login).
 
+## Branching (main stable, dev active)
+
+- `dev` is daily work. `main` is stable only — never commit directly to `main`.
+- Promote `dev` → `main` only when stable (tests/lint pass) via fast-forward, never merge-commit or force-push:
+  `make promote` (= `git fetch` + `git checkout main` + `git merge --ff-only origin/dev` + `git push origin main`).
+- Keep history linear: `git pull --ff-only` / `git pull --rebase`; no `git merge --no-ff`, no `git push --force` on `main`/`dev`.
+- Verify with `make check-flow` (`main` must be ancestor of `dev`, no merge commits in `main..dev`); CI enforces this in `branch-flow.yml`.
+
 ## Development and verification
 
 - Go toolchain is pinned to 1.27.1 (`go.mod`). `go test ./...` runs the default suite without external services; focus a route flow with `go test ./pkg/routes -run TestName -v`. Flow tests use in-memory SQLite. PostgreSQL and Redis integration tests are opt-in via `INVOICEMAN_TEST_PG_DSN` (empty scratch DB) and `INVOICEMAN_TEST_REDIS_ADDR`.

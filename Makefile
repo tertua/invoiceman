@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run web.check dev-be dev-fe
+.PHONY: clean critic security lint test build run web.check dev-be dev-fe promote check-flow
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -88,3 +88,19 @@ docker.stop.redis:
 
 swag:
 	swag init
+
+# Branching: dev is daily work, main is stable only.
+# Promote only via fast-forward, never merge-commit or force-push.
+promote:
+	git fetch origin --prune
+	git checkout main
+	git merge --ff-only origin/dev
+	git push origin main
+	git checkout dev
+
+check-flow:
+	git fetch origin --prune
+	@echo "main..dev count (behind ahead): $$(git rev-list --left-right --count origin/main...origin/dev)"
+	@git merge-base --is-ancestor origin/main origin/dev || (echo "FAIL: main is not ancestor of dev (needs rebase/ff, no merge-commit/force-push)"; exit 1)
+	@test -z "$$(git log --merges --format=%H origin/main..origin/dev)" || (echo "FAIL: merge commits found in main..dev, keep history linear via rebase"; git log --merges --oneline origin/main..origin/dev; exit 1)
+	@echo "OK: main ancestor of dev, no merge commits."
