@@ -144,6 +144,15 @@ func postOnce(ctx context.Context, cfg Config, path string, body []byte) ([]byte
 // CreateTransaction creates a NOWPayments payment. Relayed intents reached
 // without a pay currency use the hosted crypto invoice; public-pay direct USDT
 // (PayCurrency set) returns an on-page deposit address instead of a redirect.
+//
+// Dev path — NOWPayments pay currency (scaffold):
+//
+//	[done]  one pay currency on purpose: USDT TRC20 via direct payment
+//	[later] replace the USDT prefix check with a table of supported networks
+//	        (usdterc20, usdtbep20, ...) and pass the network through
+//	        CreateTxRequest
+//
+// End dev path
 func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxRequest) (*gateway.CreateTxResponse, error) {
 	cfg := FromEnv()
 	if payCcy := strings.ToUpper(strings.TrimSpace(req.PayCurrency)); payCcy != "" {

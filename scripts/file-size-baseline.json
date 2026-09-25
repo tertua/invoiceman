@@ -260,7 +260,7 @@
  "web/src/pages/Landing.jsx": 563,
  "web/src/pages/Login.jsx": 155,
  "web/src/pages/Payments.jsx": 100,
- "web/src/pages/PublicPay.jsx": 248,
+  "web/src/pages/PublicPay.jsx": 239,
  "web/src/pages/Register.jsx": 135,
  "web/src/pages/Reports.jsx": 129,
  "web/src/pages/ResetPassword.jsx": 133,

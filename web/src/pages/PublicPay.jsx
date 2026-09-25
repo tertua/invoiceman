@@ -6,6 +6,7 @@ import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import PublicShell from "@/components/publicpay/PublicShell";
 import CryptoWidget from "@/components/publicpay/CryptoWidget";
 import MethodPicker from "@/components/publicpay/MethodPicker";
+import InvoiceHead from "@/components/publicpay/InvoiceHead";
 import { publicPayApi } from "@/api/publicPay";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
@@ -33,6 +34,14 @@ function Row({ label, value, bold }) {
   );
 }
 
+// Dev path — public pay page (orchestrator scaffold)
+//   [done]  picking "crypto" swaps in CryptoWidget and hides the MethodPicker
+//   [next]  keep MethodPicker visible under the widget so the payer can switch
+//           method without a reload
+//   [later] order methods by audience (domestic IDR first)
+// Seam: data contract from publicPayApi.get plus the picker/widget props —
+// the page only composes, it never talks to a gateway directly.
+// End dev path
 export default function PublicPay() {
   const { token } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -156,25 +165,7 @@ export default function PublicPay() {
   return (
     <PublicShell branding={branding} lang={lang} onLang={changeLang}>
       <Card padding="lg" className="w-full max-w-[520px]">
-        <div className="flex items-start justify-between gap-4 pb-5 border-b border-[var(--border)]">
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] font-semibold mb-1">
-              {t(lang, "public.billTo")}
-            </div>
-            <div className="text-sm font-semibold text-[var(--ink)]">{invoice.client_name || "—"}</div>
-            {invoice.client_company && <div className="text-xs text-[var(--ink-muted)]">{invoice.client_company}</div>}
-          </div>
-          <div className="text-right">
-            <div className="font-display text-xl font-bold tracking-wide text-[var(--accent-strong)]">
-              {t(lang, "common.invoice").toUpperCase()}
-            </div>
-            <div className="text-sm text-[var(--ink-muted)] mt-0.5 tabular">{invoice.invoice_number}</div>
-            <div className={`mt-2 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full ${isPaid ? "bg-[var(--success)]/12 text-[var(--success)]" : isPending ? "bg-[var(--warning)]/12 text-[var(--warning)]" : "bg-[var(--danger)]/10 text-[var(--danger)]"}`}>
-              {isPaid ? <CheckCircle2 size={12} /> : null}
-              {isPaid ? t(lang, "public.paid") : isPending ? t(lang, "status.pending") : t(lang, "public.unpaid")}
-            </div>
-          </div>
-        </div>
+        <InvoiceHead invoice={invoice} isPaid={isPaid} isPending={isPending} lang={lang} />
 
         <div className="mt-4 space-y-2">
           {(invoice.items || []).map((it, i) => (

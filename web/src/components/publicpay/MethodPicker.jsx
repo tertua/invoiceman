@@ -6,6 +6,15 @@ import { t } from "@/lib/i18n";
 // already shown above, so each button carries only the method name — the
 // provider's charged amount/currency is not repeated per button. Crypto hands off
 // to the on-page CryptoWidget instead of redirecting.
+//
+// Dev path — method picker (scaffold, flat by design today)
+//   [done]  one row per provider method, name only
+//   [next]  group rows by charge currency (IDR domestic / USD international)
+//           and render m.currency + m.amount — both already in the payload
+//   [later] currency toggle on the pay page
+// Seam: props {methods, lang, onPick, pending, error} — the file can be
+// replaced wholesale without touching PublicPay.jsx.
+// End dev path
 export default function MethodPicker({ methods, lang, onPick, pending, error }) {
   return (
     <div className="mt-6">

@@ -21,6 +21,14 @@ func Route(preferredProvider, method string) (Gateway, error) {
 // method (e.g. a per-account method allowlist). A nil predicate allows every
 // provider. The predicate is consulted before a provider is selected, so a
 // vetoed provider is skipped and the next candidate is tried.
+//
+// Dev path — provider routing (product decision):
+//
+//	routing is deterministic method -> provider; no automatic failover
+//	between gateways until the UI/UX for it exists
+//	[later] opt-in fallback would live here, behind an explicit caller flag
+//
+// End dev path
 func RouteWhere(preferredProvider, method string, allow func(provider, method string) bool) (Gateway, error) {
 	method = strings.ToLower(strings.TrimSpace(method))
 	preferredProvider = strings.ToLower(strings.TrimSpace(preferredProvider))

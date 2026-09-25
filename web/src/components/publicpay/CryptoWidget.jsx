@@ -28,6 +28,14 @@ function currencyLabel(payCurrency) {
   return (payCurrency || "USDT").toUpperCase();
 }
 
+// Dev path — on-page crypto widget (scaffold, one network on purpose)
+//   [done]  USDT TRC20 direct payment: QR, address, amount, countdown,
+//           retry on 429, localized failure messages
+//   [next]  DEFAULT_PAY_CURRENCY stays the single swap point for the pay currency
+//   [later] network picker (ERC20, BEP20) once the widget settles
+// Seam: props {token, lang, onError} + publicPayApi.createTransaction(token,
+// method, extra) — both stable, so the widget can be rewritten in place.
+// End dev path
 export default function CryptoWidget({ token, lang, onError }) {
   const [intent, setIntent] = useState(null);
   const [pending, setPending] = useState(false);

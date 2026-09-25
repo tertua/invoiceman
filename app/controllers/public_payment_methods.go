@@ -22,6 +22,14 @@ type publicChargeMethod struct {
 // currency cannot be reached with the configured rate are skipped, so the
 // payer never sees a method that would fail at intent creation. The owner's
 // Midtrans allowlist narrows the Midtrans methods; nil allows them all.
+//
+// Dev path — public method list (scaffold):
+//
+//	[done]  flat provider-neutral list, sorted by id
+//	[next]  group/order per audience (IDR methods first for domestic payers)
+//	        while keeping publicChargeMethod unchanged
+//
+// End dev path
 func availableChargeMethods(invoiceCurrency string, balance, usdToIdr decimal.Decimal, midtransAllow map[string]bool) []publicChargeMethod {
 	seen := make(map[string]bool)
 	out := make([]publicChargeMethod, 0)

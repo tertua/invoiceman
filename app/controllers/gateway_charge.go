@@ -30,6 +30,13 @@ type chargeSpec struct {
 // is IDR-only; NOWPayments invoices reject non-USD fiat (e.g. IDR) at the
 // hosted checkout, so they are always charged in USD. No realtime rates are
 // ever fetched.
+//
+// Dev path — charge currency policy:
+//
+//	[done]  Midtrans -> IDR, NOWPayments -> USD via the manual usd_to_idr rate
+//	[later] per-invoice currency choice once the pay page grows a toggle
+//
+// End dev path
 func buildCharge(gw gateway.Gateway, invoiceCurrency string, balance, usdToIdr decimal.Decimal) (chargeSpec, error) {
 	invoiceCurrency = strings.ToUpper(strings.TrimSpace(invoiceCurrency))
 	target := invoiceCurrency
