@@ -1,5 +1,11 @@
 package gateway
 
+import (
+	"context"
+
+	"github.com/shopspring/decimal"
+)
+
 type CreateTxRequest struct {
 	OrderID        string
 	AmountMinor    int64
@@ -50,4 +56,13 @@ type PaymentMethodProvider interface {
 // unusable methods.
 type ConfiguredProvider interface {
 	Configured() bool
+}
+
+// MinAmountChecker is an optional capability: providers with live
+// per-currency minimums report them so endpoints can hide a method whose
+// charge could never succeed, instead of failing after the payer commits.
+// currencyFrom is the charge currency (e.g. USD); the provider picks its own
+// canonical pay currency internally.
+type MinAmountChecker interface {
+	MinAmount(ctx context.Context, currencyFrom string) (decimal.Decimal, error)
 }
