@@ -81,6 +81,51 @@ func TestCreateDirectPaymentOtherError(t *testing.T) {
 	}
 }
 
+func TestCreateDirectPaymentRetriesRateLimit(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		if calls == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`<html>429 Too Many Requests</html>`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"payment_id":"pay_retry","pay_address":"TRETRY","pay_amount":"25.50","pay_currency":"usdttrc20"}`))
+	}))
+	defer srv.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
+
+	dp, err := CreateDirectPayment(context.Background(), FromEnv(), &DirectPaymentRequest{
+		OrderID: "INV-1-retry", PriceAmount: "25.50", PriceCurrency: "USD", PayCurrency: "USDTTRC20",
+	})
+	if err != nil {
+		t.Fatalf("expected the retry to recover from 429, got: %v", err)
+	}
+	if dp.PaymentID != "pay_retry" || calls != 2 {
+		t.Fatalf("expected 2 attempts and a payment, got calls=%d payment=%+v", calls, dp)
+	}
+}
+
+func TestCreateDirectPaymentRateLimited(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`<html>429 Too Many Requests</html>`))
+	}))
+	defer srv.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
+
+	_, err := CreateDirectPayment(context.Background(), FromEnv(), &DirectPaymentRequest{
+		OrderID: "INV-1-limited", PriceAmount: "25.50", PriceCurrency: "USD", PayCurrency: "USDTTRC20",
+	})
+	if !errors.Is(err, gateway.ErrRateLimited) {
+		t.Fatalf("expected ErrRateLimited, got: %v", err)
+	}
+}
+
 func TestCreateDirectPaymentGateway(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

@@ -13,8 +13,9 @@ function formatCountdown(left) {
 }
 
 function payErrorMessage(e, lang) {
-  const details = e?.response?.data?.error?.details;
-  if (details?.code === "amount_below_minimum") return t(lang, "public.payAmountMinimum");
+  const err = e?.response?.data?.error;
+  if (err?.details?.code === "amount_below_minimum") return t(lang, "public.payAmountMinimum");
+  if (err?.details?.code === "rate_limited" || e?.response?.status === 429) return t(lang, "public.payRateLimited");
   return t(lang, "public.payCreateFailed");
 }
 

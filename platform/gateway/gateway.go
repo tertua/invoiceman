@@ -23,6 +23,10 @@ var ErrInvalidPayload = errors.New("invalid notification")
 // gateway's minimum accepted payment amount for the chosen currency.
 var ErrAmountBelowMinimum = errors.New("payment amount is below the gateway minimum")
 
+// ErrRateLimited is returned when the gateway rejects the caller with a
+// temporary rate limit after retries were exhausted.
+var ErrRateLimited = errors.New("payment gateway is rate limited")
+
 // Transaction statuses shared by all gateways and the relay payload.
 // Gateways map their provider-specific states to these.
 const (

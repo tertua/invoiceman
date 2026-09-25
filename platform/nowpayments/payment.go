@@ -45,29 +45,20 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.BaseURL()+"/payment", bytes.NewReader(body))
+	raw, status, err := postWithRetry(ctx, cfg, "/payment", body)
 	if err != nil {
 		return nil, err
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("x-api-key", cfg.APIKey)
-	resp, err := http.DefaultClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("nowpayments payment: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return nil, fmt.Errorf("nowpayments payment: %w", err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	if status < 200 || status >= 300 {
+		if status == http.StatusTooManyRequests {
+			return nil, fmt.Errorf("nowpayments payment: %w", gateway.ErrRateLimited)
+		}
 		if isAmountMinimalError(raw) {
 			return nil, fmt.Errorf("nowpayments payment: %w: %s", gateway.ErrAmountBelowMinimum, truncate(string(raw), 300))
 		}
-		return nil, fmt.Errorf("nowpayments payment: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return nil, fmt.Errorf("nowpayments payment: status %d: %s", status, truncate(string(raw), 300))
 	}
 	var decoded map[string]any
 	if err := json.Unmarshal(raw, &decoded); err != nil {
@@ -107,6 +98,47 @@ func isAmountMinimalError(raw []byte) bool {
 		return false
 	}
 	return body.Code == "AMOUNT_MINIMAL_ERROR"
+}
+
+// postWithRetry posts one JSON body to a NOWPayments endpoint. A 429 answer
+// is retried with a short backoff so a transient rate limit does not fail
+// the caller; the final status is returned once the limit persists.
+func postWithRetry(ctx context.Context, cfg Config, path string, body []byte) ([]byte, int, error) {
+	const maxAttempts = 3
+	for attempt := 1; ; attempt++ {
+		raw, status, err := postOnce(ctx, cfg, path, body)
+		if err != nil {
+			return nil, 0, err
+		}
+		if status != http.StatusTooManyRequests || attempt == maxAttempts {
+			return raw, status, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, 0, fmt.Errorf("nowpayments payment: %w", ctx.Err())
+		case <-time.After(time.Duration(attempt) * time.Second):
+		}
+	}
+}
+
+func postOnce(ctx context.Context, cfg Config, path string, body []byte) ([]byte, int, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.BaseURL()+path, bytes.NewReader(body))
+	if err != nil {
+		return nil, 0, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("x-api-key", cfg.APIKey)
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
+	}
+	return raw, resp.StatusCode, nil
 }
 
 // CreateTransaction creates a NOWPayments payment. Relayed intents reached

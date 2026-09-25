@@ -63,6 +63,9 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		if errors.Is(err, gateway.ErrAmountBelowMinimum) {
 			return utils.Fail(c, fiber.StatusBadRequest, "payment amount is below the gateway minimum", fiber.Map{"code": "amount_below_minimum"})
 		}
+		if errors.Is(err, gateway.ErrRateLimited) {
+			return utils.Fail(c, fiber.StatusTooManyRequests, "payment gateway is rate limited, please retry", fiber.Map{"code": "rate_limited"})
+		}
 		logger.L().Warn("public gateway intent failed", "gateway", gw.Name(), "method", method, "err", err)
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
 	}

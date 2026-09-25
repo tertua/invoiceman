@@ -161,7 +161,7 @@
  "platform/nowpayments/invoice.go": 125,
  "platform/nowpayments/nowpayments.go": 43,
  "platform/nowpayments/nowpayments_test.go": 169,
- "platform/nowpayments/verify.go": 167,
+ "platform/nowpayments/verify.go": 102,
  "platform/outbox/worker.go": 332,
  "platform/outbox/worker_test.go": 268,
  "platform/relay/forwarder.go": 46,

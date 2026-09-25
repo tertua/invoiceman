@@ -596,6 +596,7 @@ export const id = {
     "public.chooseMethod": "Pilih cara pembayaran",
     "public.payAmountMinimum": "Jumlah invoice di bawah minimum yang diterima untuk pembayaran kripto. Silakan pilih metode pembayaran lain.",
     "public.payCreateFailed": "Pembayaran gagal dimulai. Coba lagi atau pilih metode pembayaran lain.",
+    "public.payRateLimited": "Penyedia pembayaran sedang sibuk. Tunggu beberapa detik, lalu coba lagi.",
     "public.payNoAddress": "Alamat deposit tidak diterima. Coba lagi.",
     "public.viewInvoice": "Lihat faktur",
     "public.pdfPreparing": "Menyiapkan PDF...",

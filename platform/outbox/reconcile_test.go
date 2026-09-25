@@ -2,6 +2,8 @@ package outbox
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -11,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 // seedReconcileInvoice creates a user with one sent invoice for reconcile tests.
@@ -49,10 +51,10 @@ func seedPendingTxn(t *testing.T, db *database.Queries, uid uuid.UUID, inv *mode
 
 func stubFetchTxStatus(status, gross string) func() {
 	old := FetchTxStatus
-	FetchTxStatus = func(ctx context.Context, orderID string) (*midtrans.TxStatus, error) {
-		return &midtrans.TxStatus{
-			OrderID: orderID, Status: status, TransactionID: "txn-1",
-			PaymentType: "qris", GrossAmount: decimal.RequireFromString(gross),
+	FetchTxStatus = func(ctx context.Context, txn models.GatewayTransaction) (*txStatus, error) {
+		return &txStatus{
+			Status: status, TransactionID: "txn-1", PaymentType: "qris",
+			GrossAmount: decimal.RequireFromString(gross), Currency: gateway.FiatIDR,
 		}, nil
 	}
 	return func() { FetchTxStatus = old }
@@ -125,4 +127,83 @@ func TestReconcileSkippedWithoutGateway(t *testing.T) {
 	txn, err := db.GetTransaction(orderID)
 	require.NoError(t, err)
 	assert.Equal(t, models.GatewayStatusPending, txn.Status)
+}
+
+// seedNowPaymentsTxn stores a stale pending direct-payment row the way the
+// public pay widget creates one: payment id in SnapToken plus a pay address.
+func seedNowPaymentsTxn(t *testing.T, db *database.Queries, uid uuid.UUID, inv *models.Invoice, paymentID, address string) string {
+	t.Helper()
+	orderID := "PAY-NP-" + uuid.NewString()[:8]
+	old := time.Now().Add(-time.Hour)
+	txn := &models.GatewayTransaction{
+		OrderID: orderID, ProjectSlug: "local", Gateway: "nowpayments",
+		SnapToken: paymentID, Address: address, PayAmount: "5.55", PayCurrency: "usdttrc20",
+		AmountIDR: 100000, Currency: "USD", InvoiceCurrency: "IDR",
+		InvoiceAmount: decimal.RequireFromString("100000"), Status: models.GatewayStatusPending,
+		CreatedAt: old, UpdatedAt: old, InvoiceID: &inv.ID, UserID: &uid,
+	}
+	require.NoError(t, db.CreateTransaction(txn))
+	return orderID
+}
+
+// TestReconcileNowPaymentsSettles polls NOWPayments for a direct payment and
+// settles the invoice through the IPN's own rules (a USD price carries no
+// minor amount, so a finished payment credits the full balance).
+func TestReconcileNowPaymentsSettles(t *testing.T) {
+	np := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/payment/pay_np_1" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"payment_id":"pay_np_1","order_id":"PAY-NP","payment_status":"finished","price_amount":5.55,"price_currency":"USD","pay_amount":"5.55","pay_currency":"usdttrc20"}`))
+	}))
+	defer np.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test")
+	t.Setenv("NOWPAYMENTS_BASE_URL", np.URL+"/v1")
+	t.Setenv("MIDTRANS_SERVER_KEY", "test")
+
+	db := testDB(t)
+	uid, inv := seedReconcileInvoice(t, db, "100000")
+	orderID := seedNowPaymentsTxn(t, db, uid, &inv, "pay_np_1", "TAddrNP")
+
+	(&Worker{batch: 20}).reconcileGateway(context.Background())
+
+	txn, err := db.GetTransaction(orderID)
+	require.NoError(t, err)
+	assert.Equal(t, models.GatewayStatusSuccess, txn.Status)
+	assert.Equal(t, "pay_np_1", txn.MidtransTxnID)
+	assert.Equal(t, "usdttrc20", txn.PaymentType)
+	paid, err := db.PaidAmount(inv.ID)
+	require.NoError(t, err)
+	assert.True(t, paid.Equal(decimal.RequireFromString("100000")), "finished must credit the balance, got %s", paid.String())
+	updated, err := db.GetInvoice(uid, inv.ID)
+	require.NoError(t, err)
+	assert.Equal(t, models.InvoiceStatusPaid, updated.Status)
+}
+
+// TestReconcileNowPaymentsHostedInvoiceSkipped keeps a hosted invoice row
+// untouched: without a payment id there is nothing to ask the provider.
+func TestReconcileNowPaymentsHostedInvoiceSkipped(t *testing.T) {
+	calls := 0
+	np := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer np.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test")
+	t.Setenv("NOWPAYMENTS_BASE_URL", np.URL+"/v1")
+	t.Setenv("MIDTRANS_SERVER_KEY", "test")
+
+	db := testDB(t)
+	uid, inv := seedReconcileInvoice(t, db, "100000")
+	orderID := seedNowPaymentsTxn(t, db, uid, &inv, "inv_hosted", "")
+
+	(&Worker{batch: 20}).reconcileGateway(context.Background())
+
+	txn, err := db.GetTransaction(orderID)
+	require.NoError(t, err)
+	assert.Equal(t, models.GatewayStatusPending, txn.Status)
+	assert.Zero(t, calls, "hosted invoice rows must not hit the provider")
+	assert.WithinDuration(t, time.Now(), txn.UpdatedAt, 2*time.Minute, "the touch still spaces the next attempt")
 }

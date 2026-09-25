@@ -596,6 +596,7 @@ export const en = {
     "public.chooseMethod": "Choose how to pay",
     "public.payAmountMinimum": "This invoice amount is below the minimum accepted for crypto payments. Please choose another payment method.",
     "public.payCreateFailed": "Could not start the payment. Please try again or choose another payment method.",
+    "public.payRateLimited": "The payment provider is busy right now. Wait a few seconds, then try again.",
     "public.payNoAddress": "No deposit address was returned. Please try again.",
     "public.viewInvoice": "View invoice",
     "public.pdfPreparing": "Preparing PDF...",
