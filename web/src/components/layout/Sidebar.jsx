@@ -10,13 +10,13 @@ import {
   Settings,
   ShieldCheck,
   Waypoints,
-  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useAppName } from "@/hooks/useConfig";
 import AILogo from "./AILogo";
+import { UserCard } from "./SidebarUserCard";
 
 const NAV = [
   { to: "/dashboard", icon: LayoutGrid, labelKey: "sidebar.dashboard" },
@@ -99,8 +99,6 @@ export function Sidebar() {
   const { user, logout } = useAuth();
   const { t } = useLang();
   const appName = useAppName();
-  const displayName = user?.name || t("sidebar.account");
-  const displayEmail = user?.email || "";
 
   return (
     <aside
@@ -149,35 +147,8 @@ export function Sidebar() {
           </>
         )}
         <ActionRow icon={Settings} label={t("sidebar.settings")} to="/settings" />
-        <ActionRow icon={LogOut} label={t("sidebar.logOut")} onClick={logout} />
 
-        <div
-          className={cn(
-            "flex items-center h-12 mt-1 w-10 group-hover/sidebar:w-[200px] overflow-hidden",
-            "transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-          )}
-        >
-          <div className="h-10 w-10 rounded-full bg-[var(--accent-soft)] text-[var(--accent-strong)] font-semibold flex items-center justify-center text-sm ring-2 ring-[var(--surface)] shrink-0">
-            {user?.name?.[0]?.toUpperCase() || "R"}
-          </div>
-          <div
-            className={cn(
-              "ml-3 min-w-0 flex-1",
-              "opacity-0 -translate-x-1",
-              "transition-[opacity,transform] duration-200 ease-out",
-              "group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 group-hover/sidebar:delay-100",
-            )}
-          >
-            <div className="text-sm font-semibold text-[var(--ink)] truncate">
-              {displayName}
-            </div>
-            {displayEmail && (
-              <div className="text-[11px] text-[var(--ink-muted)] truncate">
-                {displayEmail}
-              </div>
-            )}
-          </div>
-        </div>
+        <UserCard user={user} logout={logout} t={t} />
       </div>
     </aside>
   );

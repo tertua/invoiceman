@@ -405,7 +405,6 @@ export default function Settings() {
           <TabsTrigger value="company">{t("settings.tabCompany")}</TabsTrigger>
           <TabsTrigger value="profile">{t("settings.tabAccount")}</TabsTrigger>
           <TabsTrigger value="appearance">{t("settings.tabAppearance")}</TabsTrigger>
-          <TabsTrigger value="password">{t("settings.tabPassword")}</TabsTrigger>
           <TabsTrigger value="notifications">{t("settings.tabNotifications")}</TabsTrigger>
         </TabsList>
 
@@ -414,16 +413,16 @@ export default function Settings() {
             <CompanySection />
           </TabsContent>
           <TabsContent value="profile">
-            <ProfileSection />
+            <div className="space-y-5">
+              <ProfileSection />
+              <PasswordSection />
+            </div>
           </TabsContent>
           <TabsContent value="appearance">
             <div className="space-y-5">
               <AppearanceSection />
               <LanguageSection />
             </div>
-          </TabsContent>
-          <TabsContent value="password">
-            <PasswordSection />
           </TabsContent>
           <TabsContent value="notifications">
             <NotificationsTab />

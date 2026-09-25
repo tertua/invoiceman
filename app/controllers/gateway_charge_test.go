@@ -36,7 +36,7 @@ func TestBuildChargeConvertsForMidtrans(t *testing.T) {
 	}
 }
 
-// A non-IDR provider keeps the invoice currency and needs no rate.
+// A USD invoice keeps USD for NOWPayments and needs no rate.
 func TestBuildChargeKeepsInvoiceCurrencyForCrypto(t *testing.T) {
 	spec, err := buildCharge(fakeGateway{name: "nowpayments"}, "USD", decimal.RequireFromString("25.50"), decimal.Zero)
 	if err != nil {
@@ -50,9 +50,34 @@ func TestBuildChargeKeepsInvoiceCurrencyForCrypto(t *testing.T) {
 	}
 }
 
+// An IDR invoice is converted to USD for NOWPayments with the manual rate:
+// the hosted checkout rejects IDR, so it must never be sent as-is.
+func TestBuildChargeConvertsIDRToUSDForCrypto(t *testing.T) {
+	spec, err := buildCharge(fakeGateway{name: "nowpayments"}, "IDR", decimal.RequireFromString("222000"), decimal.RequireFromString("18000"))
+	if err != nil {
+		t.Fatalf("buildCharge: %v", err)
+	}
+	if spec.Currency != gateway.FiatUSD {
+		t.Fatalf("currency = %q, want USD", spec.Currency)
+	}
+	want := decimal.RequireFromString("222000").Div(decimal.RequireFromString("18000"))
+	if got, _ := decimal.NewFromString(spec.AmountDecimal); !got.Equal(want) {
+		t.Fatalf("AmountDecimal = %s, want %s", spec.AmountDecimal, want)
+	}
+	if !spec.UsdToIdr.Equal(decimal.RequireFromString("18000")) {
+		t.Fatalf("UsdToIdr = %s, want 18000", spec.UsdToIdr)
+	}
+	if !spec.InvoiceAmount.Equal(decimal.RequireFromString("222000")) {
+		t.Fatalf("InvoiceAmount = %s, want 222000", spec.InvoiceAmount)
+	}
+}
+
 // Missing rate for a cross-currency charge is a hard error, never a silent guess.
 func TestBuildChargeRequiresRateForCrossCurrency(t *testing.T) {
 	if _, err := buildCharge(fakeGateway{name: "midtrans"}, "USD", decimal.RequireFromString("25"), decimal.Zero); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+	if _, err := buildCharge(fakeGateway{name: "nowpayments"}, "IDR", decimal.RequireFromString("222000"), decimal.Zero); err == nil {
+		t.Fatal("expected error for IDR crypto without rate, got nil")
 	}
 }
