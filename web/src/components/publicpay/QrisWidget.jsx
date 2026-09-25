@@ -22,7 +22,9 @@ function formatCountdown(left) {
 
 // Dev path — on-page QRIS widget (scaffold, Gopay acquirer on purpose)
 //   [done]  QRIS charge via the Core API (acquirer=gopay), QR image + expiry
-//           countdown, Snap checkout fallback when the Core API is unavailable
+//           countdown, Snap checkout fallback when the Core API is unavailable;
+//           an expired QR is hidden and re-requested via "new QR" (backend
+//           recharges under a -rN order id instead of resending a dead QR)
 //   [next]  acquirer stays a backend decision; the widget only renders qr_image
 //   [later] poll the intent status inline instead of relying on the page poll
 // Seam: props {token, lang, amount, currency, gateway, onError, onPaid} +
@@ -33,6 +35,7 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
   const [intent, setIntent] = useState(null);
   const [pending, setPending] = useState(false);
   const [left, setLeft] = useState(DEFAULT_TTL);
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +72,7 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
     return () => {
       cancelled = true;
     };
-  }, [token, lang, gateway, onError, onPaid]);
+  }, [token, lang, gateway, onError, onPaid, nonce]);
 
   useEffect(() => {
     if (!intent) return undefined;
@@ -94,6 +97,8 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
 
   if (!intent) return null;
 
+  const expired = left <= 0;
+
   return (
     <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -101,17 +106,30 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
           {t(lang, "public.qrisTitle")}
         </div>
         <div className="tabular text-xs font-semibold text-[var(--danger)]">
-          {t(lang, "public.qrisExpires")} {formatCountdown(left)}
+          {expired ? t(lang, "public.qrisExpired") : `${t(lang, "public.qrisExpires")} ${formatCountdown(left)}`}
         </div>
       </div>
 
-      <div className="flex flex-col items-center">
-        <img
-          src={intent.payment_url}
-          alt={t(lang, "public.qrisQrAlt")}
-          className="h-56 w-56 rounded-xl border border-[var(--border)] bg-white p-2"
-        />
-      </div>
+      {expired ? (
+        <div className="flex flex-col items-center gap-3 py-4">
+          <p className="text-sm text-[var(--ink-muted)]">{t(lang, "public.qrisExpiredHint")}</p>
+          <button
+            type="button"
+            onClick={() => setNonce((n) => n + 1)}
+            className="rounded-2xl border border-[var(--accent)]/50 bg-[var(--surface)] px-5 py-2.5 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)]"
+          >
+            {t(lang, "public.qrisRegenerate")}
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center">
+          <img
+            src={intent.payment_url}
+            alt={t(lang, "public.qrisQrAlt")}
+            className="h-56 w-56 rounded-xl border border-[var(--border)] bg-white p-2"
+          />
+        </div>
+      )}
 
       {amount ? (
         <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
@@ -120,7 +138,9 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
         </div>
       ) : null}
 
-      <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">{t(lang, "public.qrisHint")}</p>
+      {expired ? null : (
+        <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">{t(lang, "public.qrisHint")}</p>
+      )}
     </div>
   );
 }

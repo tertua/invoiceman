@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,7 +27,7 @@ type publicIntentRequest struct {
 // the public page; an empty method keeps the legacy Midtrans default. The
 // charge is converted to the provider's currency with the owner's manual rate
 // when they differ.
-func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method string, payCurrency string) error {
+func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method, payCurrency string) error {
 	method = normalizedPaymentMethod(method)
 	settings, err := db.GetSettings(link.UserID)
 	if err != nil {
@@ -41,14 +43,33 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	}
 	applyEnabledMethods(&spec, gw.Name(), settings)
 	orderID := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
-	if existing, err := db.GetTransaction(orderID); err == nil {
-		return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
-	}
-	// Backward compat: reuse the pre-rename INV- intent for the same
-	// invoice+link instead of opening a duplicate at the gateway.
 	if method == "" {
+		// Legacy default method: keep the pre-rename INV- intent reused
+		// forever instead of opening a duplicate at the gateway.
+		if existing, err := db.GetTransaction(orderID); err == nil {
+			return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
+		}
 		if existing, err := db.GetTransaction(legacyLocalOrderID(invoice.InvoiceNumber, link.Token[:8])); err == nil {
 			return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
+		}
+	} else {
+		// Reuse the current intent only while it can still be paid; an
+		// expired or failed one is superseded by a fresh charge under a
+		// retry suffix, because Midtrans rejects a duplicate order id.
+		latest, err := db.LatestIntent("local", invoice.ID.String(), method)
+		switch {
+		case err == nil:
+			if reusableIntent(latest, balance) {
+				return utils.OK(c, fiber.StatusOK, publicIntentResponse(latest))
+			}
+			n, cerr := db.CountIntents("local", invoice.ID.String(), method)
+			if cerr != nil {
+				return utils.Fail(c, fiber.StatusInternalServerError, "failed to load gateway transaction", nil)
+			}
+			orderID += "-r" + strconv.FormatInt(n, 10)
+		case errors.Is(err, sql.ErrNoRows): // first attempt for this method
+		default:
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load gateway transaction", nil)
 		}
 	}
 	req := spec.request(orderID, "", "", method)
@@ -87,6 +108,23 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
 	}
 	return utils.OK(c, fiber.StatusOK, publicIntentResponse(*txn))
+}
+
+// reusableIntent reports whether a stored public intent can still be paid:
+// pending, not past the expiry the provider itself reported (QRIS ~15 minutes,
+// crypto deposit windows too; Snap/gopay rows carry none), and still covering
+// the current balance. Failed/settled/foreign-amount rows are never reused.
+func reusableIntent(t models.GatewayTransaction, balance decimal.Decimal) bool {
+	if t.Status != models.GatewayStatusPending {
+		return false
+	}
+	if t.ExpiresAt != "" {
+		if at, err := time.Parse(time.RFC3339, t.ExpiresAt); err == nil && !at.After(time.Now()) {
+			return false
+		}
+	}
+	// Rows written before conversion existed carry no currency to compare.
+	return t.InvoiceCurrency == "" || t.InvoiceAmount.Equal(balance)
 }
 
 // routePublicGateway resolves the provider for a public charge: an explicit
