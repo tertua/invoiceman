@@ -5,17 +5,8 @@ import (
 	"testing"
 )
 
-// resolveLocale allowlists the SPA language header.
 func TestResolveLocale(t *testing.T) {
-	cases := [][2]string{
-		{"id", "id"},
-		{"ID", "id"},
-		{" id ", "id"},
-		{"en", "en"},
-		{"EN", "en"},
-		{"", "en"},
-		{"fr", "en"},
-	}
+	cases := [][2]string{{"id", "id"}, {"ID", "id"}, {" id ", "id"}, {"en", "en"}, {"EN", "en"}, {"", "en"}, {"fr", "en"}}
 	for _, tc := range cases {
 		if got := resolveLocale(tc[0]); got != tc[1] {
 			t.Errorf("resolveLocale(%q) = %q, want %q", tc[0], got, tc[1])
@@ -23,8 +14,6 @@ func TestResolveLocale(t *testing.T) {
 	}
 }
 
-// languageDirective must pin a language explicitly: bare money data would
-// otherwise pull the answer (and its currency formatting) toward English.
 func TestLanguageDirective(t *testing.T) {
 	if got := languageDirective("id"); !strings.Contains(got, "Bahasa Indonesia") {
 		t.Errorf("id directive missing Bahasa Indonesia: %q", got)
@@ -34,7 +23,6 @@ func TestLanguageDirective(t *testing.T) {
 	}
 }
 
-// writeNoteInstruction turns notes into a wise saying and terms into a numbered-only list.
 func TestWriteNoteInstruction(t *testing.T) {
 	terms := writeNoteInstruction("terms")
 	if !strings.Contains(terms, "numbered list") || !strings.Contains(terms, "1.") {
@@ -43,13 +31,23 @@ func TestWriteNoteInstruction(t *testing.T) {
 	if strings.Contains(terms, "wise saying") {
 		t.Errorf("terms instruction must not use the notes style: %q", terms)
 	}
-	if got := writeNoteInstruction("description"); !strings.Contains(got, "wise saying") || !strings.Contains(got, "Do not summarize") {
-		t.Errorf("description instruction must request a wise saying, not a summary: %q", got)
+	banned := []string{"thank you", "terima kasih", "kerja sama", "kerjasama", "cooperation"}
+	for _, b := range banned {
+		if !strings.Contains(terms, b) {
+			t.Errorf("terms must forbid %q", b)
+		}
+	}
+	note := writeNoteInstruction("description")
+	if !strings.Contains(note, "wise saying") || !strings.Contains(note, "Do not summarize") {
+		t.Errorf("description must request wise saying: %q", note)
+	}
+	for _, b := range banned {
+		if !strings.Contains(note, b) {
+			t.Errorf("note must forbid %q", b)
+		}
 	}
 }
 
-// currencyDirective must bind formatting to the ISO code so the model never
-// defaults bare numbers to US dollars.
 func TestCurrencyDirective(t *testing.T) {
 	idr := currencyDirective("IDR")
 	if !strings.Contains(idr, "Rp160.000") {
