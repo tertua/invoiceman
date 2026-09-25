@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { publicPayApi } from "@/api/publicPay";
 import { loadMidtransSnap } from "@/lib/midtrans";
+import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
 import { formatMoney } from "@/lib/utils";
 
@@ -36,6 +37,15 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
   const [pending, setPending] = useState(true);
   const [left, setLeft] = useState(DEFAULT_TTL);
   const [nonce, setNonce] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  async function saveQr() {
+    if (!intent?.payment_url || saving) return;
+    setSaving(true);
+    const ok = await downloadImage(intent.payment_url, "qris.png");
+    setSaving(false);
+    if (!ok) window.open(intent.payment_url, "_blank", "noopener");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -126,12 +136,21 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center gap-3">
           <img
             src={intent.payment_url}
             alt={t(lang, "public.qrisQrAlt")}
             className="h-56 w-56 rounded-xl border border-[var(--border)] bg-white p-2"
           />
+          <button
+            type="button"
+            onClick={saveQr}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            {t(lang, "public.downloadQr")}
+          </button>
         </div>
       )}
 

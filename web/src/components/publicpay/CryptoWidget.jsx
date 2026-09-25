@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Copy, Check } from "lucide-react";
+import { Loader2, Copy, Check, Download } from "lucide-react";
 import { publicPayApi } from "@/api/publicPay";
+import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
 
 const BASE = 0.91; // 1090s ~ NOWPayments default payment timeout.
@@ -43,6 +44,15 @@ export default function CryptoWidget({ token, lang, onError }) {
   const copyTimer = useRef(null);
   const [left, setLeft] = useState(Math.round(BASE * 1000));
   const [qrSrc, setQrSrc] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function saveQr() {
+    if (!qrSrc || saving) return;
+    setSaving(true);
+    const ok = await downloadImage(qrSrc, "usdt-deposit-qr.png");
+    setSaving(false);
+    if (!ok) window.open(qrSrc, "_blank", "noopener");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -133,12 +143,23 @@ export default function CryptoWidget({ token, lang, onError }) {
         </div>
       </div>
 
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center gap-3">
         {qrSrc ? (
           <img src={qrSrc} alt={intent.address} className="h-48 w-48 rounded-xl border border-[var(--border)] bg-white p-2" />
         ) : (
           <div className="flex h-48 items-center justify-center text-xs text-[var(--ink-muted)]">QR…</div>
         )}
+        {qrSrc ? (
+          <button
+            type="button"
+            onClick={saveQr}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            {t(lang, "public.downloadQr")}
+          </button>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-1.5">

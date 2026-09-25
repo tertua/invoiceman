@@ -588,6 +588,7 @@ export const en = {
     "public.billTo": "Bill To",
     "public.thanksPaid": "Thank you! This invoice has been paid.",
     "public.downloadPdf": "Download PDF receipt",
+    "public.downloadQr": "Download QR",
     "public.receipt": "Payment receipt",
     "public.receiptRef": "Receipt",
     "public.invalidLink": "This payment link is invalid or has expired.",
