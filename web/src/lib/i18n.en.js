@@ -594,6 +594,7 @@ export const en = {
     "public.notPayable": "This invoice cannot be paid online.",
     "public.secureBy": "Payments are securely processed by our payment providers",
     "public.chooseMethod": "Choose how to pay",
+    "public.continuePay": "Continue",
     "public.payAmountMinimum": "This invoice amount is below the minimum accepted for crypto payments. Please choose another payment method.",
     "public.payCreateFailed": "Could not start the payment. Please try again or choose another payment method.",
     "public.payRateLimited": "The payment provider is busy right now. Wait a few seconds, then try again.",

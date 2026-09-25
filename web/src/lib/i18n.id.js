@@ -594,6 +594,7 @@ export const id = {
     "public.notPayable": "Faktur ini tidak dapat dibayar online.",
     "public.secureBy": "Pembayaran diproses aman oleh mitra kami",
     "public.chooseMethod": "Pilih cara pembayaran",
+    "public.continuePay": "Lanjutkan",
     "public.payAmountMinimum": "Jumlah invoice di bawah minimum yang diterima untuk pembayaran kripto. Silakan pilih metode pembayaran lain.",
     "public.payCreateFailed": "Pembayaran gagal dimulai. Coba lagi atau pilih metode pembayaran lain.",
     "public.payRateLimited": "Penyedia pembayaran sedang sibuk. Tunggu beberapa detik, lalu coba lagi.",
