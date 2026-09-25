@@ -103,10 +103,10 @@ func isAmountMinimalError(raw []byte) bool {
 // postWithRetry posts one JSON body to a NOWPayments endpoint. A 429 answer
 // is retried with a short backoff so a transient rate limit does not fail
 // the caller; the final status is returned once the limit persists.
-func postWithRetry(ctx context.Context, cfg Config, path string, body []byte) ([]byte, int, error) {
+func postWithRetry(ctx context.Context, cfg Config, path string, body []byte) (raw []byte, status int, err error) {
 	const maxAttempts = 3
 	for attempt := 1; ; attempt++ {
-		raw, status, err := postOnce(ctx, cfg, path, body)
+		raw, status, err = postOnce(ctx, cfg, path, body)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -121,7 +121,7 @@ func postWithRetry(ctx context.Context, cfg Config, path string, body []byte) ([
 	}
 }
 
-func postOnce(ctx context.Context, cfg Config, path string, body []byte) ([]byte, int, error) {
+func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []byte, status int, err error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.BaseURL()+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, 0, err
@@ -134,7 +134,7 @@ func postOnce(ctx context.Context, cfg Config, path string, body []byte) ([]byte
 		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err = io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
 	}
