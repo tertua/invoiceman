@@ -59,14 +59,10 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	if paid, err := db.PaidAmount(id); err == nil {
-		if db.PendingInvoiceIDs(userID)[id] {
-			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
+	if err := rejectLockedInvoice(*db, userID, id, existing); err != nil {
+		if errors.Is(err, ErrPendingPayment) || errors.Is(err, ErrInvoicePaid) {
+			return failInvoiceRule(c, err)
 		}
-		if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) {
-			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is already paid", nil)
-		}
-	} else {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
 
@@ -99,5 +95,9 @@ func UpdateInvoice(c fiber.Ctx) error {
 	}
 
 	invalidateAggregates(c, userID)
+	if existing.Status != invoice.Status {
+		enqueueNotification(db, userID, models.NotifEventInvoiceStatusUpdated, "",
+			invoiceNotifData(db, userID, existing.ID))
+	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
 }

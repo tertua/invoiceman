@@ -1,10 +1,13 @@
 package routes
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tertua/invoiceman/platform/outbox"
+	"github.com/tertua/invoiceman/platform/relay"
 )
 
 // TestSendRequiresClient covers the cross-field invariant: an invoice may be
@@ -46,4 +49,60 @@ func TestSendRequiresClient(t *testing.T) {
 	resp = doRequest(t, app, "PATCH", "/api/invoices/"+draftID+"/status", `{"status":"sent"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "sent", decodeBody(t, resp)["invoice"].(map[string]interface{})["effective_status"])
+}
+
+// TestUpdateToSentFansOutStatusUpdated covers the editor "save & send" path:
+// flipping draft to sent through PATCH /invoices/{id} must enqueue
+// invoice.status_updated like the status toggle does, while an update that
+// keeps the status must not enqueue anything.
+func TestUpdateToSentFansOutStatusUpdated(t *testing.T) {
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Status Fanout User","email":"statusfanout@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+	cookies := resp.Cookies()
+
+	resp = doRequest(t, app, "POST", "/api/notifications/endpoints",
+		`{"target_url":"https://n8n.example/webhook/invoiceman"}`, cookies)
+	require.Equal(t, 201, resp.StatusCode)
+	decodeBody(t, resp)
+
+	clientID := createClient(t, app, cookies, "Status Fanout Client")
+	draft := newInvoice()
+	draft.Status, draft.ClientID = "draft", clientID
+	draftID := createInvoiceID(t, app, cookies, draft)
+
+	statusUpdated := func() []interface{} {
+		resp := doRequest(t, app, "GET", "/api/notifications/deliveries?event_type=invoice.status_updated", "", cookies)
+		require.Equal(t, 200, resp.StatusCode)
+		return decodeBody(t, resp)["deliveries"].([]interface{})
+	}
+	require.Empty(t, statusUpdated())
+
+	// Same-status update enqueues nothing.
+	same := newInvoice()
+	same.Status, same.ClientID = "draft", clientID
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+draftID, same.body(t), cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+	assert.Empty(t, statusUpdated())
+
+	// Draft -> sent through the update endpoint fans out status_updated.
+	send := newInvoice()
+	send.Status, send.ClientID = "sent", clientID
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+draftID, send.body(t), cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	decodeBody(t, resp)
+	require.Len(t, statusUpdated(), 1)
+
+	// Drain the queued rows: route tests share one in-memory database, so
+	// pending deliveries would leak into tests that count worker forwards.
+	oldForward := outbox.ForwardNotification
+	outbox.ForwardNotification = func(ctx context.Context, targetURL, eventID string, payload []byte, secret string) (*relay.ForwardResult, error) {
+		return &relay.ForwardResult{StatusCode: 200, Body: "ok"}, nil
+	}
+	outbox.New().ProcessOnce(context.Background())
+	outbox.ForwardNotification = oldForward
 }

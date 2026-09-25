@@ -16,12 +16,13 @@ import (
 var (
 	ErrClientRequiredToSend = errors.New("client is required to send an invoice")
 	ErrPendingPayment       = errors.New("invoice has a pending payment")
+	ErrInvoicePaid          = errors.New("invoice is already paid")
 )
 
 // invoiceRuleStatus maps a business-rule violation to its HTTP status; anything
 // unrecognized is treated as a malformed request.
 func invoiceRuleStatus(err error) int {
-	if errors.Is(err, ErrClientRequiredToSend) || errors.Is(err, ErrPendingPayment) {
+	if errors.Is(err, ErrClientRequiredToSend) || errors.Is(err, ErrPendingPayment) || errors.Is(err, ErrInvoicePaid) {
 		return fiber.StatusUnprocessableEntity
 	}
 	return fiber.StatusBadRequest
@@ -69,4 +70,21 @@ func guardInvoiceStatus(db database.Queries, userID, id uuid.UUID, status string
 		return ErrPendingPayment
 	}
 	return validateInvoice(status, clientID)
+}
+
+// rejectLockedInvoice reports why an invoice refuses edits: a live payment
+// in flight, or money already covering the total. A PaidAmount load failure
+// is returned raw so the caller maps it to 500 instead of a rule status.
+func rejectLockedInvoice(db database.Queries, userID, id uuid.UUID, existing models.Invoice) error {
+	paid, err := db.PaidAmount(id)
+	if err != nil {
+		return err
+	}
+	if db.PendingInvoiceIDs(userID)[id] {
+		return ErrPendingPayment
+	}
+	if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) {
+		return ErrInvoicePaid
+	}
+	return nil
 }
