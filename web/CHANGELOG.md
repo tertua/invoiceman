@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.3] - 2026-09-25
+
+### Changed
+- "Sent" invoice status now uses sky blue instead of teal, so it no longer
+  looks almost identical to "Paid" green — in badges, dashboard/Reports
+  charts, and notification pills.
+- USD → IDR rate hint in company settings shortened to one line; the input
+  placeholder already shows the 18000 example.
+
 ## [v0.5.2] - 2026-09-25
 
 ### Added
