@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
-import { useToast } from "@/context/UIContext";
+import { toast } from "sonner";
 import { useAdminUsers, useUpdateUserRole } from "@/hooks/useAdminUsers";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,6 @@ function RoleBadge({ role }) {
 
 function UserRow({ account, currentUserId }) {
   const { t } = useLang();
-  const toast = useToast();
   const updateRole = useUpdateUserRole();
   const [role, setRole] = useState(account.role);
   const isCurrentUser = account.id === currentUserId;
@@ -50,7 +49,7 @@ function UserRow({ account, currentUserId }) {
       toast.success(t("admin.roleUpdated"));
     } catch (error) {
       setRole(account.role);
-      if (error?.status !== 401) toast.error(t("admin.roleUpdateFailed"), error?.message);
+      if (error?.status !== 401) toast.error(t("admin.roleUpdateFailed"), { description: error?.message });
     }
   }
 

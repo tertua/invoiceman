@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLang } from "@/context/LangContext";
-import { useToast } from "@/context/UIContext";
+import { toast } from "sonner";
 import { QueryError } from "@/components/ui/QueryError";
 import { authApi } from "@/api/auth";
 import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
@@ -28,7 +28,6 @@ function CompanySection() {
   const { data: settings, error: settingsError } = useSettings();
   const update = useUpdateSettings();
   const uploadLogo = useUploadLogo();
-  const toast = useToast();
   const fileRef = useRef(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -68,14 +67,14 @@ function CompanySection() {
     e.target.value = "";
     if (!file) return;
     if (file.size > 400_000) {
-      toast.error(t("settings.logoTooLarge"), t("settings.logoTooLargeDesc"));
+      toast.error(t("settings.logoTooLarge"), { description: t("settings.logoTooLargeDesc") });
       return;
     }
     try {
       const updated = await uploadLogo.mutateAsync(file);
       setForm((f) => ({ ...f, logo_url: updated.logo_url || "" }));
     } catch (err) {
-      if (err?.status !== 401) toast.error(t("settings.logoFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.logoFailed"), { description: err?.message });
     }
   }
 
@@ -90,7 +89,7 @@ function CompanySection() {
       });
       toast.success(t("settings.companySaved"));
     } catch (err) {
-      if (err?.status !== 401) toast.error(t("settings.saveFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.saveFailed"), { description: err?.message });
     } finally {
       setSaving(false);
     }
@@ -180,7 +179,6 @@ function CompanySection() {
 function ProfileSection() {
   const { user, updateProfile } = useAuth();
   const { t } = useLang();
-  const toast = useToast();
   const [name, setName] = useState(user?.name || "");
   const [saving, setSaving] = useState(false);
 
@@ -194,7 +192,7 @@ function ProfileSection() {
       await updateProfile({ name: name.trim() });
       toast.success(t("settings.profileUpdated"));
     } catch (err) {
-      if (err?.status !== 401) toast.error(t("settings.profileFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.profileFailed"), { description: err?.message });
     } finally {
       setSaving(false);
     }
@@ -325,7 +323,6 @@ function LanguageSection() {
 
 function PasswordSection() {
   const { t } = useLang();
-  const toast = useToast();
   const [currentPassword, setCurrent] = useState("");
   const [newPassword, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -347,7 +344,7 @@ function PasswordSection() {
       setNext("");
       setConfirm("");
     } catch (err) {
-      if (err?.status !== 401) toast.error(t("settings.passwordFailed"), err?.message);
+      if (err?.status !== 401) toast.error(t("settings.passwordFailed"), { description: err?.message });
     } finally {
       setSaving(false);
     }

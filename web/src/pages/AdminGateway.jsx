@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { Input } from "@/components/ui/Input";
 import { useLang } from "@/context/LangContext";
-import { useToast } from "@/context/UIContext";
+import { toast } from "sonner";
 import {
   useCreateGatewayProject,
   useGatewayDeliveries,
@@ -110,7 +110,6 @@ function GatewayStatusBanner() {
 
 function CreateProjectForm({ onCreated }) {
   const { t } = useLang();
-  const toast = useToast();
   const create = useCreateGatewayProject();
   const { data: gateways = [] } = useGatewayStatus();
   const options = gateways.length ? gateways : [{ name: "midtrans", configured: true }, { name: "nowpayments", configured: false }];
@@ -167,7 +166,6 @@ function CreateProjectForm({ onCreated }) {
 
 function ProjectsTable({ projects, onCredentials }) {
   const { t } = useLang();
-  const toast = useToast();
   const rotateKey = useRotateGatewayKey();
   const rotateSecret = useRotateGatewaySecret();
   const update = useUpdateGatewayProject();

@@ -228,7 +228,6 @@
  "web/src/context/AuthContext.jsx": 84,
  "web/src/context/LangContext.jsx": 39,
  "web/src/context/ThemeContext.jsx": 40,
- "web/src/context/UIContext.jsx": 138,
  "web/src/hooks/useAdminUsers.js": 16,
  "web/src/hooks/useClients.js": 47,
  "web/src/hooks/useConfig.js": 22,

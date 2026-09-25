@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { Input } from "@/components/ui/Input";
 import { useLang } from "@/context/LangContext";
-import { useToast } from "@/context/UIContext";
+import { toast } from "sonner";
 import {
   useCreateNotificationEndpoint,
   useDeleteNotificationEndpoint,
@@ -50,7 +50,6 @@ function SecretNotice({ endpoint, onClose }) {
 
 function CreateEndpointForm({ onCreated }) {
   const { t } = useLang();
-  const toast = useToast();
   const create = useCreateNotificationEndpoint();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
@@ -89,7 +88,6 @@ function CreateEndpointForm({ onCreated }) {
 
 function EndpointRow({ endpoint, onSecret }) {
   const { t } = useLang();
-  const toast = useToast();
   const update = useUpdateNotificationEndpoint();
   const rotate = useRotateNotificationSecret();
   const remove = useDeleteNotificationEndpoint();
@@ -154,7 +152,6 @@ function DeliveriesCard() {
   const { t } = useLang();
   const { data: deliveries = [], error } = useNotificationDeliveries();
   const retry = useRetryNotificationDelivery();
-  const toast = useToast();
   if (error?.status !== 401 && error) return <QueryError error={error} />;
   return (
     <Card padding="none" className="overflow-hidden">

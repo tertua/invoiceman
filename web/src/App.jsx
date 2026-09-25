@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LangProvider, useLang } from "@/context/LangContext";
 import { AuthProvider } from "@/context/AuthContext";
-import { UIProvider } from "@/context/UIContext";
+import { AppToaster } from "@/components/ui/AppToaster";
 import { useAppName } from "@/hooks/useConfig";
 import { router } from "@/routes";
 
@@ -41,13 +41,12 @@ export default function App() {
       <ThemeProvider>
         <LangProvider>
           <DocumentTitle />
-          <UIProvider>
-            <AuthProvider>
-              <Suspense fallback={<PageLoading />}>
-                <RouterProvider router={router} />
-              </Suspense>
-            </AuthProvider>
-          </UIProvider>
+          <AuthProvider>
+            <Suspense fallback={<PageLoading />}>
+              <RouterProvider router={router} />
+            </Suspense>
+          </AuthProvider>
+          <AppToaster />
         </LangProvider>
       </ThemeProvider>
     </QueryClientProvider>

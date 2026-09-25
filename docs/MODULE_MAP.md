@@ -28,7 +28,7 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 | AI | `ai_controller.go` | `ai_model.go` | private (501 without `GEMINI_API_KEY`) | `api/ai.js` (used directly by pages) | `Dashboard/InvoiceEditor/InvoiceDetail/Expenses.jsx` | `platform/ai` |
 | App config (public) | `config_controller.go` | — | public (`/config`) | `api/config.js`, `hooks/useConfig.js` | `Landing.jsx` (public site), branding for SPA shell | — |
 | Notifications (user webhooks) | `notification_controller.go` + `notification_helper.go` (enqueue) | `notification_model.go` | private (`/notifications/endpoints`, `/notifications/deliveries`) | `api/notifications.js`, `hooks/useNotifications.js` | `Settings.jsx` → Notifications tab (`components/settings/NotificationsTab.jsx`) | `platform/relay` signing+forward reused, sent by `platform/outbox` worker |
-| Shell providers | — | — | — | — | — | `context/LangContext.jsx` (i18n), `context/ThemeContext.jsx`, `context/UIContext.jsx` (toasts/modals) |
+| Shell providers | — | — | — | — | — | `context/LangContext.jsx` (i18n), `context/ThemeContext.jsx`, `components/ui/AppToaster.jsx` (Sonner toasts) |
 
 ## Cross-cutting
 
