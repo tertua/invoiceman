@@ -64,7 +64,7 @@ export const id = {
     "status.draft": "Draf",
     "status.sent": "Terkirim",
     "status.paid": "Lunas",
-    "status.overdue": "Jatuh tempo", "status.pending": "Menunggu pembayaran",
+    "status.overdue": "Jatuh tempo", "status.pending": "Menunggu",
 
     /* ============================ relative time ============================ */
     "relative.justNow": "baru saja",
@@ -562,7 +562,7 @@ export const id = {
     "payments.paid": "(lunas)",
 
     /* ============================ tautan pembayaran online ============================ */
-    "payments.onlineTitle": "Tautan pembayaran online",
+    "payments.onlineTitle": "Tautan Publik",
     "payments.onlineDesc": "Bagikan tautan ini ke klien. Mereka membayar dengan aman melalui Midtrans dan faktur ter-update otomatis.",
     "payments.onlineCopy": "Salin tautan",
     "payments.onlineCopied": "Tersalin",

@@ -158,10 +158,9 @@ export function InvoicePaymentCard({ invoice }) {
           </div>
           <div className="flex items-center gap-2">
           <span className="flex-1 min-w-0 text-xs text-[var(--ink)] truncate">{shareUrl}</span>
-          <button type="button" onClick={copyShareLink} aria-label={t("payments.onlineCopy")}
-            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-strong)]">
-            {linkCopied ? <Check size={12} /> : <Copy size={12} />}
-            {linkCopied ? t("payments.onlineCopied") : t("payments.onlineCopy")}
+          <button type="button" onClick={copyShareLink} aria-label={t("payments.onlineCopy")} title={linkCopied ? t("payments.onlineCopied") : t("payments.onlineCopy")}
+            className="shrink-0 inline-flex items-center text-[var(--accent-strong)]">
+            {linkCopied ? <Check size={13} /> : <Copy size={13} />}
           </button>
           <a href={shareUrl} target="_blank" rel="noreferrer" aria-label={t("payments.onlineOpen")}
             className="shrink-0 inline-flex items-center text-[var(--ink-muted)] hover:text-[var(--ink)]">
