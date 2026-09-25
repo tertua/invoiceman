@@ -75,11 +75,11 @@ export default function Payments() {
                 </div>
                 <div className="text-sm font-semibold text-[var(--success)] tabular text-right">{formatMoney(p.amount, p.invoice_currency)}</div>
                 {p.can_void !== false ? (
-                  <button type="button" onClick={() => setVoidTarget(p)} aria-label={t("payments.voidTitle")} className="justify-self-end h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--surface-2)] hover:text-[var(--danger)]">
+                  <button type="button" onClick={() => setVoidTarget(p)} aria-label={t("payments.voidTitle")} className="col-start-2 md:col-start-auto justify-self-end h-7 w-7 rounded-full flex items-center justify-center text-[var(--ink-muted)] md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-[var(--surface-2)] hover:text-[var(--danger)]">
                     <Trash2 size={13} />
                   </button>
                 ) : (
-                  <span aria-hidden="true" className="justify-self-end h-7 w-7" />
+                  <span aria-hidden="true" className="col-start-2 md:col-start-auto justify-self-end h-7 w-7" />
                 )}
               </div>
             ))}
