@@ -22,7 +22,7 @@ export const settingsEn = {
     "settings.defaultTax": "Default tax %",
     "settings.prefix": "Invoice # prefix",
     "settings.usdToIdr": "USD → IDR rate",
-    "settings.usdToIdrHint": "Manual rate for online payments (e.g. 18000). Used when the gateway charges a different currency than the invoice; never fetched live.",
+    "settings.usdToIdrHint": "Used when the gateway charges a different currency than the invoice. Never fetched automatically.",
     "settings.midtransMethods": "Midtrans payment method",
     "settings.midtransMethodsDesc": "Choose which method your Midtrans account offers on payment links.",
     "settings.midtransMethodsHint": "Only the method enabled in your Midtrans dashboard will actually work.",

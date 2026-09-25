@@ -17,6 +17,7 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
+  --color-info: var(--info);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
 
@@ -38,6 +39,7 @@
   --accent-hero: #0f766e;
   --accent-hero-2: #14b8a6;
   --success: #059669;
+  --info: #0284c7;
   --warning: #d97706;
   --danger: #e11d48;
   --shadow-card: 0 1px 3px rgba(13, 42, 37, 0.05),
@@ -58,6 +60,7 @@
   --accent-hero: #0c2e28;
   --accent-hero-2: #115e56;
   --success: #34d399;
+  --info: #38bdf8;
   --warning: #fbbf24;
   --danger: #fb7185;
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);

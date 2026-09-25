@@ -10,7 +10,7 @@ import { cn, relativeTime, formatMoney } from "@/lib/utils";
 const TONE = {
   paid: "bg-[var(--success)]/12 text-[var(--success)]",
   overdue: "bg-[var(--danger)]/12 text-[var(--danger)]",
-  sent: "bg-[var(--accent-soft)] text-[var(--accent-strong)]",
+  sent: "bg-[var(--info)]/12 text-[var(--info)]",
   draft: "bg-[var(--surface-2)] text-[var(--ink-muted)]",
 };
 const ICON = {

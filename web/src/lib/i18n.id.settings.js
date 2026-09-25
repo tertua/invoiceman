@@ -22,7 +22,7 @@ export const settingsId = {
     "settings.defaultTax": "Default pajak %",
     "settings.prefix": "Awalan nomor faktur",
     "settings.usdToIdr": "Kurs USD → IDR",
-    "settings.usdToIdrHint": "Kurs manual untuk pembayaran online (mis. 18000). Dipakai saat gateway menagih mata uang berbeda dari faktur; tidak pernah diambil realtime.",
+    "settings.usdToIdrHint": "Dipakai saat gateway menagih beda mata uang dari faktur. Tidak diambil otomatis.",
     "settings.midtransMethods": "Metode pembayaran Midtrans",
     "settings.midtransMethodsDesc": "Pilih metode yang ditawarkan akun Midtrans Anda di tautan pembayaran.",
     "settings.midtransMethodsHint": "Hanya metode yang aktif di dashboard Midtrans yang benar-benar berfungsi.",
