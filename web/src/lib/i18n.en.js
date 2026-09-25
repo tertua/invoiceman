@@ -243,7 +243,7 @@ export const en = {
     "landing.wall.drafted": "Drafted",
     "landing.wall.friendlyNudge": "Friendly nudge",
     "landing.wall.reminderQuote":
-      "\"Hi Nova — a gentle reminder that INV-0021 for $2,400 was due last week…\"",
+      "\"Hi Sherly — a gentle reminder that INV-0021 for $2,400 was due last week…\"",
     "landing.wall.oneClick": "One click to send",
     "landing.wall.paidMonth": "Paid this month",
     "landing.wall.onTrack": "On track",

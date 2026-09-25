@@ -215,7 +215,7 @@ function InvoiceCard() {
         <span className="text-[10px] uppercase tracking-wide text-[var(--ink-muted)] font-semibold">{t("landing.wall.total")}</span>
         <span className="text-[17px] font-bold tabular-nums" style={{ color: TEAL_DARK }}>$5,480</span>
       </div>
-      <CardFoot>Nova Retail Group</CardFoot>
+      <CardFoot>Sherly Retail Group</CardFoot>
     </WallCard>
   );
 }

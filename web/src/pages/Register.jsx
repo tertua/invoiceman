@@ -70,6 +70,7 @@ export default function Register() {
             value={form.name}
             onChange={(v) => setForm({ ...form, name: v })}
             icon={User}
+            placeholder={t("auth.fullName")}
           />
 
           <AuthField
@@ -79,6 +80,7 @@ export default function Register() {
             value={form.email}
             onChange={(v) => setForm({ ...form, email: v })}
             icon={Mail}
+            placeholder={t("common.email")}
           />
 
           <AuthField

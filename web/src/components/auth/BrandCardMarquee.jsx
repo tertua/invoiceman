@@ -209,7 +209,7 @@ function InvoiceCard() {
         <span className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Total</span>
         <span className="text-[16px] font-semibold tabular" style={{ color: TEAL_DARK }}>$7,595</span>
       </div>
-      <Footer subtitle="Nova Retail Group" />
+      <Footer subtitle="Sherly Retail Group" />
     </PreviewCard>
   );
 }
@@ -219,7 +219,7 @@ function OverdueCard() {
   const rows = [
     { c: "Brightline Studios", a: "$3,787", d: "8d" },
     { c: "Peak Fitness", a: "$1,628", d: "15d" },
-    { c: "Nova Retail", a: "$900", d: "20d" },
+    { c: "Sherly Retail", a: "$900", d: "20d" },
   ];
   return (
     <PreviewCard width={320}>
@@ -286,7 +286,7 @@ function ReminderCard() {
           <span className="text-[12px] font-semibold text-gray-900">Friendly nudge</span>
         </div>
         <p className="text-[12px] text-gray-500 leading-snug">
-          "Hi Nova — just a gentle reminder that invoice INV-0006 for $2,400 was due last week…"
+          "Hi Sherly — just a gentle reminder that invoice INV-0006 for $2,400 was due last week…"
         </p>
       </div>
       <Footer subtitle="One click to send" />

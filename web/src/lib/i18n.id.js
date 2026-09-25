@@ -79,14 +79,14 @@ export const id = {
     "sidebar.payments": "Pembayaran",
     "sidebar.items": "Item",
     "sidebar.reports": "Laporan",
-    "sidebar.settings": "Pengaturan",
+    "sidebar.settings": "Setelan",
     "sidebar.logOut": "Keluar",
     "sidebar.account": "Akun",
     "sidebar.adminUsers": "Pengguna",
     "sidebar.adminGateway": "Gateway",
 
     /* ============================ admin ============================ */
-    "admin.title": "Pengguna admin",
+    "admin.title": "Akun Pengguna",
     "admin.desc": "Kelola peran dan akses akun di seluruh ruang kerja Anda.",
     "admin.user": "Pengguna",
     "admin.role": "Peran",
@@ -108,8 +108,8 @@ export const id = {
     "admin.role.user": "Pengguna",
 
     /* ============================ gateway ============================ */
-    "gateway.title": "Gateway pembayaran",
-    "gateway.desc": "Hubungkan proyek ke satu gateway pembayaran terpusat dan pantau pengiriman webhook.",
+    "gateway.title": "Gerbang Pembayaran",
+    "gateway.desc": "Hubungkan proyek ke satu pembayaran terpusat dan pantau pengiriman webhook.",
     "gateway.addTitle": "Hubungkan proyek",
     "gateway.addProject": "Tambah proyek",
     "gateway.slugPlaceholder": "Slug proyek, misalnya one-api",
@@ -243,7 +243,7 @@ export const id = {
     "landing.wall.drafted": "Draf dibuat",
     "landing.wall.friendlyNudge": "Teguran ramah",
     "landing.wall.reminderQuote":
-      "\"Hai Nova — pengingat ramah bahwa INV-0021 senilai $2.400 jatuh tempo minggu lalu…\"",
+      "\"Hai Sherly — pengingat ramah bahwa INV-0021 senilai $2.400 jatuh tempo minggu lalu…\"",
     "landing.wall.oneClick": "Kirim sekali klik",
     "landing.wall.paidMonth": "Dibayar bulan ini",
     "landing.wall.onTrack": "On track",
@@ -332,7 +332,7 @@ export const id = {
     "auth.sessionExpired": "Sesi Anda telah berakhir. Silakan masuk kembali.",
     "auth.getStarted": "Mulai",
     "auth.freeToStart": "Gratis untuk memulai. Tanpa kartu kredit.",
-    "auth.fullName": "Nama lengkap",
+    "auth.fullName": "Nama Lengkap",
     "auth.password": "Kata sandi",
     "auth.atLeast8": "Minimal 8 karakter",
     "auth.creating": "Membuat akun...",
