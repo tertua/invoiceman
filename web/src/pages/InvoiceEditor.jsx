@@ -220,13 +220,22 @@ export default function InvoiceEditor() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => onSave("draft")} disabled={saving}>
-            {t("invEditor.saveDraft")}
-          </Button>
-          <Button variant="accent" onClick={() => onSave()} disabled={saving}>
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            {t("common.save")}
-          </Button>
+          {form.status === "sent" ? (
+            <Button variant="accent" onClick={() => onSave()} disabled={saving}>
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              {t("common.save")}
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => onSave("draft")} disabled={saving}>
+                {t("invEditor.saveDraft")}
+              </Button>
+              <Button variant="accent" onClick={() => onSave("sent")} disabled={saving}>
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                {t("invEditor.saveSend")}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -242,7 +251,7 @@ export default function InvoiceEditor() {
           {/* meta */}
           <Card padding="lg">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={t("common.client")}>
+              <Field label={t("common.client")} className="sm:col-span-2">
                 <select
                   className={selectClass}
                   value={form.client_id}
@@ -255,17 +264,6 @@ export default function InvoiceEditor() {
                       {c.company ? ` (${c.company})` : ""}
                     </option>
                   ))}
-                </select>
-              </Field>
-              <Field label={t("common.status")}>
-                <select
-                  className={selectClass}
-                  value={form.status}
-                  onChange={(e) => set({ status: e.target.value })}
-                >
-                  <option value="draft">{t("status.draft")}</option>
-                  <option value="sent">{t("status.sent")}</option>
-                  <option value="paid">{t("status.paid")}</option>
                 </select>
               </Field>
               <Field label={t("invEditor.issueDate")}>
