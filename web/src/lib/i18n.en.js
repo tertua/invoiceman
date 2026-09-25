@@ -64,7 +64,7 @@ export const en = {
     "status.draft": "Draft",
     "status.sent": "Sent",
     "status.paid": "Paid",
-    "status.overdue": "Overdue", "status.pending": "Awaiting payment",
+    "status.overdue": "Overdue", "status.pending": "Pending",
 
     /* ============================ relative time ============================ */
     "relative.justNow": "just now",

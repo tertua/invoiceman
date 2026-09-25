@@ -79,19 +79,21 @@ function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpire
           <AuthField
             label={t("common.email")}
             type="email"
-            autoComplete="off"
+            autoComplete="email"
             value={form.email}
             onChange={(v) => setForm((current) => ({ ...current, email: v }))}
             icon={Mail}
+            placeholder="email"
           />
 
           <AuthField
             label={t("common.password")}
             type="password"
-            autoComplete="new-password"
+            autoComplete="current-password"
             value={form.password}
             onChange={(v) => setForm((current) => ({ ...current, password: v }))}
             icon={Lock}
+            placeholder="password"
             extra={
               <Link
                 to="/forgot-password"

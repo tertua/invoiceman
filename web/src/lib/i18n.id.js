@@ -601,7 +601,7 @@ export const id = {
     "public.qrisTitle": "Pindai untuk bayar dengan QRIS",
     "public.qrisExpires": "Sisa waktu",
     "public.qrisAmount": "Jumlah",
-    "public.qrisHint": "Buka aplikasi apa pun yang mendukung QRIS (Gopay, OVO, Dana, m-banking), lalu pindai kode ini. Pembayaran terkonfirmasi otomatis.",
+    "public.qrisHint": "Buka aplikasi yang mendukung QRIS (Gopay, OVO, Dana, M-banking), lalu pindai kode ini. Pembayaran terkonfirmasi otomatis.",
     "public.qrisQrAlt": "Kode pembayaran QRIS",
     "public.qrisCreateFailed": "Pembayaran QRIS gagal dimulai. Coba lagi atau pilih metode lain.",
     "public.qrisExpired": "QR kedaluwarsa",
