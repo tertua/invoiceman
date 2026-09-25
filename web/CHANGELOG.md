@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.2] - 2026-09-25
+
+### Added
+- Public pay page embeds a crypto widget: pay with USDT (TRC20) without
+  leaving the page — QR code, deposit address with copy button, exact amount
+  to send, and a countdown, instead of redirecting to the provider.
+
+### Changed
+- Payment start failures now explain themselves: a rate-limited provider
+  says it is busy and to retry in a few seconds, and invoices below the
+  crypto minimum are told to pick another method. Both translate to English
+  and Indonesian.
+- Crypto payments are confirmed by the background reconcile poll as well as
+  webhooks, so invoices mark themselves paid even where the provider cannot
+  reach the server (local sandbox, missed IPN).
+
+### Fixed
+- NOWPayments direct payments failed with "price_amount must be a safe
+  number" because the amount was sent as a string; the widget could not
+  open a transaction at all.
+- Rate-limited NOWPayments calls now retry briefly instead of failing the
+  first attempt with a generic gateway error.
+
 ## [v0.5.1] - 2026-09-25
 
 ### Added
