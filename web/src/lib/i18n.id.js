@@ -592,7 +592,7 @@ export const id = {
     "public.receiptRef": "Bukti",
     "public.invalidLink": "Tautan pembayaran ini tidak valid atau sudah kedaluwarsa.",
     "public.notPayable": "Faktur ini tidak dapat dibayar online.",
-    "public.secureBy": "Pembayaran diproses aman oleh penyedia pembayaran kami",
+    "public.secureBy": "Pembayaran diproses aman oleh mitra kami",
     "public.chooseMethod": "Pilih cara pembayaran",
     "public.viewInvoice": "Lihat faktur",
     "public.pdfPreparing": "Menyiapkan PDF...",
