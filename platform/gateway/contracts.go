@@ -9,6 +9,7 @@ type CreateTxRequest struct {
 	Phone          string
 	PaymentMethod  string
 	EnabledMethods []string
+	PayCurrency    string
 }
 
 type CreateTxResponse struct {

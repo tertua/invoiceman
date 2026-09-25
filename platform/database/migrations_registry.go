@@ -119,4 +119,17 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.Settings{}, "midtrans_methods")
 		},
 	},
+	{
+		Version:     13,
+		Description: "nowpayments direct payment fields (pay_amount, pay_currency, expires_at)",
+		Down: func(db *gorm.DB) error {
+			if err := db.Migrator().DropColumn(&models.GatewayTransaction{}, "pay_amount"); err != nil {
+				return err
+			}
+			if err := db.Migrator().DropColumn(&models.GatewayTransaction{}, "pay_currency"); err != nil {
+				return err
+			}
+			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "expires_at")
+		},
+	},
 }

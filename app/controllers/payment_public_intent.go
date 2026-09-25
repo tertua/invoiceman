@@ -16,6 +16,7 @@ import (
 // publicIntentRequest is the optional body for creating a public pay intent.
 type publicIntentRequest struct {
 	PaymentMethod string `json:"payment_method" validate:"omitempty,lte=32"`
+	PayCurrency   string `json:"pay_currency" validate:"omitempty,lte=32"`
 }
 
 // createPublicGatewayIntent opens (or reuses) the gateway intent for an
@@ -23,7 +24,7 @@ type publicIntentRequest struct {
 // the public page; an empty method keeps the legacy Midtrans default. The
 // charge is converted to the provider's currency with the owner's manual rate
 // when they differ.
-func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method string) error {
+func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method string, payCurrency string) error {
 	method = normalizedPaymentMethod(method)
 	settings, err := db.GetSettings(link.UserID)
 	if err != nil {
@@ -49,7 +50,11 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 			return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
 		}
 	}
-	created, err := gw.CreateTransaction(c.Context(), spec.request(orderID, "", "", method))
+	req := spec.request(orderID, "", "", method)
+	if gw.Name() == "nowpayments" && payCurrency != "" {
+		req.PayCurrency = strings.ToUpper(strings.TrimSpace(payCurrency))
+	}
+	created, err := gw.CreateTransaction(c.Context(), req)
 	if err != nil {
 		if errors.Is(err, gateway.ErrNotConfigured) {
 			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
@@ -64,7 +69,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		Currency: spec.Currency, InvoiceCurrency: strings.ToUpper(strings.TrimSpace(invoice.Currency)),
 		InvoiceAmount: spec.InvoiceAmount, UsdToIdr: spec.UsdToIdr,
 		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
-		PaymentURL: created.PaymentURL, CreatedAt: now, UpdatedAt: now,
+		PaymentURL: created.PaymentURL, Address: created.Address, PayAmount: created.RawPayload, CreatedAt: now, UpdatedAt: now,
 	}
 	if err := db.CreateTransaction(txn); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
@@ -100,8 +105,11 @@ func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
 		"gateway":      t.Gateway,
 		"redirect_url": t.RedirectURL,
 		"payment_url":  t.PaymentURL,
+		"address":      t.Address,
+		"pay_amount":   t.PayAmount,
+		"pay_currency": t.PayCurrency,
+		"expires_at":   t.ExpiresAt,
 	}
-	// Snap tokens are Midtrans-only; other providers use a hosted payment URL.
 	if t.Gateway == "midtrans" {
 		out["snap_token"] = t.SnapToken
 	}

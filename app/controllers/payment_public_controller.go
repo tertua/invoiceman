@@ -126,7 +126,7 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	}
 	input := &publicIntentRequest{}
 	_ = c.Bind().Body(input) // body is optional; an empty body keeps the default
-	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total.Sub(paid), input.PaymentMethod)
+	return createPublicGatewayIntent(c, *db, link, invoice, invoice.Total.Sub(paid), input.PaymentMethod, input.PayCurrency)
 }
 
 // GetPublicPaymentStatus returns the current public payment status.

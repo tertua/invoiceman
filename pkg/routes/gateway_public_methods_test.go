@@ -162,3 +162,67 @@ func TestPublicPayMidtransMethodAllowlist(t *testing.T) {
 	assert.Equal(t, "snap-allow", decodeBody(t, resp)["snap_token"])
 	resp.Body.Close()
 }
+
+// A USD invoice paid via crypto with a pay_currency returns an on-page USDT
+// deposit address (no hosted redirect URL) so the payer stays on the page.
+func TestPublicPayCryptoWidgetNoRedirect(t *testing.T) {
+	snapServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"token":"snap-widget","redirect_url":"https://snap.test/widget"}`))
+	}))
+	defer snapServer.Close()
+	sawPayment := false
+	npServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/payment" {
+			sawPayment = true
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"payment_id":"pay_widget","pay_address":"TXUSDTTRC20","pay_amount":"100","pay_currency":"usdttrc20","price_amount":"100","price_currency":"USD","order_id":"INV-1"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"inv_widget","invoice_url":"https://nowpayments.io/payment/?iid=widget"}`))
+	}))
+	defer npServer.Close()
+
+	t.Setenv("MIDTRANS_SERVER_KEY", "widget-server-key")
+	t.Setenv("MIDTRANS_SNAP_BASE_URL", snapServer.URL)
+	t.Setenv("NOWPAYMENTS_API_KEY", "widget-np-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", npServer.URL+"/v1")
+	t.Setenv("NOWPAYMENTS_SANDBOX", "true")
+
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Widget MP","email":"widget-mp@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"widget-mp@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	cookies := resp.Cookies()
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "PATCH", "/api/settings",
+		`{"company_name":"Widget MP","currency":"USD","tax_rate":0,"invoice_prefix":"INV-","usd_to_idr":"18000"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	spec := newInvoice()
+	spec.ClientID, spec.Currency = createClient(t, app, cookies, "Widget Payer"), "USD"
+	spec.Items = []invoiceLine{{Description: "Service", Quantity: 1, Rate: "100"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
+
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	token := decodeBody(t, resp)["token"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"crypto","pay_currency":"usdttrc20"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	intent := decodeBody(t, resp)
+	assert.True(t, sawPayment, "expected the direct /payment endpoint to be hit")
+	assert.Equal(t, "TXUSDTTRC20", intent["address"])
+	assert.Equal(t, "100", intent["pay_amount"])
+	assert.Empty(t, intent["payment_url"], "no redirect; the widget stays on page")
+	assert.Empty(t, intent["snap_token"])
+	resp.Body.Close()
+}

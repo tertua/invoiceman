@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import PublicShell from "@/components/publicpay/PublicShell";
+import CryptoWidget from "@/components/publicpay/CryptoWidget";
+import MethodPicker from "@/components/publicpay/MethodPicker";
 import { publicPayApi } from "@/api/publicPay";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
@@ -31,46 +33,6 @@ function Row({ label, value, bold }) {
   );
 }
 
-// MethodPicker lets the payer choose how to pay; the gateway intent (and its
-// paylink) is only created after a method is chosen. The invoice total is
-// already shown above, so each button carries only the method name — the
-// provider's charged amount/currency is not repeated per button.
-function MethodPicker({ methods, lang, onPick, pending, error }) {
-  return (
-    <div className="mt-6">
-      <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)] mb-3">
-        {t(lang, "public.chooseMethod")}
-      </div>
-      {methods.length ? (
-        <div className="space-y-2">
-          {methods.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => onPick(m.id)}
-              disabled={!!pending}
-              className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--surface-2)] disabled:opacity-60"
-            >
-              <span className="text-sm font-semibold text-[var(--ink)]">{m.name}</span>
-              {pending === m.id ? (
-                <Loader2 size={15} className="animate-spin text-[var(--accent-strong)]" />
-              ) : (
-                <ArrowRight size={15} className="text-[var(--accent-strong)]" />
-              )}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</p>
-      )}
-      {error && methods.length ? <p className="text-xs text-[var(--danger)] mt-3 text-center">{error}</p> : null}
-      <div className="flex items-center justify-center gap-1.5 mt-4 text-[11px] text-[var(--ink-muted)]">
-        <ShieldCheck size={13} /> {t(lang, "public.secureBy")}
-      </div>
-    </div>
-  );
-}
-
 export default function PublicPay() {
   const { token } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,6 +41,7 @@ export default function PublicPay() {
   const [err, setErr] = useState("");
   const [pending, setPending] = useState("");
   const [payErr, setPayErr] = useState("");
+  const [cryptoActive, setCryptoActive] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("lang", lang);
@@ -142,6 +105,11 @@ export default function PublicPay() {
     setPending(method);
     setPayErr("");
     try {
+      if (method === "crypto") {
+        setCryptoActive(true);
+        setPending("");
+        return;
+      }
       const res = await publicPayApi.createTransaction(token, method);
       if (res.snap_token && data.gateway?.client_key) {
         const snap = await loadMidtransSnap(data.gateway.is_production);
@@ -254,7 +222,23 @@ export default function PublicPay() {
             </div>
           </div>
         ) : can_pay ? (
-          <MethodPicker methods={methods} lang={lang} onPick={pay} pending={pending} error={payErr} />
+          cryptoActive ? (
+            <CryptoWidget
+              key={token}
+              token={token}
+              lang={lang}
+              onError={(m) => {
+                setPayErr(m);
+                setCryptoActive(false);
+              }}
+              onPaid={() => {
+                setCryptoActive(false);
+                publicPayApi.get(token).then(setData).catch(() => {});
+              }}
+            />
+          ) : (
+            <MethodPicker methods={methods} lang={lang} onPick={pay} pending={pending} error={payErr} />
+          )
         ) : (
           <div className="mt-6 text-center text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</div>
         )}

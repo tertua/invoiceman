@@ -48,6 +48,9 @@ type GatewayTransaction struct {
 	RedirectURL     string     `gorm:"size:1024" db:"redirect_url" json:"redirect_url"`
 	PaymentURL      string     `gorm:"size:1024" db:"payment_url" json:"payment_url"`
 	Address         string     `gorm:"size:255" db:"address" json:"address"`
+	PayAmount       string     `gorm:"size:64" db:"pay_amount" json:"pay_amount"`
+	PayCurrency     string     `gorm:"size:32" db:"pay_currency" json:"pay_currency"`
+	ExpiresAt       string     `gorm:"size:64" db:"expires_at" json:"expires_at"`
 	MidtransTxnID   string     `gorm:"size:128" db:"midtrans_txn_id" json:"midtrans_txn_id"`
 	PaymentType     string     `gorm:"size:64" db:"payment_type" json:"payment_type"`
 	RawIntent       string     `db:"raw_intent" json:"-"`
