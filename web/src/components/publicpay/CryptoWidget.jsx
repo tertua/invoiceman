@@ -38,7 +38,7 @@ function currencyLabel(payCurrency) {
 // End dev path
 export default function CryptoWidget({ token, lang, onError }) {
   const [intent, setIntent] = useState(null);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef(null);
   const [left, setLeft] = useState(Math.round(BASE * 1000));

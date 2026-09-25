@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { publicPayApi } from "@/api/publicPay";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
@@ -17,11 +17,16 @@ import MethodPicker from "./MethodPicker";
 // Seam: props {token, methods, lang, gateway, onRefresh} — the panel can be
 // replaced without touching PublicPay.jsx.
 // End dev path
+const SWAP_DELAY_MS = 300;
+
 export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
   const [crypto, setCrypto] = useState(false);
   const [qris, setQris] = useState(false);
+  const swapTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(swapTimer.current), []);
 
   const finish = useCallback(() => {
     setCrypto(false);
@@ -39,19 +44,18 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
   }, []);
 
   async function pay(method) {
-    setPending(method);
+    if (pending) return;
     setError("");
+    if (method === "crypto" || method === "qris") {
+      setPending(method);
+      swapTimer.current = setTimeout(() => {
+        if (method === "crypto") setCrypto(true);
+        else setQris(true);
+      }, SWAP_DELAY_MS);
+      return;
+    }
+    setPending(method);
     try {
-      if (method === "crypto") {
-        setCrypto(true);
-        setPending("");
-        return;
-      }
-      if (method === "qris") {
-        setQris(true);
-        setPending("");
-        return;
-      }
       const res = await publicPayApi.createTransaction(token, method);
       if (res.snap_token && gateway?.client_key) {
         const snap = await loadMidtransSnap(gateway.is_production);

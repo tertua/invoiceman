@@ -33,7 +33,7 @@ function formatCountdown(left) {
 // End dev path
 export default function QrisWidget({ token, lang, amount, currency, gateway, onError, onPaid }) {
   const [intent, setIntent] = useState(null);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState(true);
   const [left, setLeft] = useState(DEFAULT_TTL);
   const [nonce, setNonce] = useState(0);
 
@@ -115,8 +115,12 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
           <p className="text-sm text-[var(--ink-muted)]">{t(lang, "public.qrisExpiredHint")}</p>
           <button
             type="button"
-            onClick={() => setNonce((n) => n + 1)}
-            className="rounded-2xl border border-[var(--accent)]/50 bg-[var(--surface)] px-5 py-2.5 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)]"
+            disabled={pending}
+            onClick={() => {
+              setPending(true);
+              setNonce((n) => n + 1);
+            }}
+            className="rounded-2xl border border-[var(--accent)]/50 bg-[var(--surface)] px-5 py-2.5 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
           >
             {t(lang, "public.qrisRegenerate")}
           </button>
