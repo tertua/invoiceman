@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -25,6 +26,8 @@ type Config struct {
 	IsProd    bool
 	// BaseURL overrides the Snap endpoint (used by tests).
 	BaseURL string
+	// CoreBase overrides the Core API base (used by tests).
+	CoreBase string
 }
 
 // FromEnv reads Midtrans config from the central config.
@@ -35,6 +38,9 @@ func FromEnv() Config {
 		ClientKey: cfg.ClientKey,
 		IsProd:    cfg.IsProd,
 		BaseURL:   cfg.SnapBase,
+		// Test-only override, mirrors SnapBase. Read straight from the
+		// environment so the frozen configs file does not grow for it.
+		CoreBase: strings.TrimSpace(os.Getenv("MIDTRANS_CORE_BASE_URL")),
 	}
 }
 

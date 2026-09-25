@@ -4,10 +4,23 @@ import (
 	"context"
 	"errors"
 
+	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxRequest) (*gateway.CreateTxResponse, error) {
+	if req.DirectQRIS && req.PaymentMethod == gateway.MethodQRIS {
+		resp, err := CreateQRISCharge(ctx, FromEnv(), req.OrderID, req.AmountMinor)
+		if err == nil {
+			return resp, nil
+		}
+		if errors.Is(err, ErrNotConfigured) {
+			return nil, gateway.ErrNotConfigured
+		}
+		// The on-page QRIS path is best-effort: a Core API failure falls back
+		// to the Snap checkout so the payer can still complete the payment.
+		logger.L().Warn("midtrans qris core charge failed, falling back to snap", "order_id", req.OrderID, "err", err)
+	}
 	methods := SnapMethods(req.EnabledMethods)
 	if method := snapPaymentType(req.PaymentMethod); method != "" {
 		methods = []string{method}

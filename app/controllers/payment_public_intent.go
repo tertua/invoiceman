@@ -52,6 +52,9 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		}
 	}
 	req := spec.request(orderID, "", "", method)
+	if method == gateway.MethodQRIS {
+		req.DirectQRIS = true
+	}
 	if gw.Name() == "nowpayments" && payCurrency != "" {
 		req.PayCurrency = strings.ToUpper(strings.TrimSpace(payCurrency))
 	}
@@ -77,7 +80,8 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		Currency: spec.Currency, InvoiceCurrency: strings.ToUpper(strings.TrimSpace(invoice.Currency)),
 		InvoiceAmount: spec.InvoiceAmount, UsdToIdr: spec.UsdToIdr,
 		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
-		PaymentURL: created.PaymentURL, Address: created.Address, PayAmount: created.RawPayload, PayCurrency: created.PayCurrency, CreatedAt: now, UpdatedAt: now,
+		PaymentURL: created.PaymentURL, Address: created.Address, PayAmount: created.RawPayload, PayCurrency: created.PayCurrency,
+		ExpiresAt: created.ExpiresAt, CreatedAt: now, UpdatedAt: now,
 	}
 	if err := db.CreateTransaction(txn); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)

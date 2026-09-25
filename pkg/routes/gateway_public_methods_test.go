@@ -102,9 +102,15 @@ func TestPublicPayMidtransMethodAllowlist(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"inv_allow","invoice_url":"https://nowpayments.io/payment/?iid=allow"}`))
 	}))
 	defer npServer.Close()
+	coreServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"transaction_id":"txn-allow","order_id":"x","payment_type":"qris","transaction_status":"pending","expiry_time":"2026-09-25 10:30:00","actions":[{"name":"generate-qr-code","url":"https://api.test/qris/allow/qr-code"}]}`))
+	}))
+	defer coreServer.Close()
 
 	t.Setenv("MIDTRANS_SERVER_KEY", "allow-server-key")
 	t.Setenv("MIDTRANS_SNAP_BASE_URL", snapServer.URL)
+	t.Setenv("MIDTRANS_CORE_BASE_URL", coreServer.URL)
 	t.Setenv("NOWPAYMENTS_API_KEY", "allow-np-key")
 	t.Setenv("NOWPAYMENTS_BASE_URL", npServer.URL+"/v1")
 	t.Setenv("NOWPAYMENTS_SANDBOX", "true")
@@ -156,10 +162,14 @@ func TestPublicPayMidtransMethodAllowlist(t *testing.T) {
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
-	// The allowed method still works.
+	// The allowed method still works: QRIS now returns an on-page QR image
+	// (Core API, acquirer=gopay) instead of a Snap token.
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"qris"}`, nil)
 	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, "snap-allow", decodeBody(t, resp)["snap_token"])
+	qrisIntent := decodeBody(t, resp)
+	assert.Equal(t, "https://api.test/qris/allow/qr-code", qrisIntent["payment_url"])
+	assert.Empty(t, qrisIntent["snap_token"])
+	assert.Equal(t, "2026-09-25T10:30:00+07:00", qrisIntent["expires_at"])
 	resp.Body.Close()
 }
 

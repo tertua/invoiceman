@@ -10,6 +10,9 @@ type CreateTxRequest struct {
 	PaymentMethod  string
 	EnabledMethods []string
 	PayCurrency    string
+	// DirectQRIS asks the provider to return an on-page QRIS payload (Core
+	// API) instead of a hosted/Snap checkout when the method is qris.
+	DirectQRIS bool
 }
 
 type CreateTxResponse struct {

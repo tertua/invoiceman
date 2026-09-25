@@ -19,12 +19,9 @@ func IDs() []string {
 	}
 }
 
-// MethodName maps a stable method ID to its display label. NOTE (intentional,
-// not a typo): MethodGopay displays as "QRIS" and MethodQRIS displays as
-// "Other QRIS" per owner request; the IDs ("gopay"/"qris") stay unchanged for
-// Midtrans Snap, allowlists, and the API.
+// MethodName maps a stable method ID to its display label.
 func MethodName(method string) string {
-	labels := map[string]string{MethodBankTransfer: "Bank Transfer", MethodQRIS: "Other QRIS", MethodGopay: "QRIS", MethodCreditCard: "Credit Card", MethodCrypto: "Cryptocurrency", MethodOther: "Other"}
+	labels := map[string]string{MethodBankTransfer: "Bank Transfer", MethodQRIS: "QRIS", MethodGopay: "GoPay", MethodCreditCard: "Credit Card", MethodCrypto: "Cryptocurrency", MethodOther: "Other"}
 	if label, ok := labels[method]; ok {
 		return label
 	}

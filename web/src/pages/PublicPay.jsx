@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import PublicShell from "@/components/publicpay/PublicShell";
-import CryptoWidget from "@/components/publicpay/CryptoWidget";
-import MethodPicker from "@/components/publicpay/MethodPicker";
+import PayPanel from "@/components/publicpay/PayPanel";
 import InvoiceHead from "@/components/publicpay/InvoiceHead";
 import { publicPayApi } from "@/api/publicPay";
-import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
 
@@ -35,12 +33,12 @@ function Row({ label, value, bold }) {
 }
 
 // Dev path — public pay page (orchestrator scaffold)
-//   [done]  picking "crypto" swaps in CryptoWidget and hides the MethodPicker
+//   [done]  PayPanel swaps in the crypto/QRIS widget or the MethodPicker
 //   [next]  keep MethodPicker visible under the widget so the payer can switch
 //           method without a reload
 //   [later] order methods by audience (domestic IDR first)
-// Seam: data contract from publicPayApi.get plus the picker/widget props —
-// the page only composes, it never talks to a gateway directly.
+// Seam: data contract from publicPayApi.get plus PayPanel's props — the page
+// only composes, it never talks to a gateway directly.
 // End dev path
 export default function PublicPay() {
   const { token } = useParams();
@@ -48,9 +46,10 @@ export default function PublicPay() {
   const [lang, setLang] = useState(() => detectLang(searchParams));
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
-  const [pending, setPending] = useState("");
-  const [payErr, setPayErr] = useState("");
-  const [cryptoActive, setCryptoActive] = useState(false);
+
+  const refresh = useCallback(() => {
+    publicPayApi.get(token).then(setData).catch(() => {});
+  }, [token]);
 
   useEffect(() => {
     document.documentElement.setAttribute("lang", lang);
@@ -109,37 +108,6 @@ export default function PublicPay() {
       window.clearInterval(interval);
     };
   }, [data, token]);
-
-  async function pay(method) {
-    setPending(method);
-    setPayErr("");
-    try {
-      if (method === "crypto") {
-        setCryptoActive(true);
-        setPending("");
-        return;
-      }
-      const res = await publicPayApi.createTransaction(token, method);
-      if (res.snap_token && data.gateway?.client_key) {
-        const snap = await loadMidtransSnap(data.gateway.is_production);
-        snap.pay(res.snap_token, {
-          onClose: () => setPending(""),
-          onError: () => setPending(""),
-          onSuccess: () => window.location.reload(),
-        });
-        return;
-      }
-      const hosted = res.redirect_url || res.payment_url;
-      if (hosted) {
-        window.location.href = hosted;
-        return;
-      }
-      setPending("");
-    } catch (e) {
-      setPayErr(e.message || t(lang, "public.notPayable"));
-      setPending("");
-    }
-  }
 
   if (err) {
     return (
@@ -213,23 +181,7 @@ export default function PublicPay() {
             </div>
           </div>
         ) : can_pay ? (
-          cryptoActive ? (
-            <CryptoWidget
-              key={token}
-              token={token}
-              lang={lang}
-              onError={(m) => {
-                setPayErr(m);
-                setCryptoActive(false);
-              }}
-              onPaid={() => {
-                setCryptoActive(false);
-                publicPayApi.get(token).then(setData).catch(() => {});
-              }}
-            />
-          ) : (
-            <MethodPicker methods={methods} lang={lang} onPick={pay} pending={pending} error={payErr} />
-          )
+          <PayPanel token={token} methods={methods} lang={lang} gateway={data.gateway} onRefresh={refresh} />
         ) : (
           <div className="mt-6 text-center text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</div>
         )}
