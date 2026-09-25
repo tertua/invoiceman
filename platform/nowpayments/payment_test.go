@@ -3,6 +3,7 @@ package nowpayments
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,6 +39,45 @@ func TestCreateDirectPayment(t *testing.T) {
 	}
 	if gotBody["pay_currency"] != "USDTTTC20" || gotBody["price_currency"] != "USD" {
 		t.Fatalf("unexpected body: %v", gotBody)
+	}
+	if v, ok := gotBody["price_amount"].(float64); !ok || v != 25.5 {
+		t.Fatalf("price_amount must be a JSON number, got %T %v", gotBody["price_amount"], gotBody["price_amount"])
+	}
+}
+
+func TestCreateDirectPaymentAmountBelowMinimum(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"status":false,"statusCode":400,"code":"AMOUNT_MINIMAL_ERROR","message":"Crypto amount 10.485047 is less than minimal"}`))
+	}))
+	defer srv.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
+
+	_, err := CreateDirectPayment(context.Background(), FromEnv(), &DirectPaymentRequest{
+		OrderID: "INV-1-small", PriceAmount: "10.50", PriceCurrency: "USD", PayCurrency: "USDTTRC20",
+	})
+	if !errors.Is(err, gateway.ErrAmountBelowMinimum) {
+		t.Fatalf("expected ErrAmountBelowMinimum, got: %v", err)
+	}
+}
+
+func TestCreateDirectPaymentOtherError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"status":false,"statusCode":400,"code":"WRONG_PAYLOAD","message":"bad payload"}`))
+	}))
+	defer srv.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
+
+	_, err := CreateDirectPayment(context.Background(), FromEnv(), &DirectPaymentRequest{
+		OrderID: "INV-1-bad", PriceAmount: "10.50", PriceCurrency: "USD", PayCurrency: "USDTTRC20",
+	})
+	if err == nil || errors.Is(err, gateway.ErrAmountBelowMinimum) {
+		t.Fatalf("expected a generic provider error, got: %v", err)
 	}
 }
 

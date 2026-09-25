@@ -222,7 +222,56 @@ func TestPublicPayCryptoWidgetNoRedirect(t *testing.T) {
 	assert.True(t, sawPayment, "expected the direct /payment endpoint to be hit")
 	assert.Equal(t, "TXUSDTTRC20", intent["address"])
 	assert.Equal(t, "100", intent["pay_amount"])
+	assert.Equal(t, "usdttrc20", intent["pay_currency"])
 	assert.Empty(t, intent["payment_url"], "no redirect; the widget stays on page")
 	assert.Empty(t, intent["snap_token"])
+	resp.Body.Close()
+}
+
+func TestPublicPayCryptoAmountBelowMinimum(t *testing.T) {
+	npServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"status":false,"statusCode":400,"code":"AMOUNT_MINIMAL_ERROR","message":"Crypto amount 10.485047 is less than minimal"}`))
+	}))
+	defer npServer.Close()
+
+	t.Setenv("MIDTRANS_SERVER_KEY", "min-server-key")
+	t.Setenv("NOWPAYMENTS_API_KEY", "min-np-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", npServer.URL+"/v1")
+	t.Setenv("NOWPAYMENTS_SANDBOX", "true")
+
+	app := newTestApp()
+
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Min MP","email":"min-mp@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"min-mp@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	cookies := resp.Cookies()
+	resp.Body.Close()
+
+	resp = doRequest(t, app, "PATCH", "/api/settings",
+		`{"company_name":"Min MP","currency":"USD","tax_rate":0,"invoice_prefix":"INV-","usd_to_idr":"18000"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	spec := newInvoice()
+	spec.ClientID, spec.Currency = createClient(t, app, cookies, "Min Payer"), "USD"
+	spec.Items = []invoiceLine{{Description: "Service", Quantity: 1, Rate: "10"}}
+	invoiceID := createInvoiceID(t, app, cookies, spec)
+
+	resp = doRequest(t, app, "POST", "/api/payments/online", `{"invoiceId":"`+invoiceID+`"}`, cookies)
+	require.Equal(t, 200, resp.StatusCode)
+	token := decodeBody(t, resp)["token"].(string)
+
+	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"crypto","pay_currency":"usdttrc20"}`, nil)
+	require.Equal(t, 400, resp.StatusCode)
+	body := decodeBody(t, resp)
+	assert.Equal(t, "payment amount is below the gateway minimum", body["error"].(map[string]any)["message"])
+	details := body["error"].(map[string]any)["details"].(map[string]any)
+	assert.Equal(t, "amount_below_minimum", details["code"])
 	resp.Body.Close()
 }

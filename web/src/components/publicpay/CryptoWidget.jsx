@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Copy, Check } from "lucide-react";
 import { publicPayApi } from "@/api/publicPay";
+import { t } from "@/lib/i18n";
 
 const BASE = 0.91; // 1090s ~ NOWPayments default payment timeout.
 const DEFAULT_PAY_CURRENCY = "usdttrc20";
@@ -9,6 +10,21 @@ function formatCountdown(left) {
   const m = String(Math.floor(left / 60)).padStart(2, "0");
   const s = String(left % 60).padStart(2, "0");
   return `${m}:${s}`;
+}
+
+function payErrorMessage(e, lang) {
+  const details = e?.response?.data?.error?.details;
+  if (details?.code === "amount_below_minimum") return t(lang, "public.payAmountMinimum");
+  return t(lang, "public.payCreateFailed");
+}
+
+function currencyLabel(payCurrency) {
+  const c = (payCurrency || "").toLowerCase();
+  if (c.startsWith("usdt")) {
+    const network = c.slice(4);
+    return network ? `USDT (${network.toUpperCase()})` : "USDT";
+  }
+  return (payCurrency || "USDT").toUpperCase();
 }
 
 export default function CryptoWidget({ token, lang, onError }) {
@@ -31,11 +47,11 @@ export default function CryptoWidget({ token, lang, onError }) {
         } else if (res.payment_url) {
           window.location.href = res.payment_url;
         } else {
-          onError("no deposit address");
+          onError(t(lang, "public.payNoAddress"));
         }
       })
       .catch((e) => {
-        if (!cancelled) onError(e.message || "payment failed");
+        if (!cancelled) onError(payErrorMessage(e, lang));
       })
       .finally(() => {
         if (!cancelled) setPending(false);
@@ -44,7 +60,7 @@ export default function CryptoWidget({ token, lang, onError }) {
       cancelled = true;
       if (copyTimer.current) clearTimeout(copyTimer.current);
     };
-  }, [token, onError, copyTimer]);
+  }, [token, lang, onError, copyTimer]);
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +111,7 @@ export default function CryptoWidget({ token, lang, onError }) {
   if (!intent) return null;
 
   const amount = intent.pay_amount || intent.amount || "—";
-  const currency = (intent.pay_currency || "USDT").toUpperCase();
+  const currency = currencyLabel(intent.pay_currency);
 
   return (
     <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4 space-y-4">

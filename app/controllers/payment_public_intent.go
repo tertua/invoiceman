@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -59,6 +60,10 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		if errors.Is(err, gateway.ErrNotConfigured) {
 			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
 		}
+		if errors.Is(err, gateway.ErrAmountBelowMinimum) {
+			return utils.Fail(c, fiber.StatusBadRequest, "payment amount is below the gateway minimum", fiber.Map{"code": "amount_below_minimum"})
+		}
+		logger.L().Warn("public gateway intent failed", "gateway", gw.Name(), "method", method, "err", err)
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
 	}
 	now := time.Now()
@@ -69,7 +74,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		Currency: spec.Currency, InvoiceCurrency: strings.ToUpper(strings.TrimSpace(invoice.Currency)),
 		InvoiceAmount: spec.InvoiceAmount, UsdToIdr: spec.UsdToIdr,
 		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
-		PaymentURL: created.PaymentURL, Address: created.Address, PayAmount: created.RawPayload, CreatedAt: now, UpdatedAt: now,
+		PaymentURL: created.PaymentURL, Address: created.Address, PayAmount: created.RawPayload, PayCurrency: created.PayCurrency, CreatedAt: now, UpdatedAt: now,
 	}
 	if err := db.CreateTransaction(txn); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)

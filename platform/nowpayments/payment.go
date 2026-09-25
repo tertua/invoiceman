@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -29,8 +30,12 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	if cfg.APIKey == "" {
 		return nil, ErrNotConfigured
 	}
+	amount, err := decimal.NewFromString(strings.TrimSpace(req.PriceAmount))
+	if err != nil {
+		return nil, fmt.Errorf("nowpayments payment: invalid amount %q: %w", req.PriceAmount, err)
+	}
 	body, err := json.Marshal(map[string]interface{}{
-		"price_amount":      req.PriceAmount,
+		"price_amount":      json.Number(amount.String()),
 		"price_currency":    req.PriceCurrency,
 		"pay_currency":      req.PayCurrency,
 		"order_id":          req.OrderID,
@@ -59,6 +64,9 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 		return nil, fmt.Errorf("nowpayments payment: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if isAmountMinimalError(raw) {
+			return nil, fmt.Errorf("nowpayments payment: %w: %s", gateway.ErrAmountBelowMinimum, truncate(string(raw), 300))
+		}
 		return nil, fmt.Errorf("nowpayments payment: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
 	}
 	var decoded map[string]any
@@ -89,6 +97,18 @@ type DirectPaymentRequest struct {
 	PayCurrency   string
 }
 
+// isAmountMinimalError reports whether the provider rejected the charge only
+// because it is below NOWPayments' minimum for the requested pay currency.
+func isAmountMinimalError(raw []byte) bool {
+	var body struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return false
+	}
+	return body.Code == "AMOUNT_MINIMAL_ERROR"
+}
+
 // CreateTransaction creates a NOWPayments payment. Relayed intents reached
 // without a pay currency use the hosted crypto invoice; public-pay direct USDT
 // (PayCurrency set) returns an on-page deposit address instead of a redirect.
@@ -110,7 +130,7 @@ func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxReque
 			}
 			return nil, err
 		}
-		return &gateway.CreateTxResponse{Token: dp.PaymentID, Address: dp.PayAddress, PaymentMethod: gateway.MethodCrypto, RawPayload: dp.PayAmount, ExpiresAt: dp.ExpiresAt}, nil
+		return &gateway.CreateTxResponse{Token: dp.PaymentID, Address: dp.PayAddress, PaymentMethod: gateway.MethodCrypto, RawPayload: dp.PayAmount, PayCurrency: dp.PayCurrency, ExpiresAt: dp.ExpiresAt}, nil
 	}
 	inv, err := CreateInvoice(ctx, cfg, req)
 	if err != nil {

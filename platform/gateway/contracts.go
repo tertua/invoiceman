@@ -20,6 +20,7 @@ type CreateTxResponse struct {
 	ExpiresAt     string
 	PaymentMethod string
 	RawPayload    string
+	PayCurrency   string
 }
 
 type NotificationResult struct {

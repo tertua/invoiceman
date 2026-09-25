@@ -19,6 +19,10 @@ var ErrInvalidSignature = errors.New("invalid signature")
 // ErrInvalidPayload is returned when a webhook body cannot be decoded.
 var ErrInvalidPayload = errors.New("invalid notification")
 
+// ErrAmountBelowMinimum is returned when the charge is smaller than the
+// gateway's minimum accepted payment amount for the chosen currency.
+var ErrAmountBelowMinimum = errors.New("payment amount is below the gateway minimum")
+
 // Transaction statuses shared by all gateways and the relay payload.
 // Gateways map their provider-specific states to these.
 const (
