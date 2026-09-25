@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.1] - 2026-09-25
+
+### Added
+- AI invoice notes/terms now forbid thank-you and cooperation closings
+  ("thank you", "terima kasih", "kerja sama", "kerjasama", "cooperation").
+
+### Changed
+- Gateway methods trimmed to `bank_transfer`, `qris`, `gopay`, `credit_card`;
+  the Midtrans setting is a single-select dropdown defaulting to `gopay`.
+- NOWPayments invoices are always charged in USD; IDR balances convert with
+  the manual `usd_to_idr` rate instead of being sent as-is.
+- Auth forms drop stiff example placeholders; login disables browser email
+  history and uses `new-password` for the password field; address hints are
+  unified to "Alamat Lengkap".
+- Indonesian copy shortened: pending status "Menunggu", payment link title
+  "Tautan Publik", invoice lines "Qty"/"Harga"; the share-link copy is
+  icon-only.
+- Settings merges the Account and Password tabs; the sidebar logout moves
+  into the user card (avatar is display-only, only the logout icon acts).
+- Dashboard dates honor the saved language from first paint, so ID renders
+  "24 Sep 2026" instead of "Sep 24, 2026".
+- Public pay secured-by note reads "Pembayaran diproses aman oleh mitra kami".
+
 ## [v0.5.0] - 2026-09-24
 
 ### Added
