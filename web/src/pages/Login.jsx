@@ -75,24 +75,22 @@ function LoginForm({ login, nav, location, t, sessionExpired, clearSessionExpire
           {t("auth.loginDesc")}
         </p>
 
-        <form onSubmit={onSubmit} className="mt-9 space-y-4">
+        <form onSubmit={onSubmit} className="mt-9 space-y-4" autoComplete="off">
           <AuthField
             label={t("common.email")}
             type="email"
-            autoComplete="email"
+            autoComplete="off"
             value={form.email}
             onChange={(v) => setForm((current) => ({ ...current, email: v }))}
-            placeholder="you@example.com"
             icon={Mail}
           />
 
           <AuthField
             label={t("common.password")}
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             value={form.password}
             onChange={(v) => setForm((current) => ({ ...current, password: v }))}
-            placeholder="••••••••"
             icon={Lock}
             extra={
               <Link

@@ -53,6 +53,7 @@ export const en = {
     "common.retry": "Try again",
     "common.back": "Back",
     "common.validEmail": "Enter a valid email address",
+    "common.addressPlaceholder": "Alamat Lengkap",
     "ai.unavailable": "AI is not configured. Add a Gemini API key to enable this feature.",
     "ai.unavailableShort": "AI unavailable",
     "ai.failed": "The AI provider could not complete the request. Please try again.",

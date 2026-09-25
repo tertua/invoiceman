@@ -53,6 +53,7 @@ export const id = {
     "common.retry": "Coba lagi",
     "common.back": "Kembali",
     "common.validEmail": "Masukkan alamat email yang valid",
+    "common.addressPlaceholder": "Alamat Lengkap",
     "ai.unavailable": "AI belum dikonfigurasi. Tambahkan API key Gemini untuk mengaktifkan fitur ini.",
     "ai.unavailableShort": "AI tidak tersedia",
     "ai.failed": "Provider AI gagal menyelesaikan permintaan. Silakan coba lagi.",

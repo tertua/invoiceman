@@ -79,7 +79,6 @@ export default function ForgotPassword() {
               autoComplete="email"
               value={email}
               onChange={setEmail}
-              placeholder="you@example.com"
               icon={Mail}
             />
 

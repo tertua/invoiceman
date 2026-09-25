@@ -290,7 +290,7 @@ function ExpenseModal({ open, expense, onClose }) {
             )}
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Field label={t("common.vendor")}><Input value={form.vendor} onChange={set("vendor")} placeholder="Adobe Inc." /></Field>
+                <Field label={t("common.vendor")}><Input value={form.vendor} onChange={set("vendor")} /></Field>
                 <Field label={t("common.amount")}>
                   <Input type="number" min="0" step="0.01" value={form.amount} onChange={set("amount")} className="tabular" />
                 </Field>

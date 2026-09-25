@@ -144,12 +144,12 @@ function CompanySection() {
         <div className="space-y-4">
           <div>
             <FieldLabel>{t("settings.companyName")}</FieldLabel>
-            <Input value={form.company_name} onChange={set("company_name")} placeholder="Your Company LLC" />
+            <Input value={form.company_name} onChange={set("company_name")} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel>{t("settings.billingEmail")}</FieldLabel>
-              <Input type="email" value={form.email} onChange={set("email")} placeholder="billing@you.com" />
+              <Input type="email" value={form.email} onChange={set("email")} />
             </div>
             <div>
               <FieldLabel>{t("common.phone")}</FieldLabel>
@@ -158,7 +158,7 @@ function CompanySection() {
           </div>
           <div>
             <FieldLabel>{t("common.address")}</FieldLabel>
-            <Input value={form.address} onChange={set("address")} placeholder="123 Main St, City, State" />
+            <Input value={form.address} onChange={set("address")} placeholder={t("common.addressPlaceholder")} />
           </div>
         </div>
       </Card>
