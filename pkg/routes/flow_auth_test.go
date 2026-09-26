@@ -44,53 +44,6 @@ func TestAuthFlow(t *testing.T) {
 	cookies := resp.Cookies()
 	require.NotEmpty(t, cookies)
 
-	// The next account starts as a regular user and can be promoted by admin.
-	resp = doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"Moderator User","email":"moderator@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 201, resp.StatusCode)
-	moderatorBody := decodeBody(t, resp)
-	moderator := moderatorBody["user"].(map[string]interface{})
-	assert.Equal(t, "user", moderator["role"])
-	moderatorID := moderator["id"].(string)
-
-	resp = doRequest(t, app, "GET", "/api/admin/users?per_page=100", "", cookies)
-	require.Equal(t, 200, resp.StatusCode)
-	// Order-proof: the suite shares one database, so assert presence of
-	// our two accounts rather than an exact total.
-	users := decodeBody(t, resp)["users"].([]interface{})
-	emails := map[string]bool{}
-	for _, u := range users {
-		emails[u.(map[string]interface{})["email"].(string)] = true
-	}
-	assert.True(t, emails["flow@example.com"], "expected flow user listed")
-	assert.True(t, emails["moderator@example.com"], "expected moderator user listed")
-
-	resp = doRequest(t, app, "PATCH", "/api/admin/users/"+moderatorID+"/role", `{"role":"moderator"}`, cookies)
-	require.Equal(t, 200, resp.StatusCode)
-	assert.Equal(t, "moderator", decodeBody(t, resp)["user"].(map[string]interface{})["role"])
-	// Role change is a privilege moment: the admin CSRF token rotated, so
-	// merge the fresh cookies before the next mutation.
-	cookies = mergeCookies(cookies, resp.Cookies())
-
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"moderator@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	moderatorCookies := resp.Cookies()
-	assert.Equal(t, "moderator", decodeBody(t, resp)["user"].(map[string]interface{})["role"])
-
-	resp = doRequest(t, app, "GET", "/api/settings", "", moderatorCookies)
-	assert.Equal(t, 200, resp.StatusCode)
-	resp.Body.Close()
-	resp = doRequest(t, app, "PATCH", "/api/settings", `{"company_name":"Blocked"}`, moderatorCookies)
-	assert.Equal(t, 403, resp.StatusCode)
-	resp.Body.Close()
-	resp = doRequest(t, app, "GET", "/api/admin/users", "", moderatorCookies)
-	assert.Equal(t, 403, resp.StatusCode)
-	resp.Body.Close()
-	resp = doRequest(t, app, "POST", "/api/clients", `{"name":"Moderator Client"}`, moderatorCookies)
-	assert.Equal(t, 201, resp.StatusCode)
-	resp.Body.Close()
-
 	// Duplicate email is rejected.
 	resp = doRequest(t, app, "POST", "/api/auth/register",
 		`{"name":"Flow User","email":"flow@example.com","password":"secret123"}`, nil)

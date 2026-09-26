@@ -6,11 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// RoleInput describes an admin role assignment request.
-type RoleInput struct {
-	Role string `json:"role" validate:"required,oneof=user moderator"`
-}
-
 // AdminClaim is the singleton first-admin bootstrap row (ID is always 1).
 // The first register to insert it wins the admin role; the primary key
 // makes the claim atomic across concurrent registers on both SQLite and

@@ -27,7 +27,6 @@ export const settingsEn = {
     "settings.midtransMethodsDesc": "Choose which method your Midtrans account offers on payment links.",
     "settings.midtransMethodsHint": "Only the method enabled in your Midtrans dashboard will actually work.",
     "settings.saveCompany": "Save company settings",
-    "settings.moderatorReadOnly": "Moderators can manage billing operations but cannot change company settings.",
     "settings.companySaved": "Company settings saved",
     "settings.saveFailed": "Couldn't save settings",
     "settings.logoTooLarge": "Logo too large",

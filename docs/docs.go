@@ -412,53 +412,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/users/{id}/role": {
-            "patch": {
-                "security": [
-                    {
-                        "SessionCookie": []
-                    }
-                ],
-                "description": "Update a user's role.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "update user role",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Role payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.RoleInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/ai/business-summary": {
             "post": {
                 "security": [
@@ -3608,21 +3561,6 @@ const docTemplate = `{
                 "token": {
                     "type": "string",
                     "maxLength": 255
-                }
-            }
-        },
-        "models.RoleInput": {
-            "type": "object",
-            "required": [
-                "role"
-            ],
-            "properties": {
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "user",
-                        "moderator"
-                    ]
                 }
             }
         },

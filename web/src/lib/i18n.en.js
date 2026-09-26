@@ -104,7 +104,6 @@ export const en = {
     "admin.you": "You",
     "admin.protected": "Protected",
     "admin.role.admin": "Admin",
-    "admin.role.moderator": "Moderator",
     "admin.role.user": "User",
 
     /* ============================ gateway ============================ */

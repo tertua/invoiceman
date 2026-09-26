@@ -239,12 +239,6 @@ func TestAuditTrail(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	targetID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
 
-	// Promote the user (admin-only action).
-	resp = doRequest(t, app, "PATCH", "/api/admin/users/"+targetID+`/role`,
-		`{"role":"moderator"}`, adminCookies)
-	require.Equal(t, 200, resp.StatusCode)
-	resp.Body.Close()
-
 	// The trail contains the change with actor context.
 	resp = doRequest(t, app, "GET", "/api/admin/audit-logs", "", adminCookies)
 	require.Equal(t, 200, resp.StatusCode)
@@ -254,11 +248,11 @@ func TestAuditTrail(t *testing.T) {
 	found := false
 	for _, l := range logs {
 		entry := l.(map[string]interface{})
-		if entry["action"] == "user.role.update" && entry["entity_id"] == targetID {
+		if entry["action"] == "auth.register" && entry["entity_id"] == targetID {
 			found = true
 			assert.NotEmpty(t, entry["user_id"])
 		}
 	}
-	assert.True(t, found, "expected user.role.update in audit trail")
+	assert.True(t, found, "expected auth.register in audit trail")
 	assert.Contains(t, body, "meta")
 }

@@ -104,7 +104,6 @@ export const id = {
     "admin.you": "Anda",
     "admin.protected": "Dilindungi",
     "admin.role.admin": "Admin",
-    "admin.role.moderator": "Moderator",
     "admin.role.user": "Pengguna",
 
     /* ============================ gateway ============================ */

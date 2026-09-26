@@ -27,7 +27,6 @@ export const settingsId = {
     "settings.midtransMethodsDesc": "Pilih metode yang ditawarkan akun Midtrans Anda di tautan pembayaran.",
     "settings.midtransMethodsHint": "Hanya metode yang aktif di dashboard Midtrans yang benar-benar berfungsi.",
     "settings.saveCompany": "Simpan pengaturan perusahaan",
-    "settings.moderatorReadOnly": "Moderator dapat mengelola operasional penagihan, tetapi tidak dapat mengubah pengaturan perusahaan.",
     "settings.companySaved": "Pengaturan perusahaan disimpan",
     "settings.saveFailed": "Gagal menyimpan pengaturan",
     "settings.logoTooLarge": "Logo terlalu besar",

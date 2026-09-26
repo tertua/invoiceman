@@ -93,7 +93,6 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 
 	admin := a.Group(prefix+"/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
 	admin.Get("/users", controllers.ListUsers)
-	admin.Patch("/users/:id/role", controllers.UpdateUserRole)
 	admin.Get("/audit-logs", controllers.ListAuditLogs)
 	admin.Post("/migrate/down", controllers.MigrateDown)
 }

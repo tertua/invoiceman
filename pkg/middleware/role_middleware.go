@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/pkg/repository"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 )
@@ -28,10 +27,4 @@ func RequireRoles(allowed ...string) fiber.Handler {
 		}
 		return c.Next()
 	}
-}
-
-// IsKnownAssignableRole reports whether a role may be assigned by an admin.
-func IsKnownAssignableRole(role string) bool {
-	_, err := utils.VerifyRole(role)
-	return err == nil && role != repository.AdminRoleName
 }
