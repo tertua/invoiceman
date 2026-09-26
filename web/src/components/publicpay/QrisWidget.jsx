@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n";
 import { formatMoney } from "@/lib/utils";
 
 const DEFAULT_TTL = 900;
+const REVOKE_DELAY = 4000; // ms to wait before revoking blob URL
 
 function countdownFrom(expiresAt) {
   if (!expiresAt) return DEFAULT_TTL;
@@ -67,12 +68,12 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
         document.body.appendChild(a);
         a.click();
         a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY);
         setSaving(false);
         return;
       }
-    } catch {
-      /* fall through to the direct image below */
+    } catch (err) {
+      console.warn("QR download via backend failed, trying direct image download:", err);
     }
     const ok = await downloadImage(intent.payment_url, qrFileName(""));
     setSaving(false);

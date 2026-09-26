@@ -4,8 +4,11 @@ import { publicPayApi } from "@/api/publicPay";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
 
-const BASE = 0.91; // 1090s ~ NOWPayments default payment timeout.
+const DEFAULT_TIMEOUT_SECONDS = 910; // ~NOWPayments default payment timeout
 const DEFAULT_PAY_CURRENCY = "usdttrc20";
+const COPIED_FEEDBACK_DURATION = 2000; // ms to show "copied" feedback
+const QR_SIZE = 200;
+const QR_MARGIN = 1;
 
 function formatCountdown(left) {
   const m = String(Math.floor(left / 60)).padStart(2, "0");
@@ -42,14 +45,19 @@ export default function CryptoWidget({ token, lang, onError }) {
   const [pending, setPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef(null);
-  const [left, setLeft] = useState(Math.round(BASE * 1000));
+  const [left, setLeft] = useState(DEFAULT_TIMEOUT_SECONDS);
   const [qrSrc, setQrSrc] = useState("");
   const [saving, setSaving] = useState(false);
+
+  function qrFileName() {
+    const id = String(intent?.payment_id || intent?.order_id || "").replace(/[^A-Za-z0-9-_]/g, "").slice(0, 48);
+    return `${id || "crypto-qr"}.png`;
+  }
 
   async function saveQr() {
     if (!qrSrc || saving) return;
     setSaving(true);
-    const ok = await downloadImage(qrSrc, "usdt-deposit-qr.png");
+    const ok = await downloadImage(qrSrc, qrFileName());
     setSaving(false);
     if (!ok) window.open(qrSrc, "_blank", "noopener");
   }
@@ -86,7 +94,9 @@ export default function CryptoWidget({ token, lang, onError }) {
     if (intent?.address) {
       import("qrcode").then(({ default: QRCode }) => {
         if (!mounted) return;
-        QRCode.toDataURL(intent.address, { margin: 1, width: 200 }).then(setQrSrc).catch(() => {});
+        QRCode.toDataURL(intent.address, { margin: QR_MARGIN, width: QR_SIZE })
+          .then(setQrSrc)
+          .catch((err) => console.warn("QR generation failed:", err));
       });
     }
     return () => {
@@ -96,7 +106,7 @@ export default function CryptoWidget({ token, lang, onError }) {
 
   useEffect(() => {
     const start = Date.now();
-    const total = Math.round(BASE * 1000);
+    const total = DEFAULT_TIMEOUT_SECONDS * 1000;
     const timer = setInterval(() => {
       const remaining = Math.max(0, Math.round((start + total - Date.now()) / 1000));
       setLeft(remaining);
@@ -113,9 +123,9 @@ export default function CryptoWidget({ token, lang, onError }) {
       navigator.clipboard?.writeText(intent.address);
       setCopied(true);
       if (copyTimer.current) clearTimeout(copyTimer.current);
-      copyTimer.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable */
+      copyTimer.current = setTimeout(() => setCopied(false), COPIED_FEEDBACK_DURATION);
+    } catch (err) {
+      console.warn("Clipboard write failed:", err);
     }
   }
 
@@ -136,10 +146,10 @@ export default function CryptoWidget({ token, lang, onError }) {
     <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-          {lang === "id" ? "Bayar dengan USDT (TRC20)" : "Pay with USDT (TRC20)"}
+          {t(lang, "public.cryptoTitle")}
         </div>
         <div className="tabular text-xs font-semibold text-[var(--danger)]">
-          {lang === "id" ? "Sisa waktu" : "Expires in"} {formatCountdown(left)}
+          {t(lang, "public.cryptoExpires")} {formatCountdown(left)}
         </div>
       </div>
 
@@ -163,7 +173,7 @@ export default function CryptoWidget({ token, lang, onError }) {
       </div>
 
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-1.5">
-        <div className="text-xs text-[var(--ink-muted)]">{lang === "id" ? "Alamat deposit" : "Deposit address"}</div>
+        <div className="text-xs text-[var(--ink-muted)]">{t(lang, "public.cryptoAddress")}</div>
         <button
           type="button"
           onClick={copy}
@@ -175,14 +185,12 @@ export default function CryptoWidget({ token, lang, onError }) {
       </div>
 
       <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
-        <span className="text-xs text-[var(--ink-muted)]">{lang === "id" ? "Jumlah" : "Amount"}</span>
+        <span className="text-xs text-[var(--ink-muted)]">{t(lang, "public.cryptoAmount")}</span>
         <span className="tabular text-sm font-semibold text-[var(--ink)]">{amount} {currency}</span>
       </div>
 
       <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">
-        {lang === "id"
-          ? "Kirim jumlah persis di atas ke alamat deposit. Pembayaran terverifikasi otomatis setelah konfirmasi jaringan."
-          : "Send the exact amount above to the deposit address. Payment is verified automatically once the network confirms it."}
+        {t(lang, "public.cryptoHint")}
       </p>
     </div>
   );
