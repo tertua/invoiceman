@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { createPublicTransaction, newIntentKey } from "@/api/publicIntent";
+import { createPublicTransaction, newIntentKey, qrDownloadUrl } from "@/api/publicIntent";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
@@ -45,10 +45,36 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
   const clientKey = gateway?.client_key;
   const isProd = gateway?.is_production;
 
+  function qrFileName(disposition) {
+    const m = /filename="([A-Za-z0-9-_]+\.png)"/.exec(disposition || "");
+    if (m) return m[1];
+    const id = String(intent?.order_id || "").replace(/[^A-Za-z0-9-_]/g, "").slice(0, 48);
+    return `${id || "qris"}.png`;
+  }
+
   async function saveQr() {
     if (!intent?.payment_url || saving) return;
     setSaving(true);
-    const ok = await downloadImage(intent.payment_url, "qris.png");
+    try {
+      const res = await fetch(qrDownloadUrl(token));
+      const ct = res.headers.get("content-type") || "";
+      if (res.ok && ct.startsWith("image/")) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = qrFileName(res.headers.get("content-disposition"));
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        setSaving(false);
+        return;
+      }
+    } catch {
+      /* fall through to the direct image below */
+    }
+    const ok = await downloadImage(intent.payment_url, qrFileName(""));
     setSaving(false);
     if (!ok) window.open(intent.payment_url, "_blank", "noopener");
   }

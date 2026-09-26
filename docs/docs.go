@@ -2731,6 +2731,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/pay/{token}/qr": {
+            "get": {
+                "description": "Get the current QRIS QR image for a public payment token.",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "Public Payments"
+                ],
+                "summary": "get public QRIS image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "QR png",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/public/pay/{token}/status": {
             "get": {
                 "description": "Get public payment status.",

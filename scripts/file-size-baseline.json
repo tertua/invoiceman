@@ -104,7 +104,7 @@
  "pkg/routes/pagination_test.go": 60,
  "pkg/routes/private_routes.go": 101,
  "pkg/routes/private_routes_test.go": 98,
- "pkg/routes/public_routes.go": 46,
+ "pkg/routes/public_routes.go": 42,
  "pkg/routes/public_routes_test.go": 87,
  "pkg/routes/routes_test.go": 34,
  "pkg/routes/security_test.go": 264,

@@ -2270,6 +2270,25 @@ paths:
       summary: get public payment
       tags:
       - Public Payments
+  /public/pay/{token}/qr:
+    get:
+      description: Get the current QRIS QR image for a public payment token.
+      parameters:
+      - description: Payment token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: QR png
+          schema:
+            type: string
+      summary: get public QRIS image
+      tags:
+      - Public Payments
   /public/pay/{token}/status:
     get:
       description: Get public payment status.

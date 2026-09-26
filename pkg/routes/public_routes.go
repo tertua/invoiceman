@@ -32,15 +32,11 @@ func PublicRoutesAt(a *fiber.App, prefix string) {
 	route.Get("/public/pay/:token", publicPay, controllers.GetPublicPayment)
 	route.Post("/public/pay/:token/transaction", publicPay, middleware.Idempotency(middleware.PublicPayIdempotencyScope), controllers.CreatePublicTransaction)
 	route.Get("/public/pay/:token/status", publicPay, controllers.GetPublicPaymentStatus)
+	route.Get("/public/pay/:token/qr", publicPay, controllers.GetPublicQrImage)
 	route.Get("/public/gateway/config", publicPay, controllers.GatewayConfig)
 	route.Get("/public/gateway/status", publicPay, controllers.GatewayStatus)
 
 	route.Get("/config", controllers.AppConfig) // public branding for the SPA
 
-	// Provider webhooks (HMAC-verified, but still rate-limited per IP).
-	// One generic handler serves every provider: POST /webhooks/midtrans and
-	// POST /webhooks/nowpayments both resolve here, so per-provider URLs are
-	// stable without duplicate routes.
-	webhooks := middleware.WebhookLimiter()
-	route.Post("/webhooks/:gateway", webhooks, controllers.HandleGatewayWebhook)
+	registerWebhooks(route)
 }

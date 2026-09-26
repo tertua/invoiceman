@@ -11,6 +11,13 @@ export function createPublicTransaction(token, method, extra, idempotencyKey) {
   return apiClient.post(`/public/pay/${token}/transaction`, body, config).then((r) => r.data);
 }
 
+// Same-origin QR image for the download button: the backend proxies the
+// provider image, so the browser saves the file instead of opening a tab.
+// A direct fetch is used (not apiClient) to read the image as a blob.
+export function qrDownloadUrl(token) {
+  return `/api/v1/public/pay/${token}/qr`;
+}
+
 // One UUID per QR generation, with a non-crypto fallback for old webviews.
 export function newIntentKey(nonce) {
   try {
