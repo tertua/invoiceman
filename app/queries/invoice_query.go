@@ -232,7 +232,7 @@ func (q *InvoiceQueries) UpdateInvoice(userID uuid.UUID, invoice *models.Invoice
 	return DoRetry(func() error {
 		return q.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", invoice.ID, userID).
-				Updates(map[string]interface{}{
+				Updates(map[string]any{
 					"updated_at": time.Now(),
 					"client_id":  invoice.ClientID,
 					"status":     invoice.Status,
@@ -267,7 +267,7 @@ func (q *InvoiceQueries) UpdateInvoice(userID uuid.UUID, invoice *models.Invoice
 // UpdateInvoiceStatus updates only the status of an invoice.
 func (q *InvoiceQueries) UpdateInvoiceStatus(userID, id uuid.UUID, status string) error {
 	if err := q.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", id, userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"updated_at": time.Now(),
 			"status":     status,
 		}).Error; err != nil {

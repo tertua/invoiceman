@@ -71,7 +71,7 @@ func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*pay
 		return nil, fmt.Errorf("nowpayments status: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("nowpayments status: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
+		return nil, fmt.Errorf("nowpayments status: %w", gateway.NewProviderError("nowpayments", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	p, err := decodePayment(raw)
 	if err != nil {

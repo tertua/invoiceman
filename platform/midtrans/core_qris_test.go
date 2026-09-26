@@ -3,6 +3,7 @@ package midtrans
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -79,6 +80,25 @@ func TestCreateQRISChargeMapsQRCode(t *testing.T) {
 	}
 	if res.ExpiresAt != "2026-09-25T10:30:00+07:00" {
 		t.Fatalf("ExpiresAt = %q, want WIB-normalized RFC3339", res.ExpiresAt)
+	}
+}
+
+// A non-2xx Core API answer is a typed provider error so callers can branch
+// with errors.Is/As instead of parsing the message.
+func TestCreateQRISChargeProviderErrorTyped(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error_messages":["bad"]}`))
+	}))
+	defer server.Close()
+
+	_, err := CreateQRISCharge(context.Background(), Config{ServerKey: "k", CoreBase: server.URL}, "PAY-3-abc", 32000)
+	if !errors.Is(err, gateway.ErrProviderStatus) {
+		t.Fatalf("expected errors.Is(_, ErrProviderStatus), got: %v", err)
+	}
+	var pe *gateway.ProviderError
+	if !errors.As(err, &pe) || pe.Status != http.StatusBadRequest || pe.Provider != "midtrans" {
+		t.Fatalf("expected typed ProviderError 400/midtrans, got: %+v", pe)
 	}
 }
 

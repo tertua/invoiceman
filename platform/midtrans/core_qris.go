@@ -49,13 +49,13 @@ func (c Config) CoreURL() string {
 // Gopay acquirer. Snap cannot express qris.acquirer, which is why QRIS-on-page
 // takes the Core API path instead of Snap.
 func qrisCorePayload(orderID string, amountIDR int64) ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"payment_type": "qris",
-		"transaction_details": map[string]interface{}{
+		"transaction_details": map[string]any{
 			"order_id":     orderID,
 			"gross_amount": amountIDR,
 		},
-		"qris": map[string]interface{}{"acquirer": "gopay"},
+		"qris": map[string]any{"acquirer": "gopay"},
 	})
 }
 
@@ -97,7 +97,7 @@ func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR
 		return nil, fmt.Errorf("midtrans qris: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("midtrans qris: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
+		return nil, fmt.Errorf("midtrans qris: %w", gateway.NewProviderError("midtrans", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	out := &coreChargeResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/constants"
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 // ErrNotConfigured is returned when the Midtrans server key is missing.
@@ -103,7 +104,7 @@ func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amou
 		return nil, fmt.Errorf("midtrans snap: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("midtrans snap: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
+		return nil, fmt.Errorf("midtrans snap: %w", gateway.NewProviderError("midtrans", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	out := &SnapResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {

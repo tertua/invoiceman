@@ -68,7 +68,7 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 		return nil, fmt.Errorf("nowpayments invoice: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("nowpayments invoice: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
+		return nil, fmt.Errorf("nowpayments invoice: %w", gateway.NewProviderError("nowpayments", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	var decoded map[string]any
 	if err := json.Unmarshal(raw, &decoded); err != nil {

@@ -98,7 +98,7 @@ func (q *PaymentQueries) VoidPayment(userID, id uuid.UUID, reason string) error 
 	return DoRetry(func() error {
 		res := q.Model(&models.Payment{}).
 			Where("id = ? AND user_id = ? AND voided_at IS NULL", id, userID).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"voided_at":   time.Now(),
 				"void_reason": reason,
 			})

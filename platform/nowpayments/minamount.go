@@ -90,7 +90,7 @@ func fetchMinAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo st
 		return decimal.Zero, fmt.Errorf("nowpayments min-amount: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return decimal.Zero, fmt.Errorf("nowpayments min-amount: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
+		return decimal.Zero, fmt.Errorf("nowpayments min-amount: %w", gateway.NewProviderError("nowpayments", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	var decoded struct {
 		MinAmount json.Number `json:"min_amount"`

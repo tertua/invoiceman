@@ -11,6 +11,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/pkg/constants"
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 // TxStatus is the subset of the Core API transaction status used to
@@ -68,7 +69,7 @@ func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, er
 		return nil, fmt.Errorf("midtrans status: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("midtrans status: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
+		return nil, fmt.Errorf("midtrans status: %w", gateway.NewProviderError("midtrans", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	out := &statusResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {

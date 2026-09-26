@@ -91,7 +91,7 @@ func (q *UserQueries) ListUsers(limit, offset int) ([]models.User, error) {
 
 // UpdateUserRole changes a user's role.
 func (q *UserQueries) UpdateUserRole(id uuid.UUID, role string) error {
-	return q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+	return q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"updated_at": time.Now(),
 		"user_role":  role,
 	}).Error
@@ -100,7 +100,7 @@ func (q *UserQueries) UpdateUserRole(id uuid.UUID, role string) error {
 // UpdateUserProfile query for updating user display name.
 func (q *UserQueries) UpdateUserProfile(id uuid.UUID, name string) error {
 	// Send query to database.
-	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"updated_at": time.Now(),
 		"name":       name,
 	}).Error; err != nil {
@@ -115,7 +115,7 @@ func (q *UserQueries) UpdateUserProfile(id uuid.UUID, name string) error {
 // UpdateUserPassword query for updating user password hash.
 func (q *UserQueries) UpdateUserPassword(id uuid.UUID, passwordHash string) error {
 	// Send query to database.
-	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"updated_at":    time.Now(),
 		"password_hash": passwordHash,
 	}).Error; err != nil {

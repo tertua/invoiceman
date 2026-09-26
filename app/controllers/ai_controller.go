@@ -75,7 +75,7 @@ func aiError(c fiber.Ctx, err error) error {
 	return utils.Fail(c, fiber.StatusBadGateway, "AI provider request failed", nil)
 }
 
-func parseAIJSON(text string, target interface{}) error {
+func parseAIJSON(text string, target any) error {
 	text = strings.TrimSpace(text)
 	text = strings.TrimPrefix(text, "```json")
 	text = strings.TrimPrefix(text, "```")
@@ -118,7 +118,7 @@ func ReceiptParse(c fiber.Ctx) error {
 	if err != nil {
 		return aiError(c, err)
 	}
-	parsed := map[string]interface{}{}
+	parsed := map[string]any{}
 	if err := parseAIJSON(result, &parsed); err != nil {
 		return utils.Fail(c, fiber.StatusBadGateway, "AI provider returned invalid receipt data", nil)
 	}

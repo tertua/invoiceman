@@ -48,7 +48,7 @@ func (q *ItemQueries) CreateItem(item *models.Item) error {
 // UpdateItem updates a catalog item owned by a user.
 func (q *ItemQueries) UpdateItem(item *models.Item) error {
 	return q.Model(&models.Item{}).Where("id = ? AND user_id = ?", item.ID, item.UserID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"updated_at":  time.Now(),
 			"name":        item.Name,
 			"description": item.Description,

@@ -40,19 +40,19 @@ func (q *SettingsQueries) CreateSettings(s *models.Settings) error {
 // UpdateSettings updates user settings.
 func (q *SettingsQueries) UpdateSettings(s *models.Settings) error {
 	if err := q.Model(&models.Settings{}).Where("user_id = ?", s.UserID).
-		Updates(map[string]interface{}{
-			"updated_at":     time.Now(),
-			"company_name":   s.CompanyName,
-			"email":          s.Email,
-			"phone":          s.Phone,
-			"address":        s.Address,
-			"logo_url":       s.LogoURL,
-			"currency":       s.Currency,
-			"tax_rate":       s.TaxRate,
-			"usd_to_idr":     s.UsdToIdr,
+		Updates(map[string]any{
+			"updated_at":       time.Now(),
+			"company_name":     s.CompanyName,
+			"email":            s.Email,
+			"phone":            s.Phone,
+			"address":          s.Address,
+			"logo_url":         s.LogoURL,
+			"currency":         s.Currency,
+			"tax_rate":         s.TaxRate,
+			"usd_to_idr":       s.UsdToIdr,
 			"midtrans_methods": s.MidtransMethods,
-			"invoice_prefix": s.InvoicePrefix,
-			"language":       s.Language,
+			"invoice_prefix":   s.InvoicePrefix,
+			"language":         s.Language,
 		}).Error; err != nil {
 		return err
 	}

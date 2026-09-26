@@ -11,7 +11,7 @@ func OK(c fiber.Ctx, status int, data fiber.Map) error {
 
 // Fail sends an error JSON response shaped for the frontend apiClient,
 // which reads message from error.message and details from error.details.
-func Fail(c fiber.Ctx, status int, message string, details interface{}) error {
+func Fail(c fiber.Ctx, status int, message string, details any) error {
 	errObject := fiber.Map{"message": message}
 	if details != nil {
 		errObject["details"] = details

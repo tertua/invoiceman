@@ -100,7 +100,7 @@ func (q *ExpenseQueries) CreateExpense(expense *models.Expense) error {
 // UpdateExpense updates an expense owned by a user.
 func (q *ExpenseQueries) UpdateExpense(expense *models.Expense) error {
 	return q.Model(&models.Expense{}).Where("id = ? AND user_id = ?", expense.ID, expense.UserID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"updated_at":   time.Now(),
 			"vendor":       expense.Vendor,
 			"category":     expense.Category,

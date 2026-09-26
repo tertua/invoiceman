@@ -104,7 +104,7 @@ func (q *NotificationQueries) ClaimNotification(id uuid.UUID, now time.Time) (bo
 		res := q.Model(&models.NotificationDelivery{}).
 			Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
 				id, []string{models.NotifStatusPending, models.NotifStatusFailed}, now).
-			Updates(map[string]interface{}{"status": models.NotifStatusProcessing, "updated_at": now})
+			Updates(map[string]any{"status": models.NotifStatusProcessing, "updated_at": now})
 		return res.RowsAffected > 0, res.Error
 	})
 }
@@ -113,7 +113,7 @@ func (q *NotificationQueries) ClaimNotification(id uuid.UUID, now time.Time) (bo
 func (q *NotificationQueries) MarkNotificationSent(id uuid.UUID, code int, body string, now time.Time) error {
 	return DoRetry(func() error {
 		return q.Model(&models.NotificationDelivery{}).Where("id = ?", id).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status": models.NotifStatusDelivered, "resp_code": code,
 				"resp_body": body, "updated_at": now, "next_retry_at": nil,
 			}).Error
@@ -129,7 +129,7 @@ func (q *NotificationQueries) MarkNotificationFailed(id uuid.UUID, attempt int, 
 	}
 	return DoRetry(func() error {
 		return q.Model(&models.NotificationDelivery{}).Where("id = ?", id).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status": status, "attempt": attempt, "next_retry_at": retryAt,
 				"resp_code": code, "resp_body": body, "updated_at": now,
 			}).Error
@@ -182,7 +182,7 @@ func (q *NotificationQueries) GetDeliveryByUser(userID, id uuid.UUID) (models.No
 func (q *NotificationQueries) RequeueNotification(id uuid.UUID, now time.Time) error {
 	return DoRetry(func() error {
 		return q.Model(&models.NotificationDelivery{}).Where("id = ?", id).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status": models.NotifStatusPending, "next_retry_at": nil, "updated_at": now,
 			}).Error
 	})

@@ -192,7 +192,7 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 		// Auto-mark paid when the settlement covers the invoice total.
 		if invoice.Status != models.InvoiceStatusPaid && invoice.Total.GreaterThan(decimal.Zero) && paid.Add(amount).GreaterThanOrEqual(invoice.Total) {
 			if err := tx.Model(&models.Invoice{}).Where("id = ?", invoice.ID).
-				Updates(map[string]interface{}{"status": models.InvoiceStatusPaid, "updated_at": now}).Error; err != nil {
+				Updates(map[string]any{"status": models.InvoiceStatusPaid, "updated_at": now}).Error; err != nil {
 				return err
 			}
 		}
@@ -264,7 +264,7 @@ func (q *GatewayQueries) SaveDelivery(d *models.WebhookDelivery) error {
 func (q *GatewayQueries) FailDelivery(id uuid.UUID, status string, attempt int, retry *time.Time, respBody string, now time.Time) error {
 	return DoRetry(func() error {
 		return q.Model(&models.WebhookDelivery{}).Where("id = ?", id).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status": status, "attempt": attempt, "next_retry_at": retry,
 				"resp_body": respBody, "updated_at": now,
 			}).Error
@@ -288,7 +288,7 @@ func (q *GatewayQueries) ClaimDelivery(id uuid.UUID, now time.Time) (bool, error
 		res := q.Model(&models.WebhookDelivery{}).
 			Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
 				id, []string{"pending", "failed"}, now).
-			Updates(map[string]interface{}{"updated_at": now})
+			Updates(map[string]any{"updated_at": now})
 		return res.RowsAffected > 0, res.Error
 	})
 }

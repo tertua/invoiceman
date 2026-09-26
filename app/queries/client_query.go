@@ -45,7 +45,7 @@ func (q *ClientQueries) CreateClient(c *models.Client) error {
 // UpdateClient updates a client of a user.
 func (q *ClientQueries) UpdateClient(c *models.Client) error {
 	if err := q.Model(&models.Client{}).Where("id = ? AND user_id = ?", c.ID, c.UserID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"updated_at": time.Now(),
 			"name":       c.Name,
 			"email":      c.Email,

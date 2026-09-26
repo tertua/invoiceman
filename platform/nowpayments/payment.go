@@ -35,7 +35,7 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments payment: invalid amount %q: %w", req.PriceAmount, err)
 	}
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"price_amount":      json.Number(amount.String()),
 		"price_currency":    req.PriceCurrency,
 		"pay_currency":      req.PayCurrency,
@@ -59,7 +59,7 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 		if isAmountMinimalError(raw) {
 			return nil, fmt.Errorf("nowpayments payment: %w: %s", gateway.ErrAmountBelowMinimum, truncate(string(raw), constants.MaxErrorBodyLog))
 		}
-		return nil, fmt.Errorf("nowpayments payment: status %d: %s", status, truncate(string(raw), constants.MaxErrorBodyLog))
+		return nil, fmt.Errorf("nowpayments payment: %w", gateway.NewProviderError("nowpayments", status, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	var decoded map[string]any
 	if err := json.Unmarshal(raw, &decoded); err != nil {

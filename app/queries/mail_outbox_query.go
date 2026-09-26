@@ -43,7 +43,7 @@ func (q *MailOutboxQueries) ClaimMail(id uuid.UUID, now time.Time) (bool, error)
 		res := q.Model(&models.MailOutbox{}).
 			Where("id = ? AND status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
 				id, []string{models.MailStatusPending, models.MailStatusFailed}, now).
-			Updates(map[string]interface{}{"status": models.MailStatusProcessing, "updated_at": now})
+			Updates(map[string]any{"status": models.MailStatusProcessing, "updated_at": now})
 		return res.RowsAffected > 0, res.Error
 	})
 }
@@ -52,7 +52,7 @@ func (q *MailOutboxQueries) ClaimMail(id uuid.UUID, now time.Time) (bool, error)
 func (q *MailOutboxQueries) MarkMailSent(id uuid.UUID, now time.Time) error {
 	return DoRetry(func() error {
 		return q.Model(&models.MailOutbox{}).Where("id = ?", id).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status": models.MailStatusSent, "updated_at": now, "next_retry_at": nil,
 			}).Error
 	})
@@ -67,7 +67,7 @@ func (q *MailOutboxQueries) MarkMailFailed(id uuid.UUID, attempt int, retryAt *t
 	}
 	return DoRetry(func() error {
 		return q.Model(&models.MailOutbox{}).Where("id = ?", id).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status": status, "attempt": attempt, "next_retry_at": retryAt, "updated_at": now,
 			}).Error
 	})

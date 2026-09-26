@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 func TestCreateDirectPaymentHonorsRetryAfter(t *testing.T) {
@@ -60,5 +62,27 @@ func TestCreateDirectPaymentRetryAbortsOnCancel(t *testing.T) {
 	})
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected context.DeadlineExceeded, got: %v", err)
+	}
+}
+
+func TestCreateDirectPaymentProviderErrorTyped(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"code":"WRONG_PAYLOAD"}`))
+	}))
+	defer srv.Close()
+	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
+	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
+
+	_, err := CreateDirectPayment(context.Background(), FromEnv(), &DirectPaymentRequest{
+		OrderID: "INV-1-typed", PriceAmount: "25.50", PriceCurrency: "USD", PayCurrency: "USDTTRC20",
+	})
+	if !errors.Is(err, gateway.ErrProviderStatus) {
+		t.Fatalf("expected errors.Is(_, ErrProviderStatus), got: %v", err)
+	}
+	var pe *gateway.ProviderError
+	if !errors.As(err, &pe) || pe.Status != http.StatusBadRequest || pe.Provider != "nowpayments" {
+		t.Fatalf("expected typed ProviderError 400/nowpayments, got: %+v", pe)
 	}
 }

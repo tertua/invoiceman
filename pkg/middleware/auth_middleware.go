@@ -217,7 +217,7 @@ func splitBearer(header string) string {
 // jwtKeyFunc returns the JWT signing key, accepting only HS256.
 // Without the alg pin a token signed with another algorithm (e.g. "none"
 // on a permissive parser) could slip through key confusion.
-func jwtKeyFunc(token *jwt.Token) (interface{}, error) {
+func jwtKeyFunc(token *jwt.Token) (any, error) {
 	if token.Method != jwt.SigningMethodHS256 {
 		return nil, errors.New("unexpected signing method")
 	}
