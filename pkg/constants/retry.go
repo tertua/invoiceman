@@ -59,5 +59,5 @@ func RetryDelayWithHeader(header http.Header, attempt int) time.Duration {
 	if d > NowpaymentsRetryMax {
 		d = NowpaymentsRetryMax
 	}
-	return d + time.Duration(rand.Int64N(int64(d)/2+1))
+	return d + time.Duration(rand.Int64N(int64(d)/2+1)) // #nosec G404 -- backoff jitter, not security-sensitive
 }

@@ -59,7 +59,7 @@ func GetPublicQrImage(c fiber.Ctx) error {
 	}
 	ctx, cancel := context.WithTimeout(c.Context(), constants.QRFetchTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, qrURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, qrURL.String(), http.NoBody)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}

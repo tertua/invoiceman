@@ -39,5 +39,5 @@ func backoffWithJitter(base time.Duration) time.Duration {
 	if base <= 0 {
 		return 0
 	}
-	return base + time.Duration(rand.Int64N(int64(base)/2+1))
+	return base + time.Duration(rand.Int64N(int64(base)/2+1)) // #nosec G404 -- backoff jitter, not security-sensitive
 }

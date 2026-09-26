@@ -92,11 +92,11 @@ func belowLiveMinimum(ctx context.Context, gw gateway.Gateway, method string, sp
 	if err != nil {
 		return false
 	}
-	min, err := checker.MinAmount(ctx, spec.Currency)
+	limit, err := checker.MinAmount(ctx, spec.Currency)
 	if err != nil {
 		return false
 	}
-	return charge.LessThan(min)
+	return charge.LessThan(limit)
 }
 
 // methodAllowed reports whether method passes the Midtrans allowlist. A nil

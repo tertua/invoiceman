@@ -219,12 +219,12 @@ func waitForRelayClaim(ctx context.Context, db database.Queries, projectSlug, ex
 		}
 		txn, err := db.GetTransaction(claimID)
 		if err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			if real, rerr := db.LatestRelayIntent(projectSlug, external); rerr == nil && reusableRelayIntent(real, balance) {
-				return &real
-			}
+		if !errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if swapped, rerr := db.LatestRelayIntent(projectSlug, external); rerr == nil && reusableRelayIntent(swapped, balance) {
+			return &swapped
+		}
 			return nil
 		}
 		if txn.Status == publicIntentProcessing {
@@ -251,11 +251,11 @@ func reusableRelayIntent(t models.GatewayTransaction, balance decimal.Decimal) b
 // swapRelayClaim atomically exchanges a held claim slot for the charged
 // intent. The provider never saw the claim id, so no notification or poll
 // can ever reference it; deletion is safe and immediate.
-func swapRelayClaim(db database.Queries, claimID string, real *models.GatewayTransaction) error {
-	return db.GatewayQueries.DB.Transaction(func(tx *gorm.DB) error {
+func swapRelayClaim(db database.Queries, claimID string, created *models.GatewayTransaction) error {
+	return db.GatewayQueries.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(&models.GatewayTransaction{}, "order_id = ?", claimID).Error; err != nil {
 			return err
 		}
-		return tx.Create(real).Error
+		return tx.Create(created).Error
 	})
 }

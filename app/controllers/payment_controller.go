@@ -323,29 +323,9 @@ func CreateOnlineLink(c fiber.Ctx) error {
 	if db.PendingInvoiceIDs(userID)[invoiceID] {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
 	}
-	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)
+	link, err := ensurePaymentLink(*db, userID, invoice)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment link", nil)
-		}
-		if invoice.Status != models.InvoiceStatusSent {
-			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
-		}
-		paid, err := db.PaidAmount(invoiceID)
-		if err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
-		}
-		if !invoice.Total.GreaterThan(paid) {
-			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
-		}
-		token, tokenErr := newPaymentToken()
-		if tokenErr != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
-		}
-		link = models.PaymentLink{Token: token, InvoiceID: invoiceID, UserID: userID, CreatedAt: time.Now()}
-		if err := db.CreatePaymentLink(&link); err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
-		}
+		return linkFail(c, err)
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"url": "/pay/" + link.Token, "token": link.Token})
 }
@@ -395,29 +375,9 @@ func SendOnlineLink(c fiber.Ctx) error {
 	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
-	link, err := db.GetPaymentLinkForInvoice(invoiceID, userID)
+	link, err := ensurePaymentLink(*db, userID, invoice)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment link", nil)
-		}
-		if invoice.Status != models.InvoiceStatusSent {
-			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
-		}
-		paid, err := db.PaidAmount(invoiceID)
-		if err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
-		}
-		if !invoice.Total.GreaterThan(paid) {
-			return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
-		}
-		token, tokenErr := newPaymentToken()
-		if tokenErr != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
-		}
-		link = models.PaymentLink{Token: token, InvoiceID: invoiceID, UserID: userID, CreatedAt: time.Now()}
-		if err := db.CreatePaymentLink(&link); err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create payment link", nil)
-		}
+		return linkFail(c, err)
 	}
 	// Fail fast when mail is not configured (501 contract), then queue
 	// for async delivery by the worker.
