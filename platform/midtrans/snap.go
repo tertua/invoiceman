@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/tertua/invoiceman/pkg/configs"
@@ -38,9 +37,7 @@ func FromEnv() Config {
 		ClientKey: cfg.ClientKey,
 		IsProd:    cfg.IsProd,
 		BaseURL:   cfg.SnapBase,
-		// Test-only override, mirrors SnapBase. Read straight from the
-		// environment so the frozen configs file does not grow for it.
-		CoreBase: strings.TrimSpace(os.Getenv("MIDTRANS_CORE_BASE_URL")),
+		CoreBase:  cfg.CoreBase,
 	}
 }
 

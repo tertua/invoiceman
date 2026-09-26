@@ -1,13 +1,10 @@
 package configs
 
 // Package configs is the single source of truth for backend configuration.
-//
 // All values come from the environment (see .env.example) with dev-friendly
-// defaults. Call Load once at startup (main.go) and fail fast on validation
-// errors; everywhere else use Get, which returns the same defaults-applied
-// values without validation so tests and CLIs keep working with partial env.
-//
-// No new dependency: parsing is plain stdlib so zero-config dev stays intact.
+// defaults. Call Load once at startup (main.go); elsewhere use Get, which
+// returns defaults-applied values without validation so tests keep working.
+// Parsing is plain stdlib so zero-config dev stays intact.
 
 import (
 	"fmt"
@@ -194,6 +191,7 @@ type MidtransConfig struct {
 	ClientKey string // MIDTRANS_CLIENT_KEY
 	IsProd    bool   // MIDTRANS_IS_PROD
 	SnapBase  string // MIDTRANS_SNAP_BASE_URL (test override)
+	CoreBase  string // MIDTRANS_CORE_BASE_URL (test override)
 }
 
 // NOWPaymentsConfig holds crypto relay credentials.
@@ -282,6 +280,7 @@ func Load() (Config, error) {
 			ClientKey: strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
 			IsProd:    envBool("MIDTRANS_IS_PROD", false),
 			SnapBase:  strings.TrimSpace(os.Getenv("MIDTRANS_SNAP_BASE_URL")),
+			CoreBase:  strings.TrimSpace(os.Getenv("MIDTRANS_CORE_BASE_URL")),
 		},
 		NOWPayments: NOWPaymentsConfig{
 			APIKey:    strings.TrimSpace(os.Getenv("NOWPAYMENTS_API_KEY")),
