@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
 import { usePaymentMutations } from "@/hooks/usePayments";
@@ -115,7 +114,6 @@ export function InvoicePaymentCard({ invoice }) {
           <CardTitle>{t("invDetail.payments")}</CardTitle>
         </div>
         <div className="flex items-center gap-2">
-          {invoice.payment_method && <Badge tone="neutral">{invoice.payment_method}</Badge>}
           {balance > 0 && invoice.effective_status !== "pending" && !(invoice.payment_method === "Online" && (shareLink || canShareOnline)) && (
             <Button variant="accent" size="sm" onClick={() => setModalOpen(true)}><Plus size={13} /> {t("invDetail.recordPayment")}</Button>
           )}
