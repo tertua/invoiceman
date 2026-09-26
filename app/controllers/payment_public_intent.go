@@ -246,10 +246,11 @@ func isDeadClaim(t models.GatewayTransaction) bool {
 }
 
 // claimPublicOrderID atomically claims an order id for the caller's charge.
-// A fresh id is inserted; a collision on a dead claim adopts that row (reset
+// A fresh id is inserted; a collision on a dead claim (failed before reaching
+// the provider) or a stale one (processing past publicClaimStale, whose
+// guarded provider call can never still be running) adopts that row (reset
 // to processing); a collision on anything else reports false so the caller
-// joins the live claim via waitForPublicIntent. A non-duplicate storage
-// error is returned.
+// joins the live claim via wait. A non-duplicate storage error is returned.
 func claimPublicOrderID(db database.Queries, claim *models.GatewayTransaction) (bool, error) {
 	if err := db.CreateTransaction(claim); err == nil {
 		return true, nil
@@ -257,7 +258,10 @@ func claimPublicOrderID(db database.Queries, claim *models.GatewayTransaction) (
 		return false, err
 	}
 	existing, gerr := db.GetTransaction(claim.OrderID)
-	if gerr != nil || !isDeadClaim(existing) {
+	if gerr != nil {
+		return false, nil
+	}
+	if !isDeadClaim(existing) && !isStaleClaim(existing) {
 		return false, nil
 	}
 	existing.Status = publicIntentProcessing
@@ -267,6 +271,13 @@ func claimPublicOrderID(db database.Queries, claim *models.GatewayTransaction) (
 	}
 	*claim = existing
 	return true, nil
+}
+
+// isStaleClaim reports a processing claim older than publicClaimStale. The
+// provider call it guarded always resolves within seconds, so an older claim
+// belongs to a crashed attempt and its slot may be adopted.
+func isStaleClaim(t models.GatewayTransaction) bool {
+	return t.Status == publicIntentProcessing && time.Since(t.CreatedAt) > publicClaimStale
 }
 func isDuplicateKeyError(err error) bool {
 	msg := strings.ToLower(err.Error())

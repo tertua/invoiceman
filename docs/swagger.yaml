@@ -1495,6 +1495,7 @@ paths:
       - description: Replay protection key (uuid per payment intent)
         in: header
         name: Idempotency-Key
+        required: true
         type: string
       produces:
       - application/json

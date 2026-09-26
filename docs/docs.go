@@ -1523,7 +1523,8 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Replay protection key (uuid per payment intent)",
                         "name": "Idempotency-Key",
-                        "in": "header"
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {

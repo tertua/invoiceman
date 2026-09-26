@@ -61,7 +61,7 @@ func TestIntentMethodRoutesAcrossProviders(t *testing.T) {
 
 	resp := doGatewayRequest(t, app, "POST", "/api/gateway/intents",
 		`{"external_order_id":"mp-qris-1","payment_method":"qris","amount_idr":32000}`,
-		map[string]string{"X-Api-Key": apiKey}, nil)
+		map[string]string{"X-Api-Key": apiKey, "Idempotency-Key": "mp-qris-1"}, nil)
 	require.Equal(t, 201, resp.StatusCode)
 	intent := decodeBody(t, resp)
 	assert.Equal(t, "midtrans", intent["gateway"])
@@ -93,7 +93,7 @@ func TestIntentConvertsUSDWithManualRate(t *testing.T) {
 
 	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
 		`{"external_order_id":"fx-usd-1","payment_method":"qris","amount_decimal":"25.50","currency":"USD"}`,
-		map[string]string{"X-Api-Key": apiKey}, nil)
+		map[string]string{"X-Api-Key": apiKey, "Idempotency-Key": "fx-usd-1"}, nil)
 	require.Equal(t, 201, resp.StatusCode)
 	intent := decodeBody(t, resp)
 	assert.Equal(t, "midtrans", intent["gateway"])

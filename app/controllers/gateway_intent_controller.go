@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -28,126 +27,13 @@ import (
 // @Produce json
 // @Param request body models.IntentInput true "Intent payload"
 // @Success 201 {object} map[string]interface{}
-// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
+// @Param Idempotency-Key header string true "Replay protection key (uuid per payment intent)"
 // @Router /gateway/intents [post]
 func CreateIntent(c fiber.Ctx) error {
-	project, err := utils.CurrentServiceProject(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
+	if strings.TrimSpace(c.Get("Idempotency-Key")) == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "Idempotency-Key header is required", nil)
 	}
-	input := &models.IntentInput{}
-	if err := c.Bind().Body(input); err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
-	if err := utils.NewValidator().Struct(input); err != nil {
-		return utils.ValidationFailed(c, err)
-	}
-	if input.AmountIDR <= 0 && strings.TrimSpace(input.AmountDecimal) == "" {
-		return utils.Fail(c, fiber.StatusBadRequest, "amount_idr or amount_decimal is required", nil)
-	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
-	}
-
-	// The canonical amount is expressed in the request currency; amount_idr
-	// implies IDR. Conversion to the provider's currency happens after routing.
-	invoiceCurrency := strings.ToUpper(strings.TrimSpace(input.Currency))
-	if invoiceCurrency == "" {
-		invoiceCurrency = "IDR"
-	}
-	balance := models.MoneyFromMinor(input.AmountIDR)
-	if raw := strings.TrimSpace(input.AmountDecimal); raw != "" {
-		parsed, err := decimal.NewFromString(raw)
-		if err != nil {
-			return utils.Fail(c, fiber.StatusBadRequest, "invalid amount_decimal", nil)
-		}
-		balance = parsed
-	} else {
-		invoiceCurrency = "IDR"
-	}
-
-	// Reuse a pending intent for the same external id + amount (safe retry).
-	// The method only has to match when the retry asks for one explicitly, so
-	// provider-resolved defaults (e.g. NOWPayments "crypto") still reuse.
-	if existing, err := db.GetTransactionByExternal(project.Slug, input.ExternalOrderID); err == nil {
-		requested := normalizedPaymentMethod(input.PaymentMethod)
-		methodMatches := requested == "" || existing.PaymentMethod == requested
-		sameAmount := existing.InvoiceCurrency == invoiceCurrency && existing.InvoiceAmount.Equal(balance)
-		if existing.InvoiceCurrency == "" { // pre-conversion rows
-			sameAmount = existing.AmountIDR == input.AmountIDR && existing.AmountDecimal == strings.TrimSpace(input.AmountDecimal)
-		}
-		if existing.Status == models.GatewayStatusPending && sameAmount && methodMatches && existing.SnapToken != "" {
-			return utils.OK(c, fiber.StatusOK, intentResponse(existing))
-		}
-	}
-
-	gw, err := routeIntentGateway(input, project.DefaultGateway)
-	if err != nil {
-		if errors.Is(err, gateway.ErrUnsupportedPaymentMethod) {
-			return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
-		}
-		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
-	}
-	if gw.Name() == "nowpayments" && strings.TrimSpace(input.AmountDecimal) == "" {
-		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for nowpayments", nil)
-	}
-	usdToIdr := decimal.Zero
-	var ownerSettings models.Settings
-	haveOwnerSettings := false
-	if project.OwnerUserID != nil {
-		if s, err := db.GetSettings(*project.OwnerUserID); err == nil {
-			usdToIdr = s.UsdToIdr
-			ownerSettings, haveOwnerSettings = s, true
-		}
-	}
-	spec, err := buildCharge(gw, invoiceCurrency, balance, usdToIdr)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
-	}
-	if haveOwnerSettings {
-		applyEnabledMethods(&spec, gw.Name(), ownerSettings)
-	}
-	orderID, err := relayOrderID(project.Slug, input.ExternalOrderID)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create order", nil)
-	}
-	created, err := gw.CreateTransaction(c.Context(), spec.request(orderID, input.CustomerEmail, input.CustomerPhone, normalizedPaymentMethod(input.PaymentMethod)))
-	if err != nil {
-		if errors.Is(err, gateway.ErrNotConfigured) {
-			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
-		}
-		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
-	}
-	raw, _ := json.Marshal(input)
-	now := time.Now()
-	txn := &models.GatewayTransaction{
-		OrderID:         orderID,
-		ProjectSlug:     project.Slug,
-		Gateway:         gw.Name(),
-		PaymentMethod:   created.PaymentMethod,
-		ExternalOrderID: input.ExternalOrderID,
-		AmountIDR:       spec.AmountMinor,
-		AmountDecimal:   spec.AmountDecimal,
-		Currency:        spec.Currency,
-		InvoiceCurrency: invoiceCurrency,
-		InvoiceAmount:   spec.InvoiceAmount,
-		UsdToIdr:        spec.UsdToIdr,
-		CustomerEmail:   input.CustomerEmail,
-		CustomerPhone:   input.CustomerPhone,
-		Status:          models.GatewayStatusPending,
-		SnapToken:       created.Token,
-		RedirectURL:     created.RedirectURL,
-		PaymentURL:      created.PaymentURL,
-		Address:         created.Address,
-		RawIntent:       string(raw),
-		CreatedAt:       now,
-		UpdatedAt:       now,
-	}
-	if err := db.CreateTransaction(txn); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
-	}
-	return utils.OK(c, fiber.StatusCreated, intentResponse(*txn))
+	return createRelayIntent(c)
 }
 
 // GetIntent returns one intent owned by the calling project.

@@ -110,7 +110,7 @@ func TestGatewayRelayFlow(t *testing.T) {
 	require.NotEmpty(t, apiKey)
 	require.NotEmpty(t, webhookSecret)
 
-	headers := map[string]string{"X-Api-Key": apiKey}
+	headers := map[string]string{"X-Api-Key": apiKey, "Idempotency-Key": "relay-flow-1"}
 	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
 		`{"external_order_id":"topup_abc123","amount_idr":32000}`, headers, nil)
 	require.Equal(t, 201, resp.StatusCode)
@@ -276,17 +276,16 @@ func TestNowpaymentsIntentValidation(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	apiKey := decodeBody(t, resp)["project"].(map[string]interface{})["api_key"].(string)
 	require.NotEmpty(t, apiKey)
-	headers := map[string]string{"X-Api-Key": apiKey}
 
 	// Minor-only amounts are rejected for NOWPayments (minor/major ambiguity).
 	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
-		`{"external_order_id":"np_minor_only","gateway":"nowpayments","amount_idr":50000}`, headers, nil)
+		`{"external_order_id":"np_minor_only","gateway":"nowpayments","amount_idr":50000}`, map[string]string{"X-Api-Key": apiKey, "Idempotency-Key": "np-minor-1"}, nil)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	// Decimal-priced intents create a hosted invoice.
 	resp = doGatewayRequest(t, app, "POST", "/api/gateway/intents",
-		`{"external_order_id":"np_usd_1","gateway":"nowpayments","amount_decimal":"25.50","currency":"USD"}`, headers, nil)
+		`{"external_order_id":"np_usd_1","gateway":"nowpayments","amount_decimal":"25.50","currency":"USD"}`, map[string]string{"X-Api-Key": apiKey, "Idempotency-Key": "np-usd-1"}, nil)
 	require.Equal(t, 201, resp.StatusCode)
 	intent := decodeBody(t, resp)
 	assert.Equal(t, "nowpayments", intent["gateway"])
