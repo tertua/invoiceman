@@ -7,9 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.6] - 2026-09-26
+
+### Fixed
+- Payment intent waits no longer hang when the payer disconnects
+  mid-request: the QRIS/relay claim polls and the idempotency replay wait
+  now abort with the request context and back off (100ms doubling, capped
+  at 1s) instead of sleeping on a fixed tick.
+- Concurrent payment submits are detected reliably on both SQLite and
+  PostgreSQL via typed duplicate-key errors instead of message matching.
+- Background worker bookkeeping failures (mail/delivery/notification state
+  writes, reconcile touches) are now logged with context instead of failing
+  silently.
+
+### Changed
+- All payment-gateway HTTP calls (Midtrans, NOWPayments, Turnstile, QR
+  image fetch) share configured clients with explicit timeouts and
+  connection pooling.
+
 ## [v0.5.5] - 2026-09-26
 
-<!-- Describe user-visible changes: Added / Changed / Fixed / Security. -->
+### Security
+- Webhook settlement now refuses notifications whose amount or currency
+  does not match the stored intent, preventing settlement on mismatched
+  provider payloads.
+
+### Changed
+- The Edit button on paid or pending invoices is now hidden instead of
+  shown disabled.
+- QRIS and crypto pay widgets use localized strings and dynamic QR
+  filenames; gateway HTTP calls identify as `InvoiceMan/<version>` and
+  webhook relays as `InvoiceMan-Relay/<version>`.
 
 ## [v0.5.4] - 2026-09-26
 
