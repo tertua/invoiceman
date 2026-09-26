@@ -570,7 +570,7 @@ export const en = {
     "payments.onlineCopied": "Copied",
     "payments.onlineOpen": "Open link",
     "payments.shareLink": "Share payment link",
-    "payments.onlineActive": "Active — anyone with the link can pay",
+    "payments.onlineActive": "Active — invoice is still unpaid",
     "payments.onlineInactive": "Inactive — invoice is already paid",
     "payments.onlineSend": "Send to client email",
     "payments.onlineSent": "Payment link sent",

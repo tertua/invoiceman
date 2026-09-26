@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Decimal from "decimal.js";
 import {
@@ -55,6 +55,7 @@ export default function InvoiceEditor() {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const inFlight = useRef(false);
 
   // Initialize the form from settings or the existing invoice.
   useEffect(() => {
@@ -168,7 +169,7 @@ export default function InvoiceEditor() {
     }));
 
   async function onSave(overrideStatus) {
-    setErr("");
+    if (inFlight.current) return; inFlight.current = true; setErr("");
     const status = overrideStatus || form.status;
     if (status === "sent" && !form.client_id) return setErr(t("api.client is required to send an invoice"));
     const payload = {
@@ -192,6 +193,7 @@ export default function InvoiceEditor() {
     } catch (e) {
       if (e.status !== 401) setErr(e.message || t("invEditor.saveFailed"));
     } finally {
+      inFlight.current = false;
       setSaving(false);
     }
   }

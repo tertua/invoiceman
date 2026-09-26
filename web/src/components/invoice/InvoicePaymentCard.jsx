@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
 import { usePaymentMutations } from "@/hooks/usePayments";
@@ -113,11 +114,12 @@ export function InvoicePaymentCard({ invoice }) {
           </div>
           <CardTitle>{t("invDetail.payments")}</CardTitle>
         </div>
-        {balance > 0 && invoice.effective_status !== "pending" && (
-          <Button variant="accent" size="sm" onClick={() => setModalOpen(true)}>
-            <Plus size={13} /> {t("invDetail.recordPayment")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {invoice.payment_method && <Badge tone="neutral">{invoice.payment_method}</Badge>}
+          {balance > 0 && invoice.effective_status !== "pending" && !(invoice.payment_method === "Online" && (shareLink || canShareOnline)) && (
+            <Button variant="accent" size="sm" onClick={() => setModalOpen(true)}><Plus size={13} /> {t("invDetail.recordPayment")}</Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-1.5 text-sm mb-3">
@@ -132,7 +134,6 @@ export function InvoicePaymentCard({ invoice }) {
             {formatMoney(balance, currency)}
           </span>
         </div>
-        {invoice.payment_method && <TotalLine label={t("common.method")} value={invoice.payment_method} />}
       </div>
 
       <div className="h-1.5 w-full rounded-full bg-[var(--surface-2)] mb-4 overflow-hidden">
@@ -170,7 +171,7 @@ export function InvoicePaymentCard({ invoice }) {
           </div>
           {!isPaid && (
           <div className="mt-2 pt-2 border-t border-[var(--border)]">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
               <input
                 type="email"
                 value={email}
@@ -223,7 +224,6 @@ export function InvoicePaymentCard({ invoice }) {
         invoiceId={invoice.id}
         invoiceNumber={invoice.invoice_number}
         amount={balance}
-        defaultEmail={invoice.client_email || ""}
       />
       <VoidPaymentModal
         open={!!voidTarget}

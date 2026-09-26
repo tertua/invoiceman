@@ -570,7 +570,7 @@ export const id = {
     "payments.onlineCopied": "Tersalin",
     "payments.onlineOpen": "Buka tautan",
     "payments.shareLink": "Bagikan tautan bayar",
-    "payments.onlineActive": "Aktif — siapa pun dengan tautan bisa membayar",
+    "payments.onlineActive": "Aktif — faktur belum dibayar",
     "payments.onlineInactive": "Nonaktif — faktur sudah lunas",
     "payments.onlineSend": "Kirim ke email klien",
     "payments.onlineSent": "Tautan pembayaran terkirim",

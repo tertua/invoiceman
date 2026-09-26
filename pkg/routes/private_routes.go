@@ -33,7 +33,7 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 
 	// Invoice routes:
 	route.Get("/invoices", controllers.ListInvoices)                     // get invoices with filters
-	route.Post("/invoices", controllers.CreateInvoice)                   // create a new invoice
+	route.Post("/invoices", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateInvoice) // create a new invoice
 	route.Get("/invoices/:id", controllers.GetInvoice)                   // get invoice with items and payments
 	route.Patch("/invoices/:id", controllers.UpdateInvoice)              // update an invoice
 	route.Patch("/invoices/:id/status", controllers.UpdateInvoiceStatus) // update invoice status
