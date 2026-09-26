@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -74,7 +75,7 @@ func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.CoreURL(), bytes.NewReader(body))
@@ -85,17 +86,17 @@ func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(cfg.ServerKey, "")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("midtrans qris: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return nil, fmt.Errorf("midtrans qris: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("midtrans qris: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return nil, fmt.Errorf("midtrans qris: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	out := &coreChargeResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {

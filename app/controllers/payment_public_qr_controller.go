@@ -6,20 +6,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
-
-// publicQrFetchTimeout bounds the server-side fetch of the provider QR image.
-const publicQrFetchTimeout = 10 * time.Second
-
-// publicQrMaxBytes caps the proxied QR image (provider QR png is kilobytes).
-const publicQrMaxBytes = 1 << 20
 
 // GetPublicQrImage proxies the current QRIS intent's QR image same-origin so
 // the payer's download button saves the file instead of opening a new tab.
@@ -63,14 +57,14 @@ func GetPublicQrImage(c fiber.Ctx) error {
 	if err != nil || (qrURL.Scheme != "http" && qrURL.Scheme != "https") || qrURL.Host == "" {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
-	ctx, cancel := context.WithTimeout(c.Context(), publicQrFetchTimeout)
+	ctx, cancel := context.WithTimeout(c.Context(), constants.QRFetchTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, qrURL.String(), nil)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
 	req.Header.Set("Accept", "image/*")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
@@ -82,8 +76,8 @@ func GetPublicQrImage(c fiber.Ctx) error {
 	if !strings.HasPrefix(strings.ToLower(ct), "image/") {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, publicQrMaxBytes+1))
-	if err != nil || len(raw) == 0 || len(raw) > publicQrMaxBytes {
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxQRImageSize+1))
+	if err != nil || len(raw) == 0 || len(raw) > constants.MaxQRImageSize {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
 	c.Set("Content-Type", ct)

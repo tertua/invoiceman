@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/constants"
 )
 
 // ErrNotConfigured is returned when the Midtrans server key is missing.
@@ -84,7 +84,7 @@ func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amou
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.SnapURL(), bytes.NewReader(body))
@@ -95,17 +95,17 @@ func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amou
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(cfg.ServerKey, "")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("midtrans snap: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return nil, fmt.Errorf("midtrans snap: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("midtrans snap: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return nil, fmt.Errorf("midtrans snap: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	out := &SnapResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {

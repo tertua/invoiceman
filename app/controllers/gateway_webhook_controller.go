@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -56,14 +57,17 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 	eventID, _ := randHex(8)
-	_ = db.CreateEvent(&models.GatewayEvent{
+	event := &models.GatewayEvent{
 		ID:        uuid.New(),
 		OrderID:   notif.OrderID,
 		Source:    gatewayName,
 		Verified:  true,
 		Payload:   string(raw),
 		CreatedAt: time.Now(),
-	})
+	}
+	if err := db.CreateEvent(event); err != nil {
+		logger.L().Error("webhook event audit failed", "order_id", notif.OrderID, "gateway", gatewayName, "err", err)
+	}
 
 	txn, err := db.GetTransaction(notif.OrderID)
 	if err != nil {
@@ -97,11 +101,44 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		now := time.Now()
 		txn.PaidAt = &now
 	}
+	
+	// Validate webhook amount and currency before settlement to prevent money loss.
 	if status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
+		// Critical: verify webhook amount matches the original transaction intent.
+		if txn.Currency != notif.Currency {
+			logger.L().Error("webhook currency mismatch - refusing to settle",
+				"order_id", notif.OrderID,
+				"expected_currency", txn.Currency,
+				"webhook_currency", notif.Currency,
+				"expected_amount", txn.AmountIDR,
+				"webhook_amount", notif.GrossMinor,
+				"invoice_id", *txn.InvoiceID,
+				"user_id", *txn.UserID)
+			return utils.Fail(c, fiber.StatusBadRequest, "webhook currency mismatch", nil)
+		}
+		// Allow small rounding differences (e.g., 1 minor unit) but reject significant mismatches.
+		amountDiff := txn.AmountIDR - notif.GrossMinor
+		if amountDiff < 0 {
+			amountDiff = -amountDiff
+		}
+		if amountDiff > 1 {
+			logger.L().Error("webhook amount mismatch - refusing to settle",
+				"order_id", notif.OrderID,
+				"currency", txn.Currency,
+				"expected_amount", txn.AmountIDR,
+				"webhook_amount", notif.GrossMinor,
+				"diff", amountDiff,
+				"invoice_id", *txn.InvoiceID,
+				"user_id", *txn.UserID)
+			return utils.Fail(c, fiber.StatusBadRequest, "webhook amount mismatch", nil)
+		}
+		
 		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gatewayDisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
-		_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
+		if err := cache.InvalidateUser(context.Background(), txn.UserID.String()); err != nil {
+			logger.L().Warn("cache invalidation failed after payment settlement", "user_id", txn.UserID.String(), "order_id", notif.OrderID, "err", err)
+		}
 		eventHex, _ := randHex(8)
 		enqueueNotification(db, *txn.UserID, models.NotifEventInvoiceStatusUpdated, "evt_"+eventHex,
 			invoiceNotifData(db, *txn.UserID, *txn.InvoiceID))

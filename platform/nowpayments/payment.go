@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -45,7 +46,7 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayPaymentTimeout)
 	defer cancel()
 	raw, status, err := postWithRetry(ctx, cfg, "/payment", body)
 	if err != nil {
@@ -56,9 +57,9 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 			return nil, fmt.Errorf("nowpayments payment: %w", gateway.ErrRateLimited)
 		}
 		if isAmountMinimalError(raw) {
-			return nil, fmt.Errorf("nowpayments payment: %w: %s", gateway.ErrAmountBelowMinimum, truncate(string(raw), 300))
+			return nil, fmt.Errorf("nowpayments payment: %w: %s", gateway.ErrAmountBelowMinimum, truncate(string(raw), constants.MaxErrorBodyLog))
 		}
-		return nil, fmt.Errorf("nowpayments payment: status %d: %s", status, truncate(string(raw), 300))
+		return nil, fmt.Errorf("nowpayments payment: status %d: %s", status, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	var decoded map[string]any
 	if err := json.Unmarshal(raw, &decoded); err != nil {
@@ -129,12 +130,12 @@ func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := constants.PaymentHTTPClient.Do(httpReq)
 	if err != nil {
 		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err = io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err = io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
 	}

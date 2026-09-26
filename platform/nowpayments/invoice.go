@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -47,7 +47,7 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.BaseURL()+"/invoice", bytes.NewReader(body))
@@ -58,17 +58,17 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := constants.DefaultHTTPClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments invoice: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments invoice: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("nowpayments invoice: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return nil, fmt.Errorf("nowpayments invoice: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	var decoded map[string]any
 	if err := json.Unmarshal(raw, &decoded); err != nil {
