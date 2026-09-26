@@ -102,30 +102,31 @@ func isAmountMinimalError(raw []byte) bool {
 }
 
 // postWithRetry posts one JSON body to a NOWPayments endpoint. A 429 answer
-// is retried with a short backoff so a transient rate limit does not fail
-// the caller; the final status is returned once the limit persists.
+// is retried honoring the Retry-After header (capped) with jittered backoff
+// fallback, so a transient rate limit does not fail the caller; the final
+// status is returned once the limit persists.
 func postWithRetry(ctx context.Context, cfg Config, path string, body []byte) (raw []byte, status int, err error) {
-	const maxAttempts = 3
 	for attempt := 1; ; attempt++ {
-		raw, status, err = postOnce(ctx, cfg, path, body)
+		var header http.Header
+		raw, status, header, err = postOnce(ctx, cfg, path, body)
 		if err != nil {
 			return nil, 0, err
 		}
-		if status != http.StatusTooManyRequests || attempt == maxAttempts {
+		if status != http.StatusTooManyRequests || attempt == constants.NowpaymentsMaxAttempts {
 			return raw, status, nil
 		}
 		select {
 		case <-ctx.Done():
 			return nil, 0, fmt.Errorf("nowpayments payment: %w", ctx.Err())
-		case <-time.After(time.Duration(attempt) * time.Second):
+		case <-time.After(constants.RetryDelayWithHeader(header, attempt)):
 		}
 	}
 }
 
-func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []byte, status int, err error) {
+func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []byte, status int, header http.Header, err error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.BaseURL()+path, bytes.NewReader(body))
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
@@ -133,14 +134,14 @@ func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
 	resp, err := constants.PaymentHTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
+		return nil, 0, nil, fmt.Errorf("nowpayments payment: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, err = io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
-		return nil, 0, fmt.Errorf("nowpayments payment: %w", err)
+		return nil, 0, nil, fmt.Errorf("nowpayments payment: %w", err)
 	}
-	return raw, resp.StatusCode, nil
+	return raw, resp.StatusCode, resp.Header, nil
 }
 
 // CreateTransaction creates a NOWPayments payment. Relayed intents reached
