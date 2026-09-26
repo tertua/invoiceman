@@ -445,6 +445,8 @@ export const en = {
     "invEditor.saveSend": "Save & send",
     "invEditor.saveFailed": "Couldn't save invoice",
     "invEditor.noClient": "— No client —",
+    "invEditor.paymentMethod": "Payment method",
+    "invEditor.noMethod": "— Not specified —",
     "invEditor.issueDate": "Issue date",
     "invEditor.dueDate": "Due date",
     "invEditor.lineItems": "Line items",

@@ -41,9 +41,13 @@ type Invoice struct {
 	Discount      Money      `gorm:"type:decimal(19,4)" db:"discount" json:"discount"`
 	Notes         string     `db:"notes" json:"notes"`
 	Terms         string     `db:"terms" json:"terms"`
-	Subtotal      Money      `gorm:"type:decimal(19,4)" db:"subtotal" json:"subtotal"`
-	TaxAmount     Money      `gorm:"type:decimal(19,4)" db:"tax_amount" json:"tax_amount"`
-	Total         Money      `gorm:"type:decimal(19,4)" db:"total" json:"total"`
+	// PaymentMethod is the informational "how to pay" choice shown on the
+	// invoice, not a gateway routing key. Keep the oneof list in sync with
+	// web/src/lib/paymentMethods.js (PAYMENT_METHODS).
+	PaymentMethod string `db:"payment_method" json:"payment_method" gorm:"size:32;default:''" validate:"omitempty,lte=32,oneof=Cash 'Bank transfer' Online"`
+	Subtotal      Money  `gorm:"type:decimal(19,4)" db:"subtotal" json:"subtotal"`
+	TaxAmount     Money  `gorm:"type:decimal(19,4)" db:"tax_amount" json:"tax_amount"`
+	Total         Money  `gorm:"type:decimal(19,4)" db:"total" json:"total"`
 }
 
 // InvoiceItemInput struct to describe a single invoice line in create/update payloads.
@@ -55,16 +59,18 @@ type InvoiceItemInput struct {
 
 // InvoiceInput struct to describe create/update invoice payload.
 type InvoiceInput struct {
-	ClientID  *string            `json:"client_id"`
-	Status    string             `json:"status" validate:"required,oneof=draft sent paid"`
-	IssueDate string             `json:"issue_date"`
-	DueDate   string             `json:"due_date"`
-	Currency  string             `json:"currency" validate:"required,lte=3"`
-	TaxRate   float64            `json:"tax_rate" validate:"gte=0"`
-	Discount  Money              `json:"discount"`
-	Notes     string             `json:"notes"`
-	Terms     string             `json:"terms"`
-	Items     []InvoiceItemInput `json:"items" validate:"required,min=1,dive"`
+	ClientID  *string `json:"client_id"`
+	Status    string  `json:"status" validate:"required,oneof=draft sent paid"`
+	IssueDate string  `json:"issue_date"`
+	DueDate   string  `json:"due_date"`
+	Currency  string  `json:"currency" validate:"required,lte=3"`
+	TaxRate   float64 `json:"tax_rate" validate:"gte=0"`
+	Discount  Money   `json:"discount"`
+	Notes     string  `json:"notes"`
+	Terms     string  `json:"terms"`
+	// PaymentMethod mirrors the Invoice column; see the comment there.
+	PaymentMethod string             `json:"payment_method" validate:"omitempty,lte=32,oneof=Cash 'Bank transfer' Online"`
+	Items         []InvoiceItemInput `json:"items" validate:"required,min=1,dive"`
 }
 
 // InvoiceStatusInput struct to describe update invoice status payload.

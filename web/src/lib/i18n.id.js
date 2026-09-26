@@ -445,6 +445,8 @@ export const id = {
     "invEditor.saveSend": "Simpan & kirim",
     "invEditor.saveFailed": "Gagal menyimpan faktur",
     "invEditor.noClient": "— Tanpa klien —",
+    "invEditor.paymentMethod": "Metode pembayaran",
+    "invEditor.noMethod": "— Belum ditentukan —",
     "invEditor.issueDate": "Tanggal terbit",
     "invEditor.dueDate": "Tanggal jatuh tempo",
     "invEditor.lineItems": "Baris item",

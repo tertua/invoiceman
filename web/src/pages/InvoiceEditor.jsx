@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Decimal from "decimal.js";
 import {
@@ -8,18 +8,16 @@ import {
   Save,
   Loader2,
   Sparkles,
-  ScanLine,
-  Package,
-  X,
   Mail,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
+import { PaymentMethodField } from "@/components/invoice/PaymentMethodField";
+import { CatalogPicker, ReceiptScanButton } from "@/components/invoice/InvoiceEditorTools";
 import { useClients } from "@/hooks/useClients";
 import { useSettings } from "@/hooks/useSettings";
-import { useItems } from "@/hooks/useItems";
 import {
   useInvoice,
   useCreateInvoice,
@@ -72,6 +70,7 @@ export default function InvoiceEditor() {
           discount: existing.discount || 0,
           notes: existing.notes || "",
           terms: existing.terms || "",
+          payment_method: existing.client_id ? existing.payment_method || "" : "",
           items: existing.items?.length
             ? existing.items.map((it) => ({
                 description: it.description,
@@ -92,6 +91,7 @@ export default function InvoiceEditor() {
         discount: 0,
         notes: "",
         terms: "",
+        payment_method: "",
         items: [blankItem()],
       });
     }
@@ -255,7 +255,7 @@ export default function InvoiceEditor() {
                 <select
                   className={selectClass}
                   value={form.client_id}
-                  onChange={(e) => set({ client_id: e.target.value })}
+                  onChange={(e) => set({ client_id: e.target.value, payment_method: e.target.value ? form.payment_method : "" })}
                 >
                   <option value="">{t("invEditor.noClient")}</option>
                   {(clients || []).map((c) => (
@@ -265,6 +265,9 @@ export default function InvoiceEditor() {
                     </option>
                   ))}
                 </select>
+              </Field>
+              <Field label={t("invEditor.paymentMethod")} className="sm:col-span-2">
+                <PaymentMethodField value={form.payment_method || ""} disabled={!form.client_id} onChange={(v) => set({ payment_method: v })} />
               </Field>
               <Field label={t("invEditor.issueDate")}>
                 <Input
@@ -519,101 +522,6 @@ function NoteField({ label, value, onChange, placeholder, aiKind, aiContext }) {
         placeholder={placeholder}
         className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none resize-y focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
       />
-    </div>
-  );
-}
-
-function CatalogPicker({ onPick }) {
-  const { t } = useLang();
-  const { data: items } = useItems();
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e) => {
-      if (!ref.current?.contains(e.target)) setOpen(false);
-    };
-    window.addEventListener("mousedown", onClick);
-    return () => window.removeEventListener("mousedown", onClick);
-  }, [open]);
-
-  if (!items?.length) return null;
-
-  return (
-    <div ref={ref} className="relative">
-      <Button type="button" variant="soft" size="sm" onClick={() => setOpen((v) => !v)}>
-        <Package size={13} /> {t("invEditor.fromCatalog")}
-      </Button>
-      {open && (
-        <div className="absolute right-0 top-10 z-20 w-64 max-h-72 overflow-y-auto rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-hover p-1.5">
-          {items.map((it) => (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => {
-                onPick(it);
-                setOpen(false);
-              }}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left hover:bg-[var(--surface-2)] transition-colors"
-            >
-              <span className="text-sm text-[var(--ink)] truncate">{it.name}</span>
-              <span className="text-xs font-semibold tabular text-[var(--accent-strong)] shrink-0">
-                {formatMoney(it.rate)}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ReceiptScanButton({ onParsed }) {
-  const { t } = useLang();
-  const inputRef = useRef(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-  const [unavailable, setUnavailable] = useState(false);
-
-  async function onFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setErr("");
-    setLoading(true);
-    try {
-      const res = await aiApi.receiptParse(file);
-      onParsed(res);
-    } catch (ex) {
-      setUnavailable(isAiUnavailable(ex));
-      if (ex.status !== 401) setErr(isAiUnavailable(ex) ? t("ai.unavailable") : isAiRateLimited(ex) ? t("ai.rateLimited") : isAiFailure(ex) ? t("ai.failed") : ex.message || t("invEditor.scanFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      {err && (
-        <span className="text-[11px] text-[var(--danger)] flex items-center gap-1">
-          {err}
-          <button type="button" onClick={() => setErr("")}>
-            <X size={11} />
-          </button>
-        </span>
-      )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,application/pdf"
-        className="hidden"
-        onChange={onFile}
-      />
-      <Button variant="soft" size="sm" onClick={() => inputRef.current?.click()} disabled={loading || unavailable}>
-        {loading ? <Loader2 size={13} className="animate-spin" /> : <ScanLine size={13} />}
-        {t("invEditor.scanReceipt")}
-      </Button>
     </div>
   );
 }

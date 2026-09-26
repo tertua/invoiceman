@@ -132,6 +132,7 @@ export function InvoicePaymentCard({ invoice }) {
             {formatMoney(balance, currency)}
           </span>
         </div>
+        {invoice.payment_method && <TotalLine label={t("common.method")} value={invoice.payment_method} />}
       </div>
 
       <div className="h-1.5 w-full rounded-full bg-[var(--surface-2)] mb-4 overflow-hidden">

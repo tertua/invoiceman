@@ -3376,6 +3376,16 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "payment_method": {
+                    "description": "PaymentMethod mirrors the Invoice column; see the comment there.",
+                    "type": "string",
+                    "maxLength": 32,
+                    "enum": [
+                        "Cash",
+                        "Bank transfer",
+                        "Online"
+                    ]
+                },
                 "status": {
                     "type": "string",
                     "enum": [
@@ -3726,13 +3736,13 @@ const docTemplate = `{
             "properties": {
                 "client": {
                     "type": "object",
-                    "additionalProperties": true
+                    "additionalProperties": {}
                 },
                 "items": {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "additionalProperties": true
+                        "additionalProperties": {}
                     }
                 },
                 "kind": {

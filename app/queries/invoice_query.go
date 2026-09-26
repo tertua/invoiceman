@@ -233,19 +233,20 @@ func (q *InvoiceQueries) UpdateInvoice(userID uuid.UUID, invoice *models.Invoice
 		return q.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", invoice.ID, userID).
 				Updates(map[string]any{
-					"updated_at": time.Now(),
-					"client_id":  invoice.ClientID,
-					"status":     invoice.Status,
-					"issue_date": invoice.IssueDate,
-					"due_date":   invoice.DueDate,
-					"currency":   invoice.Currency,
-					"tax_rate":   invoice.TaxRate,
-					"discount":   invoice.Discount,
-					"notes":      invoice.Notes,
-					"terms":      invoice.Terms,
-					"subtotal":   invoice.Subtotal,
-					"tax_amount": invoice.TaxAmount,
-					"total":      invoice.Total,
+					"updated_at":     time.Now(),
+					"client_id":      invoice.ClientID,
+					"status":         invoice.Status,
+					"issue_date":     invoice.IssueDate,
+					"due_date":       invoice.DueDate,
+					"currency":       invoice.Currency,
+					"tax_rate":       invoice.TaxRate,
+					"discount":       invoice.Discount,
+					"notes":          invoice.Notes,
+					"terms":          invoice.Terms,
+					"payment_method": invoice.PaymentMethod,
+					"subtotal":       invoice.Subtotal,
+					"tax_amount":     invoice.TaxAmount,
+					"total":          invoice.Total,
 				}).Error; err != nil {
 				return err
 			}

@@ -26,14 +26,15 @@ type invoiceLine struct {
 // later assertions. There is no implicit client creation — that ambiguity is
 // how fixtures rot.
 type invoiceSpec struct {
-	Status   string        `json:"status"`
-	Currency string        `json:"currency"`
-	ClientID string        `json:"client_id,omitempty"`
-	Issue    string        `json:"issue_date"`
-	Due      string        `json:"due_date"`
-	TaxRate  float64       `json:"tax_rate,omitempty"`
-	Discount string        `json:"discount,omitempty"`
-	Items    []invoiceLine `json:"items"`
+	Status        string        `json:"status"`
+	Currency      string        `json:"currency"`
+	ClientID      string        `json:"client_id,omitempty"`
+	Issue         string        `json:"issue_date"`
+	Due           string        `json:"due_date"`
+	TaxRate       float64       `json:"tax_rate,omitempty"`
+	Discount      string        `json:"discount,omitempty"`
+	PaymentMethod string        `json:"payment_method,omitempty"`
+	Items         []invoiceLine `json:"items"`
 }
 
 // newInvoice returns a sent IDR invoice with one line and stable dates.

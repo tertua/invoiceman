@@ -132,4 +132,11 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "expires_at")
 		},
 	},
+	{
+		Version:     14,
+		Description: "invoice informational payment_method column",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropColumn(&models.Invoice{}, "payment_method")
+		},
+	},
 }

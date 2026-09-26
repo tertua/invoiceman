@@ -10,8 +10,7 @@ import { gatewayApi } from "@/api/gateway";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, todayDateInput } from "@/lib/utils";
 import { loadMidtransSnap } from "@/lib/midtrans";
-
-export const PAYMENT_METHODS = ["Cash", "Bank transfer", "Online"];
+import { PAYMENT_METHODS } from "@/lib/paymentMethods";
 
 function Field({ label, children }) {
   return (

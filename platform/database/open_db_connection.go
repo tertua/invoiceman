@@ -74,7 +74,7 @@ func OpenDBConnection() (*Queries, error) {
 
 // SchemaVersion is the current schema revision. Bump it by 1 every time a
 // model changes so the version guard below can detect newer databases.
-const SchemaVersion = 13
+const SchemaVersion = 14
 
 // Migrate creates or updates tables from models, then enforces the schema
 // version guard (forward-only upgrades; newer DB than binary is fatal).

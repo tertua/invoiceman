@@ -227,6 +227,14 @@ definitions:
         type: array
       notes:
         type: string
+      payment_method:
+        description: PaymentMethod mirrors the Invoice column; see the comment there.
+        enum:
+        - Cash
+        - Bank transfer
+        - Online
+        maxLength: 32
+        type: string
       status:
         enum:
         - draft
@@ -474,11 +482,11 @@ definitions:
   models.WriteNoteInput:
     properties:
       client:
-        additionalProperties: true
+        additionalProperties: {}
         type: object
       items:
         items:
-          additionalProperties: true
+          additionalProperties: {}
           type: object
         type: array
       kind:
