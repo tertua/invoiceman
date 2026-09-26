@@ -61,9 +61,9 @@ export default function Dashboard() {
     );
   }
 
-  const collectionRate = stats.totalRevenue + stats.outstanding > 0
-    ? Math.round((stats.totalRevenue / (stats.totalRevenue + stats.outstanding)) * 100)
-    : 0;
+  const collected = Number(stats.totalRevenue) || 0;
+  const owed = Number(stats.outstanding) || 0;
+  const collectionRate = collected + owed > 0 ? Math.round((collected / (collected + owed)) * 100) : 0;
 
   return (
     <div className="space-y-6">
