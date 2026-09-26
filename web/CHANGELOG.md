@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.4] - 2026-09-26
+
+### Fixed
+- The first QRIS tap on a public pay link no longer fails with "payment
+  could not be started": concurrent submits now collapse onto a single QR
+  instead of racing each other at the gateway.
+
+### Changed
+- `POST /gateway/intents` now requires an `Idempotency-Key` header (same as
+  `POST /gateway/invoices`), so a retried relay submit replays the original
+  intent instead of opening a second payable charge. Send one UUID per
+  payment intent.
+
 ## [v0.5.3] - 2026-09-25
 
 ### Changed
