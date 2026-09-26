@@ -64,6 +64,7 @@ func GetPublicQrImage(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
 	req.Header.Set("Accept", "image/*")
+	req.Header.Set("User-Agent", constants.UserAgent())
 	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)

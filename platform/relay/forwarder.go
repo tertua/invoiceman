@@ -5,7 +5,8 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"time"
+
+	"github.com/tertua/invoiceman/pkg/constants"
 )
 
 // ForwardResult is the outcome of one webhook forward attempt.
@@ -17,7 +18,7 @@ type ForwardResult struct {
 // Forward POSTs payload to targetURL with relay signature headers.
 // Callers persist the result in webhook_deliveries for audit and retry.
 func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payload []byte, secret string) (*ForwardResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.WebhookForwardTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(payload))
@@ -25,11 +26,12 @@ func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payloa
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", constants.RelayUserAgent())
 	req.Header.Set("X-Relay-Signature", SignPayload(payload, secret))
 	req.Header.Set("X-Relay-Event-Id", eventID)
 	req.Header.Set("X-Project-Slug", projectSlug)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

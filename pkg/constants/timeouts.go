@@ -1,9 +1,26 @@
 package constants
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
+
+// Version is the application version, read from VERSION file at build time.
+// Falls back to "dev" if not set.
+var Version = "0.5.5"
+
+// UserAgent returns the HTTP User-Agent header value for external API calls.
+// Format: "InvoiceMan/VERSION (+https://github.com/tertua/invoiceman)"
+func UserAgent() string {
+	return fmt.Sprintf("InvoiceMan/%s (+https://github.com/tertua/invoiceman)", Version)
+}
+
+// RelayUserAgent returns the User-Agent for webhook forwarding to downstream projects.
+// Format: "InvoiceMan-Relay/VERSION"
+func RelayUserAgent() string {
+	return fmt.Sprintf("InvoiceMan-Relay/%s", Version)
+}
 
 // HTTP client timeouts for external API calls.
 const (

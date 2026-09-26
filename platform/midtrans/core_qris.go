@@ -84,6 +84,7 @@ func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", constants.UserAgent())
 	req.SetBasicAuth(cfg.ServerKey, "")
 
 	resp, err := constants.DefaultHTTPClient.Do(req)

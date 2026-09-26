@@ -56,6 +56,7 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("User-Agent", constants.UserAgent())
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
 
 	resp, err := constants.DefaultHTTPClient.Do(httpReq)

@@ -129,6 +129,7 @@ func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("User-Agent", constants.UserAgent())
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
 	resp, err := constants.PaymentHTTPClient.Do(httpReq)
 	if err != nil {
