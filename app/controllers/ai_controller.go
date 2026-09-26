@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -115,7 +114,7 @@ func ReceiptParse(c fiber.Ctx) error {
 	if err != nil || len(data) > maxReceiptSize {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
 	}
-	result, err := ai.NewGeminiClient().GenerateWithFile(context.Background(), `Extract this receipt into JSON. Return only an object with these fields: vendor (string), category (string), date (YYYY-MM-DD string or empty), total (number), subtotal (number), notes (string), lineItems (array of objects with description (string), quantity (number), rate (number)). Use 0 for unknown numbers and empty strings for unknown text.`, mimeType, data)
+	result, err := ai.NewGeminiClient().GenerateWithFile(c.Context(), `Extract this receipt into JSON. Return only an object with these fields: vendor (string), category (string), date (YYYY-MM-DD string or empty), total (number), subtotal (number), notes (string), lineItems (array of objects with description (string), quantity (number), rate (number)). Use 0 for unknown numbers and empty strings for unknown text.`, mimeType, data)
 	if err != nil {
 		return aiError(c, err)
 	}
@@ -159,7 +158,7 @@ func BusinessSummary(c fiber.Ctx) error {
 	}
 	lang := aiLocale(c)
 	input, _ := json.Marshal(fiber.Map{"stats": stats, "totals": report.Totals, "statusBreakdown": report.StatusBreakdown})
-	result, err := ai.NewGeminiClient().Generate(context.Background(), languageDirective(lang)+currencyDirective(currency)+"Write a concise, actionable business health summary in 2-4 sentences based on this JSON. Do not invent facts. JSON: "+string(input))
+	result, err := ai.NewGeminiClient().Generate(c.Context(), languageDirective(lang)+currencyDirective(currency)+"Write a concise, actionable business health summary in 2-4 sentences based on this JSON. Do not invent facts. JSON: "+string(input))
 	if err != nil {
 		return aiError(c, err)
 	}
@@ -207,7 +206,7 @@ func PaymentReminder(c fiber.Ctx) error {
 	}
 	payload, _ := json.Marshal(detail)
 	lang := aiLocale(c)
-	result, err := ai.NewGeminiClient().GenerateJSON(context.Background(), languageDirective(lang)+currencyDirective(invoice.Currency)+"Create a payment reminder email as JSON with subject and body fields. Tone: "+input.Tone+". Be professional and concise. Invoice data: "+string(payload))
+	result, err := ai.NewGeminiClient().GenerateJSON(c.Context(), languageDirective(lang)+currencyDirective(invoice.Currency)+"Create a payment reminder email as JSON with subject and body fields. Tone: "+input.Tone+". Be professional and concise. Invoice data: "+string(payload))
 	if err != nil {
 		return aiError(c, err)
 	}
@@ -241,7 +240,7 @@ func WriteNote(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 	payload, _ := json.Marshal(input)
-	result, err := ai.NewGeminiClient().Generate(context.Background(), languageDirective(aiLocale(c))+writeNoteInstruction(input.Kind)+"Use this JSON context: "+string(payload))
+	result, err := ai.NewGeminiClient().Generate(c.Context(), languageDirective(aiLocale(c))+writeNoteInstruction(input.Kind)+"Use this JSON context: "+string(payload))
 	if err != nil {
 		return aiError(c, err)
 	}

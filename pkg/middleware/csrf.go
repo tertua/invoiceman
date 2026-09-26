@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"strings"
@@ -77,7 +76,7 @@ func RequireCSRF() fiber.Handler {
 			return utils.Fail(c, fiber.StatusForbidden, "csrf token missing or mismatched", nil)
 		}
 		if userID, _, ok := userIDFromAccess(accessTokenString(c)); ok {
-			if !csrfBound(userID, cookie) {
+			if !csrfBound(c, userID, cookie) {
 				return utils.Fail(c, fiber.StatusForbidden, "csrf token missing or mismatched", nil)
 			}
 		}
@@ -90,12 +89,12 @@ func RequireCSRF() fiber.Handler {
 // is their only check; their next transparent refresh binds them. A missing
 // or unreadable store entry fails closed: AuthRequired just proved the
 // session exists, so a miss means it died mid-request.
-func csrfBound(userID uuid.UUID, token string) bool {
+func csrfBound(c fiber.Ctx, userID uuid.UUID, token string) bool {
 	store, err := cache.Sessions()
 	if err != nil {
 		return false
 	}
-	stored, err := store.Get(context.Background(), userID.String())
+	stored, err := store.Get(c.Context(), userID.String())
 	if err != nil {
 		return false
 	}

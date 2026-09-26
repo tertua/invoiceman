@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -110,7 +109,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gatewayDisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
-		if err := cache.InvalidateUser(context.Background(), txn.UserID.String()); err != nil {
+		if err := cache.InvalidateUser(c.Context(), txn.UserID.String()); err != nil {
 			logger.L().Warn("cache invalidation failed after payment settlement", "user_id", txn.UserID.String(), "order_id", notif.OrderID, "err", err)
 		}
 		eventHex, _ := randHex(8)

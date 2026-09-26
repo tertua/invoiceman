@@ -38,22 +38,21 @@ func publicUser(u models.User) fiber.Map {
 // saveRefreshToken stores the session (sid + refresh token + bound CSRF
 // token) in the session store. Overwriting kills any previous session:
 // strict single-session.
-func saveRefreshToken(userID uuid.UUID, sid, refresh, csrf string) error {
+func saveRefreshToken(ctx context.Context, userID uuid.UUID, sid, refresh, csrf string) error {
 	store, err := cache.Sessions()
 	if err != nil {
 		return err
 	}
-	return store.Set(context.Background(), userID.String(), cache.EncodeSessionValue(sid, refresh, csrf), cache.RefreshTTL())
+	return store.Set(ctx, userID.String(), cache.EncodeSessionValue(sid, refresh, csrf), cache.RefreshTTL())
 }
 
 // saveSessionCSRF rebinds the CSRF token of the live session without
 // touching its sid or refresh token (rotation on privilege moments).
-func saveSessionCSRF(userID uuid.UUID, csrf string) error {
+func saveSessionCSRF(ctx context.Context, userID uuid.UUID, csrf string) error {
 	store, err := cache.Sessions()
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	stored, err := store.Get(ctx, userID.String())
 	if err != nil {
 		return err
@@ -66,12 +65,12 @@ func saveSessionCSRF(userID uuid.UUID, csrf string) error {
 }
 
 // deleteRefreshToken removes the refresh token from the session store.
-func deleteRefreshToken(userID uuid.UUID) error {
+func deleteRefreshToken(ctx context.Context, userID uuid.UUID) error {
 	store, err := cache.Sessions()
 	if err != nil {
 		return err
 	}
-	return store.Delete(context.Background(), userID.String())
+	return store.Delete(ctx, userID.String())
 }
 
 // recordLoginFailure audits a failed login without leaking the email:
@@ -103,7 +102,7 @@ func rotateCSRF(c fiber.Ctx, userID uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	if err := saveSessionCSRF(userID, token); err != nil {
+	if err := saveSessionCSRF(c.Context(), userID, token); err != nil {
 		return err
 	}
 	middleware.SetCSRFCookie(c, token)
@@ -216,7 +215,7 @@ func Register(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
 	}
-	if err := saveRefreshToken(user.ID, tokens.SID, tokens.Refresh, csrf); err != nil {
+	if err := saveRefreshToken(c.Context(), user.ID, tokens.SID, tokens.Refresh, csrf); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
 	}
 	recordAudit(c, db, user.ID, "auth.register", "user", user.ID.String(), "")
@@ -277,7 +276,7 @@ func Login(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
 	}
-	if err := saveRefreshToken(user.ID, tokens.SID, tokens.Refresh, csrf); err != nil {
+	if err := saveRefreshToken(c.Context(), user.ID, tokens.SID, tokens.Refresh, csrf); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
 	}
 	recordAudit(c, db, user.ID, "auth.login.success", "user", user.ID.String(), "")
@@ -305,7 +304,7 @@ func Logout(c fiber.Ctx) error {
 	if db, err := database.OpenDBConnection(); err == nil {
 		recordAudit(c, db, userID, "auth.logout", "user", userID.String(), "")
 	}
-	if err := deleteRefreshToken(userID); err != nil {
+	if err := deleteRefreshToken(c.Context(), userID); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete session", nil)
 	}
 	utils.ClearSession(c)
@@ -540,7 +539,7 @@ func ResetPassword(c fiber.Ctx) error {
 	_ = db.DeletePasswordResetsByUser(reset.UserID)
 	// The password changed out-of-band: the old session (if any) dies here,
 	// and any stale cookies lingering in this browser are cleared too.
-	_ = deleteRefreshToken(reset.UserID)
+	_ = deleteRefreshToken(c.Context(), reset.UserID)
 	utils.ClearSession(c)
 	middleware.ClearCSRFCookie(c)
 	recordAudit(c, db, reset.UserID, "auth.password.reset", "user", reset.UserID.String(), "")

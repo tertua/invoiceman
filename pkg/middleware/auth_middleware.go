@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -22,7 +21,7 @@ import (
 // refresh tokens stop working immediately.
 func AuthRequired() fiber.Handler {
 	return func(c fiber.Ctx) error {
-		if userID, sid, ok := validAccessToken(accessTokenString(c)); ok && sessionMatches(userID, sid) {
+		if userID, sid, ok := validAccessToken(accessTokenString(c)); ok && sessionMatches(c, userID, sid) {
 			c.Locals(utils.SessionUserIDKey, userID)
 			return c.Next()
 		}
@@ -81,12 +80,12 @@ func validAccessToken(tokenString string) (uuid.UUID, string, bool) {
 // Pre-sid deployments stored a bare refresh string: Decode yields an empty
 // sid for those, which only matches a sid-less token; the next transparent
 // refresh rewrites the entry in the new format.
-func sessionMatches(userID uuid.UUID, sid string) bool {
+func sessionMatches(c fiber.Ctx, userID uuid.UUID, sid string) bool {
 	store, err := cache.Sessions()
 	if err != nil {
 		return false
 	}
-	stored, err := store.Get(context.Background(), userID.String())
+	stored, err := store.Get(c.Context(), userID.String())
 	if err != nil {
 		return false
 	}
@@ -128,7 +127,7 @@ func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 	if err != nil {
 		return uuid.Nil, false
 	}
-	stored, err := store.Get(context.Background(), userID.String())
+	stored, err := store.Get(c.Context(), userID.String())
 	if err != nil {
 		return uuid.Nil, false
 	}
@@ -164,7 +163,7 @@ func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 	if err != nil {
 		return uuid.Nil, false
 	}
-	if err := store.Set(context.Background(), userID.String(), cache.EncodeSessionValue(tokens.SID, tokens.Refresh, storedCSRF), cache.RefreshTTL()); err != nil {
+	if err := store.Set(c.Context(), userID.String(), cache.EncodeSessionValue(tokens.SID, tokens.Refresh, storedCSRF), cache.RefreshTTL()); err != nil {
 		return uuid.Nil, false
 	}
 
