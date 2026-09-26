@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.7] - 2026-09-26
+
+### Fixed
+- Client-cancelled or timed-out requests now stop their server-side work
+  instead of running to completion: AI text generation, session and CSRF
+  lookups, cache invalidation, and retried database queries all follow the
+  request context.
+- NOWPayments rate-limit retries honor the provider's `Retry-After` header
+  and fall back to jittered backoff, so a throttled gateway is not hammered.
+
+### Changed
+- Payment-gateway HTTP failures surface as a typed error
+  (`gateway.ErrProviderStatus`) whose status code can be inspected with
+  `errors.Is`/`errors.As`, instead of matching provider message strings.
+- Retry policy and relay response-size limits now live in `pkg/constants`.
+
 ## [v0.5.6] - 2026-09-26
 
 ### Fixed
