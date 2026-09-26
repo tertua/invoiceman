@@ -6,6 +6,7 @@ import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import PublicShell from "@/components/publicpay/PublicShell";
 import PayPanel from "@/components/publicpay/PayPanel";
 import InvoiceHead from "@/components/publicpay/InvoiceHead";
+import { PublicErrorCard } from "@/components/publicpay/PublicErrorCard";
 import { publicPayApi } from "@/api/publicPay";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
@@ -112,9 +113,7 @@ export default function PublicPay() {
   if (err) {
     return (
       <PublicShell lang={lang} onLang={changeLang}>
-        <Card padding="lg" className="max-w-md w-full text-center">
-          <p className="text-sm text-[var(--ink-muted)]">{err}</p>
-        </Card>
+        <PublicErrorCard lang={lang} status={err.status} message={err.message} />
       </PublicShell>
     );
   }
