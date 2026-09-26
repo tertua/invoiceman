@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// Version is the application version, read from VERSION file at build time.
+// Version is the application version, injected at build time via ldflags.
 // Falls back to "dev" if not set.
-var Version = "0.5.5"
+var Version = "dev"
 
 // UserAgent returns the HTTP User-Agent header value for external API calls.
 // Format: "InvoiceMan/VERSION (+https://github.com/tertua/invoiceman)"

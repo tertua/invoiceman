@@ -2,6 +2,8 @@
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
+VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
+LDFLAGS := -w -s -X github.com/tertua/invoiceman/pkg/constants.Version=$(VERSION)
 
 clean:
 	rm -rf ./build
@@ -23,7 +25,7 @@ test: clean critic security lint
 	go tool cover -func=cover.out
 
 build: test
-	CGO_ENABLED=0 go build -ldflags="-w -s" -o $(BUILD_DIR)/$(APP_NAME) main.go
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) main.go
 
 run: swag build
 	$(BUILD_DIR)/$(APP_NAME)
@@ -31,7 +33,7 @@ run: swag build
 # Local dev processes (see AGENTS.md "Local dev run"). Binaries and logs
 # live under /tmp/opencode (pre-approved scratch dir, never the repo root).
 dev-be:
-	go build -o /tmp/opencode/invoiceman . && /tmp/opencode/invoiceman
+	go build -ldflags="$(LDFLAGS)" -o /tmp/opencode/invoiceman . && /tmp/opencode/invoiceman
 
 dev-fe:
 	npm --prefix web run dev -- --host 0.0.0.0
