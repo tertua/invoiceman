@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { publicPayApi } from "@/api/publicPay";
+import { createPublicTransaction, newIntentKey } from "@/api/publicIntent";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
@@ -29,7 +29,10 @@ function formatCountdown(left) {
 //   [next]  acquirer stays a backend decision; the widget only renders qr_image
 //   [later] poll the intent status inline instead of relying on the page poll
 // Seam: props {token, lang, amount, currency, gateway, onError, onPaid} +
-// publicPayApi.createTransaction(token, "qris") — stable, so the widget can be
+// createPublicTransaction(token, "qris", undefined, idempotencyKey) —
+// one UUID per nonce, stable across StrictMode double-effects so the retry
+// replays instead of double-charging; a 409 (sibling request in flight)
+// retries once with the same key. Stable, so the widget can be
 // rewritten in place.
 // End dev path
 export default function QrisWidget({ token, lang, amount, currency, gateway, onError, onPaid }) {
@@ -38,6 +41,9 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
   const [left, setLeft] = useState(DEFAULT_TTL);
   const [nonce, setNonce] = useState(0);
   const [saving, setSaving] = useState(false);
+  const keysRef = useRef({});
+  const clientKey = gateway?.client_key;
+  const isProd = gateway?.is_production;
 
   async function saveQr() {
     if (!intent?.payment_url || saving) return;
@@ -47,42 +53,63 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
     if (!ok) window.open(intent.payment_url, "_blank", "noopener");
   }
 
+  // One idempotency key per QR generation. The ref survives StrictMode's
+  // setup→cleanup→setup cycle, so the double-fired effect sends the same
+  // key twice and the backend replays the first charge instead of opening
+  // a second one at the gateway. A new nonce ("new QR") mints a new key.
+  function intentKey(n) {
+    if (!keysRef.current[n]) keysRef.current[n] = newIntentKey(n);
+    return keysRef.current[n];
+  }
+
   useEffect(() => {
     let cancelled = false;
     setPending(true);
-    publicPayApi
-      .createTransaction(token, "qris")
-      .then(async (res) => {
-        if (cancelled) return;
-        if (res.payment_url) {
-          setIntent(res);
-          return;
+    const key = intentKey(nonce);
+    let retried = false;
+    async function attempt() {
+      let res;
+      try {
+        res = await createPublicTransaction(token, "qris", undefined, key);
+      } catch (e) {
+        const status = e?.status ?? e?.original?.response?.status;
+        if (!cancelled && status === 409 && !retried) {
+          retried = true;
+          await new Promise((r) => setTimeout(r, 1200));
+          if (!cancelled) return attempt();
         }
-        if (res.snap_token && gateway?.client_key) {
-          const snap = await loadMidtransSnap(gateway.is_production);
-          snap.pay(res.snap_token, {
-            onClose: () => {},
-            onError: () => {},
-            onSuccess: () => onPaid?.(),
-          });
-          return;
-        }
-        if (res.redirect_url) {
-          window.location.href = res.redirect_url;
-          return;
-        }
-        onError(t(lang, "public.qrisCreateFailed"));
-      })
-      .catch(() => {
         if (!cancelled) onError(t(lang, "public.qrisCreateFailed"));
-      })
-      .finally(() => {
         if (!cancelled) setPending(false);
-      });
+        return;
+      }
+      if (cancelled) return;
+      if (res.payment_url) {
+        setIntent(res);
+        setPending(false);
+        return;
+      }
+      if (res.snap_token && clientKey) {
+        setPending(false);
+        const snap = await loadMidtransSnap(isProd);
+        snap.pay(res.snap_token, {
+          onClose: () => {},
+          onError: () => {},
+          onSuccess: () => onPaid?.(),
+        });
+        return;
+      }
+      if (res.redirect_url) {
+        window.location.href = res.redirect_url;
+        return;
+      }
+      onError(t(lang, "public.qrisCreateFailed"));
+      setPending(false);
+    }
+    attempt();
     return () => {
       cancelled = true;
     };
-  }, [token, lang, gateway, onError, onPaid, nonce]);
+  }, [token, lang, clientKey, isProd, onError, onPaid, nonce]);
 
   useEffect(() => {
     if (!intent) return undefined;

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
@@ -142,4 +144,76 @@ func TestPublicPayRetryAfterFailedIntent(t *testing.T) {
 	second := decodeBody(t, resp)
 	assert.Equal(t, first["order_id"].(string)+"-r1", second["order_id"])
 	assert.EqualValues(t, 2, calls.Load(), "a failed intent must be replaced by a new charge")
+}
+
+// Two concurrent clicks (StrictMode double-effect, double-tap) must collapse
+// onto one intent: no 500, same order id and QR on both responses, exactly
+// one Core API charge. The stub sleeps inside the charge so both requests
+// claim the base order id before either charge resolves; the loser waits for
+// the winner instead of opening its own charge (zero orphan at the gateway).
+func TestPublicPayQrisConcurrentClicksCollapse(t *testing.T) {
+	calls := &atomic.Int32{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		time.Sleep(150 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w,
+			`{"transaction_id":"txn-qris-race-%d","order_id":"x","payment_type":"qris","transaction_status":"pending","expiry_time":"2099-01-01 00:00:00","actions":[{"name":"generate-qr-code","url":"https://api.test/qris/race/%d"}]}`,
+			n, n)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("MIDTRANS_SERVER_KEY", "qris-race-key")
+	t.Setenv("MIDTRANS_CORE_BASE_URL", srv.URL)
+
+	app := newTestApp()
+	_, token := qrisFixture(t, app, "qris-race@example.com")
+
+	type outcome struct {
+		status int
+		body   map[string]interface{}
+	}
+	results := make([]outcome, 2)
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			resp := doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"qris"}`, nil)
+			results[i] = outcome{status: resp.StatusCode, body: decodeBody(t, resp)}
+		}(i)
+	}
+	wg.Wait()
+
+	require.Equal(t, 200, results[0].status, "concurrent click must not 500")
+	require.Equal(t, 200, results[1].status, "concurrent click must not 500")
+	assert.Equal(t, results[0].body["order_id"], results[1].body["order_id"], "both clicks collapse onto one intent")
+	assert.Equal(t, results[0].body["payment_url"], results[1].body["payment_url"])
+	assert.NotEmpty(t, results[0].body["payment_url"])
+	assert.EqualValues(t, 1, calls.Load(), "the loser must wait and reuse, never charge the gateway twice")
+}
+
+// The same Idempotency-Key replays the first charge: one Core API call, the
+// second response carries the replay marker. This is the enterprise path the
+// SPA uses (one UUID per QR generation); the race test above is the safety
+// net for clients that send none.
+func TestPublicPayQrisIdempotencyKeyReplay(t *testing.T) {
+	core, calls := newQRISCoreStub(t, "2099-01-01 00:00:00")
+	t.Setenv("MIDTRANS_SERVER_KEY", "qris-idem-key")
+	t.Setenv("MIDTRANS_CORE_BASE_URL", core.URL)
+
+	app := newTestApp()
+	_, token := qrisFixture(t, app, "qris-idem@example.com")
+
+	headers := map[string]string{"Idempotency-Key": "qris-replay-1"}
+	resp := doRequestWithHeaders(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"qris"}`, nil, headers)
+	status, first, respHeaders := readBody(t, resp)
+	require.Equal(t, 200, status)
+	assert.Empty(t, respHeaders.Get("Idempotent-Replayed"))
+
+	resp = doRequestWithHeaders(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"qris"}`, nil, headers)
+	status, second, respHeaders := readBody(t, resp)
+	require.Equal(t, 200, status)
+	assert.Equal(t, "true", respHeaders.Get("Idempotent-Replayed"))
+	assert.Equal(t, first["order_id"], second["order_id"])
+	assert.EqualValues(t, 1, calls.Load(), "replay must not recharge the gateway")
 }

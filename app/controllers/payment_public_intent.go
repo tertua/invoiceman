@@ -42,72 +42,242 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
 	applyEnabledMethods(&spec, gw.Name(), settings)
-	orderID := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
+	base := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
 	if method == "" {
 		// Legacy default method: keep the pre-rename INV- intent reused
-		// forever instead of opening a duplicate at the gateway.
-		if existing, err := db.GetTransaction(orderID); err == nil {
-			return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
+		// forever instead of opening a duplicate at the gateway. Dead
+		// claims (failed before reaching the provider) and in-flight
+		// claims are not returned as-is; they fall through to the claim
+		// loop below, which adopts or joins them.
+		if existing, err := db.GetTransaction(base); err == nil && !isDeadClaim(existing) {
+			if existing.Status == publicIntentProcessing {
+				if winner := waitForPublicIntent(db, base, balance); winner != nil {
+					return utils.OK(c, fiber.StatusOK, publicIntentResponse(*winner))
+				}
+			} else {
+				return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
+			}
 		}
 		if existing, err := db.GetTransaction(legacyLocalOrderID(invoice.InvoiceNumber, link.Token[:8])); err == nil {
 			return utils.OK(c, fiber.StatusOK, publicIntentResponse(existing))
 		}
-	} else {
-		// Reuse the current intent only while it can still be paid; an
-		// expired or failed one is superseded by a fresh charge under a
-		// retry suffix, because Midtrans rejects a duplicate order id.
-		latest, err := db.LatestIntent("local", invoice.ID.String(), method)
-		switch {
-		case err == nil:
-			if reusableIntent(latest, balance) {
-				return utils.OK(c, fiber.StatusOK, publicIntentResponse(latest))
-			}
-			n, cerr := db.CountIntents("local", invoice.ID.String(), method)
-			if cerr != nil {
-				return utils.Fail(c, fiber.StatusInternalServerError, "failed to load gateway transaction", nil)
-			}
-			orderID += "-r" + strconv.FormatInt(n, 10)
-		case errors.Is(err, sql.ErrNoRows): // first attempt for this method
-		default:
+	}
+	// Money path: the order id is claimed in the database BEFORE calling the
+	// provider, so two concurrent clicks (StrictMode double-effect,
+	// double-tap, retry) serialize on the primary key instead of opening two
+	// charges at the gateway. The loser waits for the winner's charge and
+	// reuses its QR; a failed claim is marked failed so the next attempt
+	// advances to a fresh -rN suffix. A crashed claim stays "processing"
+	// (never reusable, never polled by the reconciler) and is skipped the
+	// same way.
+	for attempt := 0; attempt < 3; attempt++ {
+		orderID, reuse, rerr := publicRetryOrderID(db, base, invoice, method, balance)
+		if rerr != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load gateway transaction", nil)
 		}
-	}
-	req := spec.request(orderID, "", "", method)
-	if method == gateway.MethodQRIS {
-		req.DirectQRIS = true
-	}
-	if gw.Name() == "nowpayments" && payCurrency != "" {
-		req.PayCurrency = strings.ToUpper(strings.TrimSpace(payCurrency))
-	}
-	created, err := gw.CreateTransaction(c.Context(), req)
-	if err != nil {
-		if errors.Is(err, gateway.ErrNotConfigured) {
-			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+		if reuse != nil {
+			return utils.OK(c, fiber.StatusOK, publicIntentResponse(*reuse))
 		}
-		if errors.Is(err, gateway.ErrAmountBelowMinimum) {
-			return utils.Fail(c, fiber.StatusBadRequest, "payment amount is below the gateway minimum", fiber.Map{"code": "amount_below_minimum"})
+		now := time.Now()
+		claim := &models.GatewayTransaction{
+			OrderID: orderID, ProjectSlug: "local", Gateway: gw.Name(), PaymentMethod: method,
+			ExternalOrderID: invoice.ID.String(),
+			InvoiceID:       &invoice.ID, UserID: &link.UserID, AmountIDR: spec.AmountMinor, AmountDecimal: spec.AmountDecimal,
+			Currency: spec.Currency, InvoiceCurrency: strings.ToUpper(strings.TrimSpace(invoice.Currency)),
+			InvoiceAmount: spec.InvoiceAmount, UsdToIdr: spec.UsdToIdr,
+			Status: publicIntentProcessing, CreatedAt: now, UpdatedAt: now,
 		}
-		if errors.Is(err, gateway.ErrRateLimited) {
-			return utils.Fail(c, fiber.StatusTooManyRequests, "payment gateway is rate limited, please retry", fiber.Map{"code": "rate_limited"})
+		// Claim the order id, adopting a dead claim left by a previous
+		// attempt that never reached the provider. A live row owned by a
+		// sibling click is joined via wait; anything else advances the
+		// loop to a fresh suffix.
+		claimed, err := claimPublicOrderID(db, claim)
+		if err != nil {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
 		}
-		logger.L().Warn("public gateway intent failed", "gateway", gw.Name(), "method", method, "err", err)
-		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
+		if !claimed {
+			if winner := waitForPublicIntent(db, orderID, balance); winner != nil {
+				return utils.OK(c, fiber.StatusOK, publicIntentResponse(*winner))
+			}
+			continue
+		}
+		req := spec.request(orderID, "", "", method)
+		if method == gateway.MethodQRIS {
+			req.DirectQRIS = true
+		}
+		if gw.Name() == "nowpayments" && payCurrency != "" {
+			req.PayCurrency = strings.ToUpper(strings.TrimSpace(payCurrency))
+		}
+		created, err := gw.CreateTransaction(c.Context(), req)
+		if err != nil {
+			claim.Status = models.GatewayStatusFailed
+			claim.UpdatedAt = time.Now()
+			_ = db.SaveTransaction(claim)
+			if errors.Is(err, gateway.ErrNotConfigured) {
+				return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
+			}
+			if errors.Is(err, gateway.ErrAmountBelowMinimum) {
+				return utils.Fail(c, fiber.StatusBadRequest, "payment amount is below the gateway minimum", fiber.Map{"code": "amount_below_minimum"})
+			}
+			if errors.Is(err, gateway.ErrRateLimited) {
+				return utils.Fail(c, fiber.StatusTooManyRequests, "payment gateway is rate limited, please retry", fiber.Map{"code": "rate_limited"})
+			}
+			if isDuplicateOrderError(err) {
+				if winner, werr := db.LatestIntent("local", invoice.ID.String(), method); werr == nil && reusableIntent(winner, balance) {
+					return utils.OK(c, fiber.StatusOK, publicIntentResponse(winner))
+				}
+				continue
+			}
+			logger.L().Warn("public gateway intent failed", "gateway", gw.Name(), "method", method, "err", err)
+			return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
+		}
+		claim.Gateway = gw.Name()
+		claim.Status = models.GatewayStatusPending
+		claim.SnapToken = created.Token
+		claim.RedirectURL = created.RedirectURL
+		claim.PaymentURL = created.PaymentURL
+		claim.Address = created.Address
+		claim.PayAmount = created.RawPayload
+		claim.PayCurrency = created.PayCurrency
+		claim.ExpiresAt = created.ExpiresAt
+		claim.UpdatedAt = time.Now()
+		if err := db.SaveTransaction(claim); err != nil {
+			logger.L().Warn("public gateway intent store failed", "order_id", orderID, "err", err)
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
+		}
+		return utils.OK(c, fiber.StatusOK, publicIntentResponse(*claim))
 	}
-	now := time.Now()
-	txn := &models.GatewayTransaction{
-		OrderID: orderID, ProjectSlug: "local", Gateway: gw.Name(), PaymentMethod: method,
-		ExternalOrderID: invoice.ID.String(),
-		InvoiceID:       &invoice.ID, UserID: &link.UserID, AmountIDR: spec.AmountMinor, AmountDecimal: spec.AmountDecimal,
-		Currency: spec.Currency, InvoiceCurrency: strings.ToUpper(strings.TrimSpace(invoice.Currency)),
-		InvoiceAmount: spec.InvoiceAmount, UsdToIdr: spec.UsdToIdr,
-		Status: models.GatewayStatusPending, SnapToken: created.Token, RedirectURL: created.RedirectURL,
-		PaymentURL: created.PaymentURL, Address: created.Address, PayAmount: created.RawPayload, PayCurrency: created.PayCurrency,
-		ExpiresAt: created.ExpiresAt, CreatedAt: now, UpdatedAt: now,
+	logger.L().Warn("public gateway intent race exhausted", "method", method, "invoice", invoice.ID.String())
+	return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
+}
+
+// publicIntentProcessing marks an order id claimed in the database while its
+// provider charge is still in flight. It is deliberately not one of the
+// GatewayStatus values: reusableIntent only reuses pending rows and the
+// reconciler only polls pending rows, so a claim is invisible to both until
+// it completes. Status is a free-form string column, so no migration is
+// needed for this value.
+const publicIntentProcessing = "processing"
+
+// publicClaimWait bounds how long a losing click waits for the winner's
+// charge before falling through to a retry suffix. The winner's Core API
+// call typically resolves in ~2s against a 15s timeout, so this covers it
+// without holding the payer's request.
+const publicClaimWait = 12 * time.Second
+
+// publicClaimStep is the poll interval while waiting for a claimed intent.
+const publicClaimStep = 100 * time.Millisecond
+
+// publicClaimStale is the age past which a "processing" claim is treated as
+// crashed instead of in flight: the provider call it guards always resolves
+// within seconds, so an older claim can never complete and must not block a
+// new click for the full wait window.
+const publicClaimStale = 60 * time.Second
+
+// waitForPublicIntent polls a claimed order id until its charge completes.
+// It returns the winner while it is still payable, or nil when the claim
+// failed or is still in flight past the deadline (the caller then retries
+// under a fresh suffix).
+func waitForPublicIntent(db database.Queries, orderID string, balance decimal.Decimal) *models.GatewayTransaction {
+	deadline := time.Now().Add(publicClaimWait)
+	for time.Now().Before(deadline) {
+		time.Sleep(publicClaimStep)
+		txn, err := db.GetTransaction(orderID)
+		if err != nil {
+			continue
+		}
+		if txn.Status == publicIntentProcessing {
+			continue
+		}
+		if reusableIntent(txn, balance) {
+			return &txn
+		}
+		return nil
 	}
-	if err := db.CreateTransaction(txn); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
+	return nil
+}
+
+// publicRetryOrderID resolves the order id for one attempt: a still-payable
+// intent is returned for reuse, otherwise the next retry suffix (-rN) is
+// appended because the provider rejects duplicate order ids. The legacy
+// empty method keeps its suffix-less id forever. A fresh "processing" claim
+// (a sibling click whose charge is still in flight) is waited on instead of
+// being suffixed past — suffixing it would open a second charge at the
+// gateway for the same user click.
+func publicRetryOrderID(db database.Queries, base string, invoice models.Invoice, method string, balance decimal.Decimal) (string, *models.GatewayTransaction, error) {
+	if method == "" {
+		return base, nil, nil
 	}
-	return utils.OK(c, fiber.StatusOK, publicIntentResponse(*txn))
+	latest, err := db.LatestIntent("local", invoice.ID.String(), method)
+	switch {
+	case err == nil:
+		if latest.Status == publicIntentProcessing && time.Since(latest.CreatedAt) < publicClaimStale {
+			if winner := waitForPublicIntent(db, latest.OrderID, balance); winner != nil {
+				return "", winner, nil
+			}
+		}
+		if isDeadClaim(latest) {
+			return latest.OrderID, nil, nil
+		}
+		if reusableIntent(latest, balance) {
+			return "", &latest, nil
+		}
+		n, cerr := db.CountIntents("local", invoice.ID.String(), method)
+		if cerr != nil {
+			return "", nil, cerr
+		}
+		return base + "-r" + strconv.FormatInt(n, 10), nil, nil
+	case errors.Is(err, sql.ErrNoRows):
+		return base, nil, nil
+	default:
+		return "", nil, err
+	}
+}
+
+// isDeadClaim reports a claim that provably never reached the provider: it
+// failed while holding no provider payload (no Snap token, redirect, QR, or
+// deposit address). Its order id is safe to adopt because the gateway never
+// saw it, so adopting can never double-charge.
+func isDeadClaim(t models.GatewayTransaction) bool {
+	if t.Status != models.GatewayStatusFailed {
+		return false
+	}
+	return t.SnapToken == "" && t.RedirectURL == "" && t.PaymentURL == "" && t.Address == ""
+}
+
+// claimPublicOrderID atomically claims an order id for the caller's charge.
+// A fresh id is inserted; a collision on a dead claim adopts that row (reset
+// to processing); a collision on anything else reports false so the caller
+// joins the live claim via waitForPublicIntent. A non-duplicate storage
+// error is returned.
+func claimPublicOrderID(db database.Queries, claim *models.GatewayTransaction) (bool, error) {
+	if err := db.CreateTransaction(claim); err == nil {
+		return true, nil
+	} else if !isDuplicateKeyError(err) {
+		return false, err
+	}
+	existing, gerr := db.GetTransaction(claim.OrderID)
+	if gerr != nil || !isDeadClaim(existing) {
+		return false, nil
+	}
+	existing.Status = publicIntentProcessing
+	existing.UpdatedAt = time.Now()
+	if serr := db.SaveTransaction(&existing); serr != nil {
+		return false, serr
+	}
+	*claim = existing
+	return true, nil
+}
+func isDuplicateKeyError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "unique constraint") || strings.Contains(msg, "unique_index") || strings.Contains(msg, "primary key")
+}
+
+// isDuplicateOrderError reports a provider-side duplicate order id rejection
+// (Midtrans refuses to recharge an order id it already holds).
+func isDuplicateOrderError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "already used") || strings.Contains(msg, "order_id")
 }
 
 // reusableIntent reports whether a stored public intent can still be paid:
