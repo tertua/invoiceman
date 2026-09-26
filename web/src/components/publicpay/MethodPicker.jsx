@@ -32,7 +32,7 @@ export default function MethodPicker({ methods, lang, onPick, pending, error }) 
     const rank = (m) => (String(m.currency || "").toUpperCase() === "IDR" ? 0 : 1);
     return [...methods].sort((a, b) => rank(a) - rank(b) || String(a.id).localeCompare(String(b.id)));
   }, [methods]);
-  const [selected, setSelected] = useState(() => ordered[0]?.id || "");
+  const [selected, setSelected] = useState("");
   const chosen = ordered.find((m) => m.id === selected) || null;
   if (!ordered.length) return <p className="mt-6 text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</p>;
 

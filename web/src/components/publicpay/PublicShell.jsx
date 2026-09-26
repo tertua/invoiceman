@@ -25,15 +25,19 @@ export default function PublicShell({ children, branding, lang, onLang }) {
   const appName = useAppName();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-[var(--bg)]">
-      <div className="w-full max-w-[520px] flex justify-end">
-        <LangToggle lang={lang} onLang={onLang} />
+      <div className="w-full max-w-[520px] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {branding?.logo_url ? (
+            <img src={branding.logo_url} alt={branding.company_name || "logo"} className="h-9 w-9 object-contain rounded shrink-0" />
+          ) : null}
+          {branding?.company_name ? (
+            <div className="font-display text-base font-semibold text-[var(--ink)] truncate">{branding.company_name}</div>
+          ) : null}
+        </div>
+        <div className="shrink-0">
+          <LangToggle lang={lang} onLang={onLang} />
+        </div>
       </div>
-      {branding?.logo_url ? (
-        <img src={branding.logo_url} alt={branding.company_name || "logo"} className="h-12 w-12 object-contain rounded" />
-      ) : null}
-      {branding?.company_name ? (
-        <div className="font-display text-lg font-semibold text-[var(--ink)]">{branding.company_name}</div>
-      ) : null}
       {children}
       <p className="text-[11px] text-[var(--ink-muted)]">
         Powered by{" "}
