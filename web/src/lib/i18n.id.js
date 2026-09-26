@@ -553,7 +553,7 @@ export const id = {
     "payments.voidFailed": "Gagal membatalkan pembayaran",
     "payments.colDate": "Tanggal",
     "payments.colInvoiceClient": "Faktur / Klien",
-    "payments.recordTitle": "Metode",
+    "payments.recordTitle": "Catat Pembayaran",
     "payments.selectInvoice": "Pilih faktur",
     "payments.validAmount": "Masukkan jumlah yang valid",
     "payments.saveFailed": "Gagal mencatat pembayaran",

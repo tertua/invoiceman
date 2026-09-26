@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -128,7 +129,7 @@ func createRelayIntent(c fiber.Ctx) error {
 		// A sibling request owns this slot: join its charge instead of
 		// opening a second one. Only a stuck claim falls through, and the
 		// provider call below is then genuinely the only live attempt.
-		if winner := waitForRelayClaim(*db, project.Slug, input.ExternalOrderID, claimID, balance); winner != nil {
+		if winner := waitForRelayClaim(c.Context(), *db, project.Slug, input.ExternalOrderID, claimID, balance); winner != nil {
 			return utils.OK(c, fiber.StatusOK, intentResponse(*winner))
 		}
 		logger.L().Warn("relay intent claim stuck, charging without slot", "project", project.Slug, "external", input.ExternalOrderID)
@@ -142,14 +143,20 @@ func createRelayIntent(c fiber.Ctx) error {
 		if swap {
 			claim.Status = models.GatewayStatusFailed
 			claim.UpdatedAt = time.Now()
-			_ = db.SaveTransaction(claim)
+			if serr := db.SaveTransaction(claim); serr != nil {
+				logger.L().Warn("relay intent claim store failed", "order_id", claim.OrderID, "err", serr)
+			}
 		}
 		if errors.Is(err, gateway.ErrNotConfigured) {
 			return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
 		}
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
 	}
-	raw, _ := json.Marshal(input)
+	raw, merr := json.Marshal(input)
+	if merr != nil {
+		logger.L().Warn("relay intent audit payload marshal failed", "project", project.Slug, "external", input.ExternalOrderID, "err", merr)
+		raw = []byte("{}")
+	}
 	finished := time.Now()
 	txn := &models.GatewayTransaction{
 		OrderID:         orderID,
@@ -197,10 +204,19 @@ func relayClaimID(projectSlug, external, method, currency string, amount decimal
 // vanished claim means the winner atomically swapped it for the real intent,
 // so the newest real row is returned while payable. Stale claims and terminal
 // rows resolve to nil so the caller proceeds with its own charge.
-func waitForRelayClaim(db database.Queries, projectSlug, external, claimID string, balance decimal.Decimal) *models.GatewayTransaction {
+func waitForRelayClaim(ctx context.Context, db database.Queries, projectSlug, external, claimID string, balance decimal.Decimal) *models.GatewayTransaction {
 	deadline := time.Now().Add(publicClaimWait)
+	step := publicClaimStep
 	for time.Now().Before(deadline) {
-		time.Sleep(publicClaimStep)
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(step):
+		}
+		step *= 2
+		if step > time.Second {
+			step = time.Second
+		}
 		txn, err := db.GetTransaction(claimID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {

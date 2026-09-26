@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
+	"gorm.io/gorm"
 )
 
 // publicIntentRequest is the optional body for creating a public pay intent.
@@ -51,7 +53,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		// loop below, which adopts or joins them.
 		if existing, err := db.GetTransaction(base); err == nil && !isDeadClaim(existing) {
 			if existing.Status == publicIntentProcessing {
-				if winner := waitForPublicIntent(db, base, balance); winner != nil {
+				if winner := waitForPublicIntent(c.Context(), db, base, balance); winner != nil {
 					return utils.OK(c, fiber.StatusOK, publicIntentResponse(*winner))
 				}
 			} else {
@@ -71,7 +73,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	// (never reusable, never polled by the reconciler) and is skipped the
 	// same way.
 	for attempt := 0; attempt < 3; attempt++ {
-		orderID, reuse, rerr := publicRetryOrderID(db, base, invoice, method, balance)
+		orderID, reuse, rerr := publicRetryOrderID(c.Context(), db, base, invoice, method, balance)
 		if rerr != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load gateway transaction", nil)
 		}
@@ -96,7 +98,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
 		}
 		if !claimed {
-			if winner := waitForPublicIntent(db, orderID, balance); winner != nil {
+			if winner := waitForPublicIntent(c.Context(), db, orderID, balance); winner != nil {
 				return utils.OK(c, fiber.StatusOK, publicIntentResponse(*winner))
 			}
 			continue
@@ -112,7 +114,9 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		if err != nil {
 			claim.Status = models.GatewayStatusFailed
 			claim.UpdatedAt = time.Now()
-			_ = db.SaveTransaction(claim)
+			if serr := db.SaveTransaction(claim); serr != nil {
+				logger.L().Warn("public gateway intent claim store failed", "order_id", claim.OrderID, "err", serr)
+			}
 			if errors.Is(err, gateway.ErrNotConfigured) {
 				return utils.Fail(c, fiber.StatusNotImplemented, "payment gateway is not configured", nil)
 			}
@@ -178,10 +182,19 @@ const publicClaimStale = 60 * time.Second
 // It returns the winner while it is still payable, or nil when the claim
 // failed or is still in flight past the deadline (the caller then retries
 // under a fresh suffix).
-func waitForPublicIntent(db database.Queries, orderID string, balance decimal.Decimal) *models.GatewayTransaction {
+func waitForPublicIntent(ctx context.Context, db database.Queries, orderID string, balance decimal.Decimal) *models.GatewayTransaction {
 	deadline := time.Now().Add(publicClaimWait)
+	step := publicClaimStep
 	for time.Now().Before(deadline) {
-		time.Sleep(publicClaimStep)
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(step):
+		}
+		step *= 2
+		if step > time.Second {
+			step = time.Second
+		}
 		txn, err := db.GetTransaction(orderID)
 		if err != nil {
 			continue
@@ -204,7 +217,7 @@ func waitForPublicIntent(db database.Queries, orderID string, balance decimal.De
 // (a sibling click whose charge is still in flight) is waited on instead of
 // being suffixed past — suffixing it would open a second charge at the
 // gateway for the same user click.
-func publicRetryOrderID(db database.Queries, base string, invoice models.Invoice, method string, balance decimal.Decimal) (string, *models.GatewayTransaction, error) {
+func publicRetryOrderID(ctx context.Context, db database.Queries, base string, invoice models.Invoice, method string, balance decimal.Decimal) (string, *models.GatewayTransaction, error) {
 	if method == "" {
 		return base, nil, nil
 	}
@@ -212,7 +225,7 @@ func publicRetryOrderID(db database.Queries, base string, invoice models.Invoice
 	switch {
 	case err == nil:
 		if latest.Status == publicIntentProcessing && time.Since(latest.CreatedAt) < publicClaimStale {
-			if winner := waitForPublicIntent(db, latest.OrderID, balance); winner != nil {
+			if winner := waitForPublicIntent(ctx, db, latest.OrderID, balance); winner != nil {
 				return "", winner, nil
 			}
 		}
@@ -280,6 +293,15 @@ func isStaleClaim(t models.GatewayTransaction) bool {
 	return t.Status == publicIntentProcessing && time.Since(t.CreatedAt) > publicClaimStale
 }
 func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Typed check first: both dialectors translate unique violations to
+	// gorm.ErrDuplicatedKey (TranslateError is enabled in platform/database).
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	// Fallback for untranslated driver errors.
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "unique constraint") || strings.Contains(msg, "unique_index") || strings.Contains(msg, "primary key")
 }

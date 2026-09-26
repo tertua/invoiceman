@@ -7,9 +7,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -50,7 +50,7 @@ func paymentNotification(confirmed *payment) *gateway.NotificationResult {
 
 // fetchPaymentStatus returns the live payment via GET /v1/payment/{id}.
 func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*payment, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.BaseURL()+"/payment/"+paymentID, http.NoBody)
@@ -58,19 +58,20 @@ func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*pay
 		return nil, err
 	}
 	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("User-Agent", constants.UserAgent())
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := constants.DefaultHTTPClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments status: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments status: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("nowpayments status: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return nil, fmt.Errorf("nowpayments status: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	p, err := decodePayment(raw)
 	if err != nil {

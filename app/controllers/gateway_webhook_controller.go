@@ -11,8 +11,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/pkg/logger"
+	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -81,10 +81,11 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 	// Idempotent: same status + same gateway txn id needs no further work,
 	// unless no delivery ever succeeded (forward may have failed earlier).
 	if !statusChanged && txn.MidtransTxnID == notif.TransactionID {
-		deliveries, _ := db.ListDeliveriesByOrder(txn.OrderID)
-		for _, d := range deliveries {
-			if d.Status == "delivered" {
-				return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true})
+		if deliveries, derr := db.ListDeliveriesByOrder(txn.OrderID); derr == nil {
+			for _, d := range deliveries {
+				if d.Status == "delivered" {
+					return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true})
+				}
 			}
 		}
 	}
@@ -101,38 +102,11 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		now := time.Now()
 		txn.PaidAt = &now
 	}
-	
 	// Validate webhook amount and currency before settlement to prevent money loss.
 	if status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
-		// Critical: verify webhook amount matches the original transaction intent.
-		if txn.Currency != notif.Currency {
-			logger.L().Error("webhook currency mismatch - refusing to settle",
-				"order_id", notif.OrderID,
-				"expected_currency", txn.Currency,
-				"webhook_currency", notif.Currency,
-				"expected_amount", txn.AmountIDR,
-				"webhook_amount", notif.GrossMinor,
-				"invoice_id", *txn.InvoiceID,
-				"user_id", *txn.UserID)
-			return utils.Fail(c, fiber.StatusBadRequest, "webhook currency mismatch", nil)
+		if verr := checkWebhookAmount(c, txn, notif); verr != nil {
+			return verr
 		}
-		// Allow small rounding differences (e.g., 1 minor unit) but reject significant mismatches.
-		amountDiff := txn.AmountIDR - notif.GrossMinor
-		if amountDiff < 0 {
-			amountDiff = -amountDiff
-		}
-		if amountDiff > 1 {
-			logger.L().Error("webhook amount mismatch - refusing to settle",
-				"order_id", notif.OrderID,
-				"currency", txn.Currency,
-				"expected_amount", txn.AmountIDR,
-				"webhook_amount", notif.GrossMinor,
-				"diff", amountDiff,
-				"invoice_id", *txn.InvoiceID,
-				"user_id", *txn.UserID)
-			return utils.Fail(c, fiber.StatusBadRequest, "webhook amount mismatch", nil)
-		}
-		
 		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gatewayDisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
@@ -311,7 +285,9 @@ func RetryDelivery(c fiber.Ctx) error {
 		delivery.Status = "failed"
 		delivery.RespBody = truncateErr(ferr.Error())
 		delivery.NextRetryAt = &retryAt
-		_ = db.SaveDelivery(&delivery)
+		if serr := db.SaveDelivery(&delivery); serr != nil {
+			logger.L().Warn("delivery retry state store failed", "delivery_id", delivery.ID.String(), "err", serr)
+		}
 		return utils.Fail(c, fiber.StatusBadGateway, "retry failed", nil)
 	}
 	delivery.RespCode = result.StatusCode
@@ -324,7 +300,9 @@ func RetryDelivery(c fiber.Ctx) error {
 		delivery.Status = "failed"
 		delivery.NextRetryAt = &retryAt
 	}
-	_ = db.SaveDelivery(&delivery)
+	if serr := db.SaveDelivery(&delivery); serr != nil {
+		logger.L().Warn("delivery retry state store failed", "delivery_id", delivery.ID.String(), "err", serr)
+	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"delivery": deliveryResponse(delivery)})
 }
 

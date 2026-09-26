@@ -1,11 +1,8 @@
 package captcha
 
 // Package captcha verifies Cloudflare Turnstile tokens (stdlib only).
-//
-// Verification is required on abuse-prone public endpoints (register,
-// login, forgot-password, reset-password) whenever TURNSTILE_SECRET is
-// configured. Empty secret disables verification (dev/test default) so
-// local flows and the test suite keep working without network access.
+// Verification runs on abuse-prone public endpoints when TURNSTILE_SECRET
+// is set; empty secret disables it so dev and tests work offline.
 
 import (
 	"context"
@@ -14,9 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/constants"
 )
 
 // ErrNotConfigured is returned when no secret is set (verification off).
@@ -61,15 +58,16 @@ func Verify(ctx context.Context, token, remoteIP string) error {
 		form.Set("remoteip", remoteIP)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.CaptchaVerifyTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, verifyURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", constants.UserAgent())
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

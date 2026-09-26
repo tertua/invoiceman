@@ -168,16 +168,16 @@ func (w *Worker) sendOneMail(db *database.Queries, m models.MailOutbox, now time
 		if errors.Is(err, mail.ErrNotConfigured) {
 			// No SMTP configured (dev): leave pending without burning
 			// attempts; reset the claim so the next tick retries.
-			_ = db.MarkMailFailed(m.ID, m.Attempt, &[]time.Time{now.Add(w.poll)}[0], now)
+			recordErr("mark mail failed", db.MarkMailFailed(m.ID, m.Attempt, &[]time.Time{now.Add(w.poll)}[0], now), "mail_id", m.ID.String())
 			logger.L().Debug("outbox mail skipped, provider not configured", "mail_id", m.ID.String(), "to", m.To)
 			return
 		}
 		retry := nextRetryAt(m.Attempt+1, now)
-		_ = db.MarkMailFailed(m.ID, m.Attempt+1, retry, now)
+		recordErr("mark mail failed", db.MarkMailFailed(m.ID, m.Attempt+1, retry, now), "mail_id", m.ID.String())
 		logger.L().Warn("outbox mail failed", "mail_id", m.ID.String(), "to", m.To, "attempt", m.Attempt+1, "err", err)
 		return
 	}
-	_ = db.MarkMailSent(m.ID, now)
+	recordErr("mark mail sent", db.MarkMailSent(m.ID, now), "mail_id", m.ID.String())
 	logger.L().Info("outbox mail sent", "mail_id", m.ID.String(), "to", m.To)
 }
 
@@ -199,11 +199,11 @@ func (w *Worker) processDeliveries(ctx context.Context) {
 			return
 		default:
 		}
-		w.forwardOne(db, d, now)
+		w.forwardOne(ctx, db, d, now)
 	}
 }
 
-func (w *Worker) forwardOne(db *database.Queries, d models.WebhookDelivery, now time.Time) {
+func (w *Worker) forwardOne(ctx context.Context, db *database.Queries, d models.WebhookDelivery, now time.Time) {
 	claimed, err := db.ClaimDelivery(d.ID, now)
 	if err != nil || !claimed {
 		return
@@ -218,7 +218,7 @@ func (w *Worker) forwardOne(db *database.Queries, d models.WebhookDelivery, now 
 	d.Signature = relay.SignPayload(payload, project.WebhookSecret)
 	d.Attempt++
 	d.UpdatedAt = now
-	result, ferr := relay.Forward(context.Background(), d.TargetURL, project.Slug, "evt_retry_"+d.ID.String(), payload, project.WebhookSecret)
+	result, ferr := relay.Forward(ctx, d.TargetURL, project.Slug, "evt_retry_"+d.ID.String(), payload, project.WebhookSecret)
 	if ferr != nil {
 		retry := nextRetryAt(d.Attempt, now)
 		failDelivery(db, d.ID, d.Attempt, retry, truncateErr(ferr.Error()), now)
@@ -237,7 +237,7 @@ func (w *Worker) forwardOne(db *database.Queries, d models.WebhookDelivery, now 
 			d.Status = "dead"
 		}
 	}
-	_ = db.SaveDelivery(&d)
+	recordErr("save delivery", db.SaveDelivery(&d), "delivery_id", d.ID.String(), "order_id", d.OrderID)
 	if d.Status == "delivered" {
 		logger.L().Info("outbox delivery sent", "delivery_id", d.ID.String(), "order_id", d.OrderID, "attempt", d.Attempt)
 	}
@@ -274,11 +274,11 @@ func (w *Worker) processNotifications(ctx context.Context) {
 			return
 		default:
 		}
-		w.forwardOneNotification(db, d, now)
+		w.forwardOneNotification(ctx, db, d, now)
 	}
 }
 
-func (w *Worker) forwardOneNotification(db *database.Queries, d models.NotificationDelivery, now time.Time) {
+func (w *Worker) forwardOneNotification(ctx context.Context, db *database.Queries, d models.NotificationDelivery, now time.Time) {
 	claimed, err := db.ClaimNotification(d.ID, now)
 	if err != nil || !claimed {
 		return
@@ -286,25 +286,25 @@ func (w *Worker) forwardOneNotification(db *database.Queries, d models.Notificat
 	endpoint, err := db.GetEndpoint(d.UserID, d.EndpointID)
 	if err != nil {
 		retry := nextRetryAt(d.Attempt+1, now)
-		_ = db.MarkNotificationFailed(d.ID, d.Attempt+1, retry, 0, "endpoint not found", now)
+		recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt+1, retry, 0, "endpoint not found", now), "delivery_id", d.ID.String())
 		return
 	}
 	payload := []byte(d.Payload)
 	d.Attempt++
-	result, ferr := ForwardNotification(context.Background(), d.TargetURL, "evt_retry_"+d.ID.String(), payload, endpoint.Secret)
+	result, ferr := ForwardNotification(ctx, d.TargetURL, "evt_retry_"+d.ID.String(), payload, endpoint.Secret)
 	if ferr != nil {
 		retry := nextRetryAt(d.Attempt, now)
-		_ = db.MarkNotificationFailed(d.ID, d.Attempt, retry, 0, truncateErr(ferr.Error()), now)
+		recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt, retry, 0, truncateErr(ferr.Error()), now), "delivery_id", d.ID.String())
 		logger.L().Warn("outbox notification failed", "delivery_id", d.ID.String(), "event_type", d.EventType, "attempt", d.Attempt, "err", ferr)
 		return
 	}
 	if result.StatusCode >= 200 && result.StatusCode < 300 {
-		_ = db.MarkNotificationSent(d.ID, result.StatusCode, truncateBody(result.Body), now)
+		recordErr("mark notification sent", db.MarkNotificationSent(d.ID, result.StatusCode, truncateBody(result.Body), now), "delivery_id", d.ID.String())
 		logger.L().Info("outbox notification sent", "delivery_id", d.ID.String(), "event_type", d.EventType, "attempt", d.Attempt)
 		return
 	}
 	retry := nextRetryAt(d.Attempt, now)
-	_ = db.MarkNotificationFailed(d.ID, d.Attempt, retry, result.StatusCode, truncateBody(result.Body), now)
+	recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt, retry, result.StatusCode, truncateBody(result.Body), now), "delivery_id", d.ID.String())
 }
 
 func (w *Worker) purgeIdempotency() {

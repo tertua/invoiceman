@@ -10,16 +10,15 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/constants"
 )
 
 var ErrNotConfigured = errors.New("AI provider is not configured")
 
-// ErrRateLimited reports a 429 from the provider (free-tier quota). Callers
-// map it to HTTP 429 so the UI can tell users to retry shortly instead of
-// showing a generic failure.
+// ErrRateLimited reports a 429 from the provider. Callers map it to HTTP
+// 429 so the UI can tell users to retry shortly.
 var ErrRateLimited = errors.New("AI provider rate limit reached")
 
 type GeminiClient struct {
@@ -71,7 +70,7 @@ func NewGeminiClient() *GeminiClient {
 	return &GeminiClient{
 		APIKey:     cfg.GeminiKey,
 		Model:      cfg.GeminiModel,
-		HTTPClient: &http.Client{Timeout: 45 * time.Second},
+		HTTPClient: &http.Client{Timeout: constants.GeminiAPITimeout},
 	}
 }
 
@@ -108,9 +107,10 @@ func (c *GeminiClient) generate(ctx context.Context, parts []geminiPart, jsonRes
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", constants.UserAgent())
 	client := c.HTTPClient
 	if client == nil {
-		client = http.DefaultClient
+		client = constants.DefaultHTTPClient
 	}
 	resp, err := client.Do(req)
 	if err != nil {

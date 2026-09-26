@@ -8,9 +8,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/pkg/constants"
 )
 
 // TxStatus is the subset of the Core API transaction status used to
@@ -47,7 +47,7 @@ func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, er
 	if cfg.IsProd {
 		base = "https://api.midtrans.com"
 	}
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/v2/"+orderID+"/status", http.NoBody)
@@ -55,19 +55,20 @@ func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, er
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", constants.UserAgent())
 	req.SetBasicAuth(cfg.ServerKey, "")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := constants.DefaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("midtrans status: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return nil, fmt.Errorf("midtrans status: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("midtrans status: status %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return nil, fmt.Errorf("midtrans status: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	out := &statusResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {

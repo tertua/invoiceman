@@ -104,28 +104,28 @@ func (w *Worker) reconcileGateway(ctx context.Context) {
 			return
 		default:
 		}
-		w.reconcileOne(db, txn)
+		w.reconcileOne(ctx, db, txn)
 	}
 }
 
 // reconcileOne mirrors one provider answer into the stored transaction.
 // The UpdatedAt touch always persists, spacing the next poll even when the
 // provider is unreachable or still reports pending.
-func (w *Worker) reconcileOne(db *database.Queries, txn models.GatewayTransaction) {
+func (w *Worker) reconcileOne(ctx context.Context, db *database.Queries, txn models.GatewayTransaction) {
 	now := time.Now()
 	txn.UpdatedAt = now
-	st, err := FetchTxStatus(context.Background(), txn)
+	st, err := FetchTxStatus(ctx, txn)
 	if errors.Is(err, errNoPoll) {
-		_ = db.SaveTransaction(&txn)
+		recordErr("save reconcile touch", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 		return
 	}
 	if err != nil {
-		_ = db.SaveTransaction(&txn)
+		recordErr("save reconcile touch", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 		logger.L().Warn("outbox reconcile poll failed", "order_id", txn.OrderID, "err", err)
 		return
 	}
 	if st.Status == txn.Status {
-		_ = db.SaveTransaction(&txn)
+		recordErr("save reconcile touch", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 		return
 	}
 	txn.Status = st.Status
@@ -140,11 +140,11 @@ func (w *Worker) reconcileOne(db *database.Queries, txn models.GatewayTransactio
 			logger.L().Warn("outbox reconcile settle failed", "order_id", txn.OrderID, "err", err)
 			return
 		}
-		_ = cache.InvalidateUser(context.Background(), txn.UserID.String())
+		recordErr("invalidate user cache", cache.InvalidateUser(ctx, txn.UserID.String()), "order_id", txn.OrderID)
 		logger.L().Info("outbox reconcile settled invoice", "order_id", txn.OrderID)
 		return
 	}
-	_ = db.SaveTransaction(&txn)
+	recordErr("save reconciled transaction", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 	logger.L().Info("outbox reconcile updated transaction", "order_id", txn.OrderID, "status", txn.Status)
 }
 

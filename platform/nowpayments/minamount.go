@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
@@ -70,25 +71,26 @@ func minAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo string)
 // {"min_amount": <number>}. Unknown charge currencies answer 404.
 func fetchMinAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo string) (decimal.Decimal, error) {
 	endpoint := cfg.BaseURL() + "/min-amount?currency_from=" + url.QueryEscape(currencyFrom) + "&currency_to=" + url.QueryEscape(currencyTo)
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
 	if err != nil {
 		return decimal.Zero, err
 	}
 	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("User-Agent", constants.UserAgent())
 	httpReq.Header.Set("x-api-key", cfg.APIKey)
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := constants.DefaultHTTPClient.Do(httpReq)
 	if err != nil {
 		return decimal.Zero, fmt.Errorf("nowpayments min-amount: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, constants.MaxAPIResponseSize))
 	if err != nil {
 		return decimal.Zero, fmt.Errorf("nowpayments min-amount: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return decimal.Zero, fmt.Errorf("nowpayments min-amount: status %d: %s", resp.StatusCode, truncate(string(raw), 200))
+		return decimal.Zero, fmt.Errorf("nowpayments min-amount: status %d: %s", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog))
 	}
 	var decoded struct {
 		MinAmount json.Number `json:"min_amount"`

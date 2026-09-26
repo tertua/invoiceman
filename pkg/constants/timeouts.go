@@ -38,6 +38,12 @@ const (
 	// WebhookForwardTimeout is the timeout for forwarding webhooks to
 	// downstream services.
 	WebhookForwardTimeout = 10 * time.Second
+
+	// CaptchaVerifyTimeout bounds Cloudflare Turnstile verification.
+	CaptchaVerifyTimeout = 3 * time.Second
+
+	// GeminiAPITimeout bounds AI text generation calls.
+	GeminiAPITimeout = 45 * time.Second
 )
 
 // Response size limits for external API responses.

@@ -22,9 +22,8 @@ type Invoice struct {
 	InvoiceURL string
 }
 
-// CreateInvoice creates a NOWPayments hosted invoice for req.
-// AmountDecimal with Currency (fiat, e.g. "25.50", "USD") is preferred;
-// AmountMinor follows the relay convention of fiat minor units (e.g. IDR).
+// CreateInvoice creates a NOWPayments hosted invoice for req. AmountDecimal
+// with Currency is preferred; AmountMinor follows the relay minor-unit convention.
 func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest) (*Invoice, error) {
 	if cfg.APIKey == "" {
 		return nil, ErrNotConfigured
@@ -36,7 +35,7 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 	if err != nil {
 		return nil, err
 	}
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"price_amount":      json.Number(priceAmount.String()),
 		"price_currency":    priceCurrency,
 		"order_id":          strings.TrimSpace(req.OrderID),

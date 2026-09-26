@@ -42,9 +42,7 @@ func openPostgreSQL(dsn string) (*gorm.DB, error) {
 	logger.L().Info("database: using PostgreSQL")
 	UsingPostgreSQL = true
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		PrepareStmt: true,
-	})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{PrepareStmt: true, TranslateError: true})
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +78,7 @@ func openSQLite() (*gorm.DB, error) {
 		}
 	}
 
-	db, err := gorm.Open(sqliteDriver.Open(path), &gorm.Config{
-		PrepareStmt: true,
-	})
+	db, err := gorm.Open(sqliteDriver.Open(path), &gorm.Config{PrepareStmt: true, TranslateError: true})
 	if err != nil {
 		return nil, err
 	}

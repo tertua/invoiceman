@@ -16,17 +16,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// Idempotency-Key replay protection for mutating payment routes.
-//
-// Problem: a retried POST (double-click, timeout, FE retry) executes again
-// and creates a second payment/transaction. Fix: the client sends a unique
-// key per payment intent; the first execution stores its response snapshot
-// for IdempotencyTTLHours, repeats replay the snapshot, and a reused key
-// with a different payload is rejected with 422.
-//
-// The middleware is fail-open on infrastructure errors (a downed lookup
-// must not block payments) and only activates when the header is present,
-// so existing clients are unaffected.
+// Idempotency-Key replay protection: the client sends a unique key per
+// intent; the first execution stores its response snapshot, repeats replay
+// it, and a reused key with a different payload is rejected with 422.
+// Fail-open on infrastructure errors and only active when the header is
+// present, so existing clients are unaffected.
 const (
 	idempotencyHeader   = "Idempotency-Key"
 	idempotencyMaxKey   = 255
@@ -125,14 +119,14 @@ func Idempotency(scope IdempotencyScope) fiber.Handler {
 
 		// Execute, then snapshot the response for replays.
 		if err := c.Next(); err != nil {
-			_ = db.DeleteIdempotencyKey(rec.ID)
+			deleteIdempotencyKey(db, rec.ID)
 			return err
 		}
 		status := c.Response().StatusCode()
 		body := append([]byte(nil), c.Response().Body()...)
 		if status >= 500 || len(body) > idempotencyMaxBody {
 			// Server errors stay retryable; oversized bodies are not cached.
-			_ = db.DeleteIdempotencyKey(rec.ID)
+			deleteIdempotencyKey(db, rec.ID)
 			return nil
 		}
 		rec.StatusCode = status
@@ -148,7 +142,7 @@ func Idempotency(scope IdempotencyScope) fiber.Handler {
 // one, or rejects a key reused with a different payload.
 func replayOrWait(c fiber.Ctx, db *database.Queries, rec models.IdempotencyKey, reqHash string) error {
 	if !rec.ExpiresAt.After(time.Now()) {
-		_ = db.DeleteIdempotencyKey(rec.ID)
+		deleteIdempotencyKey(db, rec.ID)
 		return c.Next()
 	}
 	if rec.RequestHash != reqHash {
@@ -159,7 +153,12 @@ func replayOrWait(c fiber.Ctx, db *database.Queries, rec models.IdempotencyKey, 
 		// Another request is executing right now; wait for its snapshot.
 		deadline := time.Now().Add(idempotencyPollWait)
 		for time.Now().Before(deadline) {
-			time.Sleep(idempotencyPollStep)
+			select {
+			case <-c.Context().Done():
+				return utils.Fail(c, fiber.StatusConflict,
+					"conflicting request with the same idempotency key is in progress", nil)
+			case <-time.After(idempotencyPollStep):
+			}
 			updated, err := db.GetIdempotencyKey(rec.KeyHash, rec.Scope)
 			if err != nil {
 				break

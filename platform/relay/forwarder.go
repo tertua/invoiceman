@@ -15,8 +15,7 @@ type ForwardResult struct {
 	Body       string
 }
 
-// Forward POSTs payload to targetURL with relay signature headers.
-// Callers persist the result in webhook_deliveries for audit and retry.
+// Forward POSTs payload with relay signature headers; callers persist the result for audit and retry.
 func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payload []byte, secret string) (*ForwardResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, constants.WebhookForwardTimeout)
 	defer cancel()
@@ -40,9 +39,6 @@ func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payloa
 	if err != nil {
 		return &ForwardResult{StatusCode: resp.StatusCode}, err
 	}
-	body := string(raw)
-	if len(body) > 4000 {
-		body = body[:4000]
-	}
+	body := string(raw[:min(len(raw), 4000)])
 	return &ForwardResult{StatusCode: resp.StatusCode, Body: body}, nil
 }
