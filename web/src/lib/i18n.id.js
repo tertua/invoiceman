@@ -434,7 +434,7 @@ export const id = {
     "invDetail.noPayments": "Belum ada pembayaran tercatat",
     "invDetail.paidInFull": "Lunas",
     "invDetail.paidLocked": "Lunas — terkunci",
-    "invDetail.paidLockedDesc": "Faktur ini sudah lunas. Edit, ubah status, dan hapus dikunci. Void pembayaran untuk membukanya kembali.",
+    "invDetail.paidLockedDesc": "Faktur ini sudah lunas. Edit, ubah status, dan hapus dikunci.",
     "invDetail.manuallyPaidDesc": "Faktur ini ditandai lunas. Kembalikan status ke Terkirim untuk mengeditnya.",
 
     /* ============================ invoice editor ============================ */
@@ -553,7 +553,7 @@ export const id = {
     "payments.voidFailed": "Gagal membatalkan pembayaran",
     "payments.colDate": "Tanggal",
     "payments.colInvoiceClient": "Faktur / Klien",
-    "payments.recordTitle": "Catat pembayaran",
+    "payments.recordTitle": "Metode",
     "payments.selectInvoice": "Pilih faktur",
     "payments.validAmount": "Masukkan jumlah yang valid",
     "payments.saveFailed": "Gagal mencatat pembayaran",

@@ -93,17 +93,10 @@ export default function InvoiceDetail() {
 
         <div className="flex items-center gap-2 flex-wrap">
           <InvoicePdfDownload invoice={invoice} settings={settings} lang={lang} label="PDF" />
-          {canEdit ? (
+          {canEdit && (
           <Button variant="outline" onClick={() => nav(`/invoices/${id}/edit`)}>
             <Pencil size={15} /> {t("common.edit")}
           </Button>
-          ) : (
-          <span
-            title={st === "pending" ? t("status.pending") : t("invDetail.paidLocked")}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-semibold border border-[var(--border)] text-[var(--ink-muted)] opacity-60 cursor-not-allowed"
-          >
-            <Pencil size={15} /> {t("common.edit")}
-          </span>
           )}
           {canDelete ? (
           <Button
