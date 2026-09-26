@@ -93,21 +93,16 @@ func createRelayIntent(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for nowpayments", nil)
 	}
 	usdToIdr := decimal.Zero
-	var ownerSettings models.Settings
-	haveOwnerSettings := false
 	if project.OwnerUserID != nil {
 		if s, err := db.GetSettings(*project.OwnerUserID); err == nil {
 			usdToIdr = s.UsdToIdr
-			ownerSettings, haveOwnerSettings = s, true
 		}
 	}
 	spec, err := buildCharge(gw, invoiceCurrency, balance, usdToIdr)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
-	if haveOwnerSettings {
-		applyEnabledMethods(&spec, gw.Name(), ownerSettings)
-	}
+	applyEnabledMethods(&spec, gw.Name())
 	method := normalizedPaymentMethod(input.PaymentMethod)
 	claimID := relayClaimID(project.Slug, input.ExternalOrderID, method, invoiceCurrency, balance)
 	now := time.Now()

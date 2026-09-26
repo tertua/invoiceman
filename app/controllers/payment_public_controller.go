@@ -58,7 +58,7 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 			"client_key":    configs.Get().Midtrans.ClientKey,
 			"is_production": configs.Get().Midtrans.IsProd,
 		},
-		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist(settings)),
+		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist()),
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
 }

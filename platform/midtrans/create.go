@@ -36,15 +36,18 @@ func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxReque
 }
 
 // SnapMethods translates provider-neutral method ids into the Snap
-// enabled_payments codes, dropping any id Midtrans cannot express. An empty
-// input yields nil so Snap keeps its full default list.
+// enabled_payments codes, dropping any id Midtrans cannot express and
+// de-duplicating codes (qris and gopay both map to gopay). An empty input
+// yields nil so Snap keeps its full default list.
 func SnapMethods(methods []string) []string {
 	if len(methods) == 0 {
 		return nil
 	}
+	seen := make(map[string]bool)
 	out := make([]string, 0, len(methods))
 	for _, method := range methods {
-		if code := snapPaymentType(method); code != "" {
+		if code := snapPaymentType(method); code != "" && !seen[code] {
+			seen[code] = true
 			out = append(out, code)
 		}
 	}

@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"strings"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
@@ -10,68 +8,35 @@ import (
 	"github.com/tertua/invoiceman/platform/midtrans"
 )
 
-// normalizeMidtransMethods reduces a raw CSV to the single Midtrans method
-// the settings dropdown stores. It keeps the first supported id and falls
-// back to gopay for empty, unknown, or legacy multi-method values so the
-// public pay page always offers exactly one method.
-func normalizeMidtransMethods(raw string) string {
-	for _, part := range strings.Split(raw, ",") {
-		method := strings.ToLower(strings.TrimSpace(part))
-		for _, supported := range (midtrans.Gateway{}).Methods() {
-			if method == supported {
-				return method
-			}
-		}
-	}
-	return gateway.MethodGopay
+// normalizeMidtransMethods keeps the settings PATCH write consistent with the
+// routing below. Midtrans is locked to QRIS everywhere (code-first is the
+// source of truth: the owner's account only offers QRIS), so any input
+// normalizes to qris regardless of the stored per-owner value.
+func normalizeMidtransMethods(string) string {
+	return gateway.MethodQRIS
 }
 
-// midtransMethodAllowlist parses the stored single method id into a lookup
-// the router consults. Empty (legacy) allows every method.
-func midtransMethodAllowlist(settings models.Settings) map[string]bool {
-	raw := strings.TrimSpace(settings.MidtransMethods)
-	if raw == "" {
-		return nil
-	}
-	allow := make(map[string]bool)
-	for _, part := range strings.Split(raw, ",") {
-		if method := strings.ToLower(strings.TrimSpace(part)); method != "" {
-			allow[method] = true
-		}
-	}
-	if len(allow) == 0 {
-		return nil
-	}
-	return allow
+// midtransMethodAllowlist always allows exactly QRIS for Midtrans. The stored
+// per-owner midtrans_methods value is intentionally ignored: no other Midtrans
+// method is available on the owner's account, and the old DB value could not
+// be trusted to reflect that.
+func midtransMethodAllowlist() map[string]bool {
+	return map[string]bool{gateway.MethodQRIS: true}
 }
 
-// enabledMidtransMethods returns the single configured method, defaulting to
-// gopay for legacy empty settings so the public page always offers exactly
-// one method.
-func enabledMidtransMethods(settings models.Settings) []string {
-	allow := midtransMethodAllowlist(settings)
-	if allow == nil {
-		return []string{gateway.MethodGopay}
-	}
-	out := make([]string, 0, len(allow))
-	for _, method := range (midtrans.Gateway{}).Methods() {
-		if allow[method] {
-			out = append(out, method)
-		}
-	}
-	if len(out) == 0 {
-		return []string{gateway.MethodGopay}
-	}
-	return out
+// enabledMidtransMethods always returns QRIS so the Snap fallback only ever
+// offers the QRIS method (the Core API QRIS path is used directly first).
+func enabledMidtransMethods() []string {
+	return []string{gateway.MethodQRIS}
 }
 
-// applyEnabledMethods lets a Midtrans charge carry the owner's method
-// allowlist so Snap only offers the enabled ones. Other providers ignore it.
-func applyEnabledMethods(spec *chargeSpec, provider string, settings models.Settings) {
+// applyEnabledMethods lets a Midtrans charge carry the method allowlist so
+// Snap only offers QRIS. Other providers ignore it.
+func applyEnabledMethods(spec *chargeSpec, provider string) {
 	if provider != "midtrans" {
 		return
 	}
-	spec.EnabledMethods = enabledMidtransMethods(settings)
+	spec.EnabledMethods = enabledMidtransMethods()
 }
 
 // ListMidtransMethods returns the Midtrans methods an owner can enable,

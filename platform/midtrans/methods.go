@@ -30,12 +30,16 @@ func StandardizePaymentType(raw string) string {
 	return gateway.MethodOther
 }
 
+// snapPaymentType maps a neutral method id to the code Midtrans Snap accepts
+// for enabled_payments. Snap has no "qris" code: QRIS is surfaced inside the
+// GoPay method ("QRIS by GoPay"), so the neutral qris method maps to gopay
+// for Snap. The on-page QRIS path uses the Core API directly instead.
 func snapPaymentType(method string) string {
 	switch method {
 	case gateway.MethodBankTransfer:
 		return "bank_transfer"
 	case gateway.MethodQRIS:
-		return "qris"
+		return "gopay"
 	case gateway.MethodGopay:
 		return "gopay"
 	case gateway.MethodCreditCard:

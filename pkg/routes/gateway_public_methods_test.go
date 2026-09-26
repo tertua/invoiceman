@@ -9,16 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The public pay page lists the single configured Midtrans method (gopay by
-// default) and only opens the gateway intent after it is chosen. A USD
-// invoice is shown converted (IDR via the manual rate) for the IDR-only
-// provider, and unconverted for the crypto provider.
+// The public pay page lists QRIS as the only Midtrans method (Midtrans is
+// locked to QRIS) plus crypto from the other provider, and only opens the
+// gateway intent after a method is chosen. A USD invoice is shown converted
+// (IDR via the manual rate) for the IDR-only provider, and unconverted for
+// the crypto provider.
 func TestPublicPayMethodSelection(t *testing.T) {
-	snapServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"token":"snap-pub","redirect_url":"https://snap.test/pub"}`))
-	}))
-	defer snapServer.Close()
 	npServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id":"inv_pub","invoice_url":"https://nowpayments.io/payment/?iid=pub"}`))
@@ -26,7 +22,6 @@ func TestPublicPayMethodSelection(t *testing.T) {
 	defer npServer.Close()
 
 	t.Setenv("MIDTRANS_SERVER_KEY", "pub-server-key")
-	t.Setenv("MIDTRANS_SNAP_BASE_URL", snapServer.URL)
 	t.Setenv("NOWPAYMENTS_API_KEY", "pub-np-key")
 	t.Setenv("NOWPAYMENTS_BASE_URL", npServer.URL+"/v1")
 	t.Setenv("NOWPAYMENTS_SANDBOX", "true")
@@ -64,19 +59,17 @@ func TestPublicPayMethodSelection(t *testing.T) {
 		entry := m.(map[string]interface{})
 		byID[entry["id"].(string)] = entry
 	}
-	require.Contains(t, byID, "gopay")
-	assert.Equal(t, "IDR", byID["gopay"]["currency"])
-	assert.Equal(t, "1800000", byID["gopay"]["amount"]) // $100 × 18000
+	require.Contains(t, byID, "qris")
+	assert.Equal(t, "IDR", byID["qris"]["currency"])
+	assert.Equal(t, "1800000", byID["qris"]["amount"]) // $100 × 18000
 	require.Contains(t, byID, "crypto")
 	assert.Equal(t, "USD", byID["crypto"]["currency"])
 	assert.Equal(t, "100", byID["crypto"]["amount"])
 	resp.Body.Close()
 
-	// Choosing gopay routes to the configured Midtrans and returns a Snap token.
+	// Choosing gopay is rejected: QRIS is the only Midtrans method.
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"gopay"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	qrisIntent := decodeBody(t, resp)
-	assert.Equal(t, "snap-pub", qrisIntent["snap_token"])
+	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	// Choosing crypto routes to NOWPayments and returns a hosted payment URL.
@@ -88,9 +81,9 @@ func TestPublicPayMethodSelection(t *testing.T) {
 	resp.Body.Close()
 }
 
-// An owner can restrict Midtrans to a subset of methods: the public page then
-// hides the rest, a hidden method is rejected, and a non-Midtrans method
-// (crypto) is unaffected by the Midtrans allowlist.
+// Midtrans is locked to QRIS: the public page shows only qris (plus crypto
+// from the other provider), a non-QRIS Midtrans method is hidden and
+// rejected, and a non-Midtrans method (crypto) is unaffected.
 func TestPublicPayMidtransMethodAllowlist(t *testing.T) {
 	snapServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

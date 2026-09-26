@@ -207,7 +207,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
-	applyEnabledMethods(&spec, gw.Name(), settings)
+	applyEnabledMethods(&spec, gw.Name())
 	suffix, err := randHex(4)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create order", nil)

@@ -35,7 +35,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
-	gw, err := routePublicGateway(method, midtransMethodAllowlist(settings))
+	gw, err := routePublicGateway(method, midtransMethodAllowlist())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
 	}
@@ -43,7 +43,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
-	applyEnabledMethods(&spec, gw.Name(), settings)
+	applyEnabledMethods(&spec, gw.Name())
 	base := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
 	if method == "" {
 		// Legacy default method: keep the pre-rename INV- intent reused

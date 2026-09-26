@@ -7,10 +7,12 @@ import (
 )
 
 // SnapMethods maps neutral ids to Snap codes and never lets an unmappable id
-// through, so a restricted account can't accidentally widen its list.
+// through, so a restricted account can't accidentally widen its list. The
+// neutral qris method maps to gopay (Snap has no qris code; QRIS is offered
+// via GoPay), and the resulting code is de-duplicated.
 func TestSnapMethodsMapsAndDropsUnknown(t *testing.T) {
 	got := SnapMethods([]string{gateway.MethodQRIS, "not_a_method", gateway.MethodGopay})
-	want := []string{"qris", "gopay"}
+	want := []string{"gopay"}
 	if len(got) != len(want) {
 		t.Fatalf("SnapMethods = %v, want %v", got, want)
 	}

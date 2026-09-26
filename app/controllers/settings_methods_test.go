@@ -3,37 +3,31 @@ package controllers
 import (
 	"testing"
 
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
-func settingsWithMethods(csv string) models.Settings {
-	return models.Settings{SettingsGatewayMethods: models.SettingsGatewayMethods{MidtransMethods: csv}}
-}
-
-// normalizeMidtransMethods keeps the first supported id and falls back to
-// gopay for empty, unknown, or legacy multi-method values.
-func TestNormalizeMidtransMethods(t *testing.T) {
-	cases := []struct{ in, want string }{
-		{"qris,nonsense,gopay,qris", "qris"},
-		{"", "gopay"},
-		{"nonsense", "gopay"},
-		{" QRIS , Gopay ", "qris"},
-	}
-	for _, tc := range cases {
-		if got := normalizeMidtransMethods(tc.in); got != tc.want {
-			t.Errorf("normalizeMidtransMethods(%q) = %q, want %q", tc.in, got, tc.want)
+// Midtrans is locked to QRIS (code-first source of truth): any input
+// normalizes to qris and the allowlist always admits exactly QRIS, so the
+// stored per-owner value can never re-enable another Midtrans method.
+func TestMidtransLockedToQRIS(t *testing.T) {
+	for _, raw := range []string{"qris", "gopay", "bank_transfer", "qris,nonsense", "", "nonsense"} {
+		if got := normalizeMidtransMethods(raw); got != gateway.MethodQRIS {
+			t.Errorf("normalizeMidtransMethods(%q) = %q, want %q", raw, got, gateway.MethodQRIS)
 		}
 	}
-}
 
-// An empty CSV must read as "no restriction" (nil), while a populated one
-// becomes an allowlist the router can consult.
-func TestMidtransMethodAllowlist(t *testing.T) {
-	if midtransMethodAllowlist(settingsWithMethods("")) != nil {
-		t.Fatal("empty CSV should mean no restriction (nil)")
+	allow := midtransMethodAllowlist()
+	if !allow[gateway.MethodQRIS] {
+		t.Fatalf("allowlist must admit QRIS, got %v", allow)
 	}
-	allow := midtransMethodAllowlist(settingsWithMethods("qris,gopay"))
-	if !allow["qris"] || !allow["gopay"] || allow["crypto"] {
-		t.Fatalf("unexpected allowlist: %v", allow)
+	for _, other := range []string{gateway.MethodGopay, gateway.MethodBankTransfer, gateway.MethodCreditCard} {
+		if allow[other] {
+			t.Errorf("allowlist must reject %q, got %v", other, allow)
+		}
+	}
+
+	enabled := enabledMidtransMethods()
+	if len(enabled) != 1 || enabled[0] != gateway.MethodQRIS {
+		t.Fatalf("enabledMidtransMethods = %v, want [qris]", enabled)
 	}
 }
