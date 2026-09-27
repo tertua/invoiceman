@@ -115,7 +115,7 @@ export function InvoicePaymentCard({ invoice }) {
         </div>
         <div className="flex items-center gap-2">
           {balance > 0 && invoice.effective_status !== "pending" && !(invoice.payment_method === "Online" && (shareLink || canShareOnline)) && (
-            <Button variant="accent" size="sm" onClick={() => setModalOpen(true)}><Plus size={13} /> {t("invDetail.recordPayment")}</Button>
+            <Button variant="accent" size="iconSm" onClick={() => setModalOpen(true)} aria-label={t("invDetail.recordPayment")} title={t("invDetail.recordPayment")}><Plus size={15} /></Button>
           )}
         </div>
       </div>
