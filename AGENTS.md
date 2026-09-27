@@ -2,6 +2,11 @@
 
 For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when owner files or domain wiring change (`npm --prefix web run check:map` is enforced in CI).
 
+## Chat output (assistant)
+
+- Always respond in Bahasa Indonesia, regardless of the language used in code, commits, or docs.
+- Keep answers short and direct (CLI-friendly); no unnecessary preamble or postamble.
+
 ## File size limits (enforced, not advisory)
 
 One file = one responsibility. `npm --prefix web run check:size` fails CI; run it locally after any Go/JS file change.
