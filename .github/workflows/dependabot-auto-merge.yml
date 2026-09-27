@@ -17,9 +17,11 @@ permissions:
   contents: write
   pull-requests: write
   # gh pr checks --watch reads the check-run rollup; without read access it
-  # fails with "Resource not accessible by integration".
+  # fails with "Resource not accessible by integration". actions: read is
+  # needed for the checkSuite -> workflowRun link in the same query.
   checks: read
   statuses: read
+  actions: read
 
 jobs:
   auto-merge:
