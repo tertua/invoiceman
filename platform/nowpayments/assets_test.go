@@ -8,7 +8,7 @@ import (
 )
 
 func TestSupportedPayCurrencies(t *testing.T) {
-	for _, code := range []string{"usdttrc20", "usdterc20", "usdtbep20", "trx", "doge", "ltc", "USDTTRC20", " Trx "} {
+	for _, code := range []string{"usdttrc20", "usdterc20", "usdtbsc", "trx", "doge", "ltc", "USDTTRC20", " Trx "} {
 		if !IsSupportedPayCurrency(code) {
 			t.Fatalf("expected %q to be supported", code)
 		}
@@ -18,8 +18,11 @@ func TestSupportedPayCurrencies(t *testing.T) {
 			t.Fatalf("expected %q to be rejected", code)
 		}
 	}
-	if NormalizePayCurrency(" USDTTRC20 ") != DefaultPayCurrency {
-		t.Fatalf("normalize = %q, want %q", NormalizePayCurrency(" USDTTRC20 "), DefaultPayCurrency)
+	if NormalizePayCurrency(" USDTTRC20 ") != "usdttrc20" {
+		t.Fatalf("normalize = %q, want %q", NormalizePayCurrency(" USDTTRC20 "), "usdttrc20")
+	}
+	if NormalizePayCurrency(" USDTBSC ") != DefaultPayCurrency {
+		t.Fatalf("normalize BSC = %q, want default %q", NormalizePayCurrency(" USDTBSC "), DefaultPayCurrency)
 	}
 }
 

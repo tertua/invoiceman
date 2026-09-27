@@ -79,7 +79,7 @@ func (f *cryptoAssetFixture) transact(t *testing.T, token, body string) *http.Re
 func TestPublicPayCryptoAssets(t *testing.T) {
 	f := setupCryptoAssetFixture(t, "multi")
 
-	for _, asset := range []string{"usdttrc20", "usdterc20", "usdtbep20", "trx", "doge", "ltc"} {
+	for _, asset := range []string{"usdttrc20", "usdterc20", "usdtbsc", "trx", "doge", "ltc"} {
 		token := f.newToken(t)
 		resp := f.transact(t, token, `{"payment_method":"crypto","pay_currency":"`+asset+`"}`)
 		require.Equal(t, 200, resp.StatusCode, "asset %s", asset)
@@ -122,6 +122,14 @@ func TestPublicPayCryptoUnsupportedAsset(t *testing.T) {
 	resp := f.transact(t, token, `{"payment_method":"crypto","pay_currency":"usdc"}`)
 	assert.Equal(t, 400, resp.StatusCode)
 	body := decodeBody(t, resp)
+	assert.Equal(t, "unsupported payment method", body["error"].(map[string]any)["message"])
+	resp.Body.Close()
+
+	// usdtbep20 is not a NOWPayments pay currency (the BSC code is usdtbsc);
+	// it must be rejected as unsupported instead of passed to the provider.
+	resp = f.transact(t, token, `{"payment_method":"crypto","pay_currency":"usdtbep20"}`)
+	assert.Equal(t, 400, resp.StatusCode)
+	body = decodeBody(t, resp)
 	assert.Equal(t, "unsupported payment method", body["error"].(map[string]any)["message"])
 	resp.Body.Close()
 }

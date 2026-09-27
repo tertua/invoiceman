@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.1] - 2026-09-27
+
+### Fixed
+- Correct the USDT BEP20 pay currency: the provider code is `usdtbsc`, not
+  `usdtbep20`, so BEP20 payments no longer fail with "currency not found". The
+  BEP20 asset is now the default picker choice.
+
 ## [v0.6.0] - 2026-09-27
 
 ### Added

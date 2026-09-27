@@ -18,12 +18,12 @@ func TestMinAmountFetchesAndCaches(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if r.URL.Query().Get("currency_from") != "usd" || r.URL.Query().Get("currency_to") != "usdttrc20" {
+		if r.URL.Query().Get("currency_from") != "usd" || r.URL.Query().Get("currency_to") != DefaultPayCurrency {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"currency_from":"usd","currency_to":"usdttrc20","min_amount":18.80979977}`))
+		_, _ = w.Write([]byte(`{"currency_from":"usd","currency_to":"` + DefaultPayCurrency + `","min_amount":18.80979977}`))
 	}))
 	defer srv.Close()
 	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
