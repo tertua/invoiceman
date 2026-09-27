@@ -98,14 +98,14 @@ export function ClientFormModal({ open, onClose, client }) {
 
             <div className="space-y-3">
               <Field label={t("common.name") + " *"}>
-                <Input value={form.name} onChange={set("name")} />
+                <Input value={form.name} onChange={set("name")} placeholder={t("clients.namePlaceholder")} />
               </Field>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={t("common.email")}>
-                  <Input type="email" value={form.email} onChange={set("email")} />
+                  <Input type="email" value={form.email} onChange={set("email")} placeholder={t("clients.emailPlaceholder")} />
                 </Field>
                 <Field label={t("common.company")}>
-                  <Input value={form.company} onChange={set("company")} />
+                  <Input value={form.company} onChange={set("company")} placeholder={t("clients.companyPlaceholder")} />
                 </Field>
               </div>
               <Field label={t("common.phone")}>
