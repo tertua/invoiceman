@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // Settings struct to describe per-user business settings.
@@ -24,12 +25,10 @@ type Settings struct {
 	Language      string `db:"language" json:"language" validate:"omitempty,oneof=en id"`
 }
 
-// DefaultSettings returns settings defaults for a new user.
+// DefaultSettings returns settings defaults for a new user: a usable first-run
+// tax rate and manual USD→IDR rate instead of empty zeros.
 func DefaultSettings(userID uuid.UUID) *Settings {
-	return &Settings{
-		UserID:        userID,
-		UpdatedAt:     time.Now(),
-		Currency:      "IDR",
-		InvoicePrefix: "INV-",
-	}
+	s := &Settings{UserID: userID, UpdatedAt: time.Now(), Currency: "IDR", TaxRate: 11, InvoicePrefix: "INV-"}
+	s.UsdToIdr = decimal.NewFromInt(18000)
+	return s
 }

@@ -32,7 +32,7 @@ export default function DefaultsCard({ form, set, selectClass }) {
         </div>
         <div>
           <FieldLabel>{t("settings.defaultTax")}</FieldLabel>
-          <Input type="number" min="0" step="0.1" value={form.tax_rate} onChange={set("tax_rate")} className="tabular" />
+          <Input type="number" min="0" step="0.1" value={form.tax_rate} onChange={set("tax_rate")} className="tabular" placeholder="11" />
         </div>
         <div>
           <FieldLabel>{t("settings.prefix")}</FieldLabel>
