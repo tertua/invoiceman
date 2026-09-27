@@ -1,0 +1,43 @@
+# Squash-merge Dependabot minor/patch PRs into dev once every reported
+# check is green. Major bumps are left for manual review on purpose.
+#
+# Why pull_request_target: Dependabot-triggered `pull_request` runs get a
+# read-only token, so the merge call would 403. pull_request_target runs
+# with the base branch's write token and this workflow never checks out
+# PR code — it only reads metadata and merges. Merge commits are disabled
+# at the repo level, so --squash is the only path (keeps history linear
+# for branch-flow / make check-flow).
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Fetch update metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for checks, then squash-merge minor/patch
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr checks "$PR_URL" --watch --interval 30
+          gh pr merge "$PR_URL" --squash --delete-branch
+
+      - name: Leave major updates for manual review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: echo "major version bump - human review required, not merging"

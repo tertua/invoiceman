@@ -36,6 +36,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 - `VERSION` changes only as part of a release, never inside feat/fix commits. The agent picks the number from the change (`fix` → patch, `feat` → minor, breaking → major), then `npm --prefix web run sync:version` + real notes in `web/CHANGELOG.md` before promoting. `sync-version.mjs --check` (CI `version-check.yml`) rejects any bump that is not a single-component +1 with lower components reset (`0.6.1→0.6.2`, `0.6.2→0.7.0`, `0.7.0→1.0.0`) — jumps and downgrades fail the build.
 - Keep history linear: `git pull --ff-only` / `git pull --rebase`; no `git merge --no-ff`, no `git push --force` on `dev`/`main`/`master`.
 - Verify with `make check-flow` (`master` ancestor of `main`, `main` ancestor of `dev`, no merge commits in `master..dev`); CI enforces this in `branch-flow.yml`.
+- Dependabot: PRs target `dev` with minor+patch grouped per ecosystem (`.github/dependabot.yml`); `.github/workflows/dependabot-auto-merge.yml` squash-merges them once every reported check is green (majors stay manual). The repo has merge commits disabled (squash/rebase only) so PR merges can never break `check-flow`.
 
 ## Development and verification
 
