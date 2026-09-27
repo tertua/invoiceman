@@ -37,6 +37,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 - Keep history linear: `git pull --ff-only` / `git pull --rebase`; no `git merge --no-ff`, no `git push --force` on `dev`/`main`/`master`.
 - Verify with `make check-flow` (`master` ancestor of `main`, `main` ancestor of `dev`, no merge commits in `master..dev`); CI enforces this in `branch-flow.yml`.
 - Dependabot: PRs target `dev` with minor+patch grouped per ecosystem (`.github/dependabot.yml`); `.github/workflows/dependabot-auto-merge.yml` squash-merges them once every reported check is green (majors stay manual). The repo has merge commits disabled (squash/rebase only) so PR merges can never break `check-flow`.
+- The repo is public and `dev`/`main`/`master` carry branch protection: no force-push, no deletion, linear history only, enforced for admins too. Fast-forward pushes (`make promote`, `make promote-prod`) stay allowed — anything else is rejected by GitHub.
 
 ## Development and verification
 
