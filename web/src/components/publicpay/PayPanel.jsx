@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { publicPayApi } from "@/api/publicPay";
+import { createPublicTransaction, newIntentKey } from "@/api/publicIntent";
 import { loadMidtransSnap } from "@/lib/midtrans";
 import { t } from "@/lib/i18n";
 import CryptoWidget from "./CryptoWidget";
@@ -25,6 +25,7 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
   const [crypto, setCrypto] = useState(false);
   const [qris, setQris] = useState(false);
   const swapTimer = useRef(null);
+  const keysRef = useRef({});
 
   useEffect(() => () => clearTimeout(swapTimer.current), []);
 
@@ -55,8 +56,9 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
       return;
     }
     setPending(method);
+    if (!keysRef.current[method]) keysRef.current[method] = newIntentKey(0);
     try {
-      const res = await publicPayApi.createTransaction(token, method);
+      const res = await createPublicTransaction(token, method, undefined, keysRef.current[method]);
       if (res.snap_token && gateway?.client_key) {
         const snap = await loadMidtransSnap(gateway.is_production);
         snap.pay(res.snap_token, {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { usePaymentMutations } from "@/hooks/usePayments";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, todayDateInput } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/lib/paymentMethods";
+import { idempotencyKey } from "@/api/payments";
 
 function Field({ label, children }) {
   return (
@@ -36,6 +37,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
   });
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
+  const attemptRef = useRef(null);
 
   const fixed = !!invoiceId;
 
@@ -54,6 +56,7 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
         notes: "",
       });
       setErr("");
+      attemptRef.current = null;
     }
   }, [open, invoiceId, amount]);
 
@@ -77,8 +80,13 @@ export function RecordPaymentModal({ open, onClose, invoiceId, invoiceNumber, am
     if (!(Number(form.amount) > 0)) return setErr(t("payments.validAmount"));
     setSaving(true);
     setErr("");
+    const payload = { ...form, amount: form.amount };
+    const fingerprint = JSON.stringify(payload);
+    if (attemptRef.current?.fingerprint !== fingerprint) {
+      attemptRef.current = { fingerprint, key: idempotencyKey() };
+    }
     try {
-      await create.mutateAsync({ ...form, amount: form.amount });
+      await create.mutateAsync({ payload, key: attemptRef.current.key });
       onClose();
     } catch (ex) {
       if (ex.status !== 401) setErr(ex.message || t("payments.saveFailed"));

@@ -47,11 +47,12 @@ export function AuthProvider({ children }) {
   }, [queryClient]);
 
   const register = useCallback(async (payload, captchaToken) => {
+    queryClient.clear(); // drop previous account's cached queries before swapping identity
     const { user } = await authApi.register(payload, captchaToken);
     setUser(user);
     setSessionExpired(false);
     return user;
-  }, []);
+  }, [queryClient]);
 
   const updateProfile = useCallback(async (payload) => {
     const { user } = await authApi.updateProfile(payload);

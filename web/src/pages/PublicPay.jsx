@@ -83,7 +83,7 @@ export default function PublicPay() {
         if (!cancelled) setData(res);
       })
       .catch((e) => {
-        if (!cancelled) setErr(e.message || t(lang, "public.invalidLink"));
+        if (!cancelled) setErr({ status: e?.status, message: e.message || t(lang, "public.invalidLink") });
       });
     return () => {
       cancelled = true;
@@ -91,23 +91,21 @@ export default function PublicPay() {
   }, [token, lang]);
 
   useEffect(() => {
-    if (!data || data.invoice?.effective_status === "paid") return undefined;
-    let cancelled = false;
+    if (!data || (data.can_pay === false && data.invoice?.effective_status !== "pending")) return undefined;
+    let cancelled = false, delay = 5000, timer;
     const poll = async () => {
       try {
         const status = await publicPayApi.status(token);
-        if (cancelled || status.status !== "paid") return;
-        const refreshed = await publicPayApi.get(token);
-        if (!cancelled) setData(refreshed);
+        if (cancelled) return;
+        delay = 5000;
+        if (status.status === "paid") { const r = await publicPayApi.get(token); if (!cancelled) setData(r); }
       } catch {
-        // Payment status is best-effort; the page remains usable if polling fails.
+        delay = Math.min(delay * 2, 30000); // back off while the status call keeps failing
       }
+      if (!cancelled) timer = window.setTimeout(poll, delay);
     };
-    const interval = window.setInterval(poll, 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
+    timer = window.setTimeout(poll, delay);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [data, token]);
 
   if (err) {

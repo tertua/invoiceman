@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { TURNSTILE_RESET_EVENT } from "@/api/captchaReset";
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
@@ -21,17 +22,15 @@ function loadScript() {
   });
   return scriptPromise;
 }
-
-// Turnstile renders the Cloudflare challenge when VITE_TURNSTILE_SITE_KEY
-// is set and reports the token via onVerify. Without a site key it renders
-// nothing and the backend skips verification (dev default).
+// Renders the Cloudflare challenge when VITE_TURNSTILE_SITE_KEY is set and
+// reports the token via onVerify (dev without a key renders nothing).
 export default function Turnstile({ onVerify }) {
   const ref = useRef(null);
-
   useEffect(() => {
     if (!SITE_KEY || !ref.current) return undefined;
     let widgetId;
     let cancelled = false;
+    const onReset = () => { try { window.turnstile?.reset(widgetId); } catch { /* ignore */ } };
     loadScript().then(
       () => {
         if (cancelled || !ref.current) return;
@@ -41,11 +40,13 @@ export default function Turnstile({ onVerify }) {
           "expired-callback": () => onVerify?.(""),
           "error-callback": () => onVerify?.(""),
         });
+        window.addEventListener(TURNSTILE_RESET_EVENT, onReset);
       },
       () => onVerify?.("")
     );
     return () => {
       cancelled = true;
+      window.removeEventListener(TURNSTILE_RESET_EVENT, onReset);
       try {
         if (widgetId !== undefined) window.turnstile?.remove(widgetId);
       } catch {
@@ -53,7 +54,6 @@ export default function Turnstile({ onVerify }) {
       }
     };
   }, [onVerify]);
-
   if (!SITE_KEY) return null;
   return <div ref={ref} className="mt-1" />;
 }

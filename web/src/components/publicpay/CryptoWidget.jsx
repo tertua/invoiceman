@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Copy, Check, Download } from "lucide-react";
-import { publicPayApi } from "@/api/publicPay";
+import { createPublicTransaction, newIntentKey } from "@/api/publicIntent";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
 
@@ -17,9 +17,9 @@ function formatCountdown(left) {
 }
 
 function payErrorMessage(e, lang) {
-  const err = e?.response?.data?.error;
-  if (err?.details?.code === "amount_below_minimum") return t(lang, "public.payAmountMinimum");
-  if (err?.details?.code === "rate_limited" || e?.response?.status === 429) return t(lang, "public.payRateLimited");
+  const code = e?.details?.code;
+  if (code === "amount_below_minimum") return t(lang, "public.payAmountMinimum");
+  if (code === "rate_limited" || e?.status === 429) return t(lang, "public.payRateLimited");
   return t(lang, "public.payCreateFailed");
 }
 
@@ -37,14 +37,17 @@ function currencyLabel(payCurrency) {
 //           retry on 429, localized failure messages
 //   [next]  DEFAULT_PAY_CURRENCY stays the single swap point for the pay currency
 //   [later] network picker (ERC20, BEP20) once the widget settles
-// Seam: props {token, lang, onError} + publicPayApi.createTransaction(token,
-// method, extra) — both stable, so the widget can be rewritten in place.
+// Seam: props {token, lang, onError} + createPublicTransaction(token,
+// "crypto", extra, idempotencyKey) — one UUID per widget, stable across
+// StrictMode double-effects and language toggles so a re-run replays
+// instead of double-charging.
 // End dev path
 export default function CryptoWidget({ token, lang, onError }) {
   const [intent, setIntent] = useState(null);
   const [pending, setPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef(null);
+  const keysRef = useRef({});
   const [left, setLeft] = useState(DEFAULT_TIMEOUT_SECONDS);
   const [qrSrc, setQrSrc] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,8 +68,8 @@ export default function CryptoWidget({ token, lang, onError }) {
   useEffect(() => {
     let cancelled = false;
     setPending(true);
-    publicPayApi
-      .createTransaction(token, "crypto", { pay_currency: DEFAULT_PAY_CURRENCY })
+    if (!keysRef.current.key) keysRef.current.key = newIntentKey(0);
+    createPublicTransaction(token, "crypto", { pay_currency: DEFAULT_PAY_CURRENCY }, keysRef.current.key)
       .then((res) => {
         if (cancelled) return;
         if (res.address) {
@@ -87,7 +90,7 @@ export default function CryptoWidget({ token, lang, onError }) {
       cancelled = true;
       if (copyTimer.current) clearTimeout(copyTimer.current);
     };
-  }, [token, lang, onError, copyTimer]);
+  }, [token, lang, onError]);
 
   useEffect(() => {
     let mounted = true;

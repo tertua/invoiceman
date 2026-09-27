@@ -2,7 +2,7 @@ import { apiClient } from "./http";
 
 // randomUUID is only defined in secure contexts (HTTPS/localhost); fall back
 // to a random v4-shaped id so self-hosted HTTP deployments can still void.
-function idempotencyKey() {
+export function idempotencyKey() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
@@ -15,7 +15,7 @@ function idempotencyKey() {
 
 export const paymentsApi = {
   list: () => apiClient.get("/payments").then((r) => r.data),
-  create: (payload) => apiClient.post("/payments", payload).then((r) => r.data.payment),
+  create: (payload, key) => apiClient.post("/payments", payload, key ? { headers: { "Idempotency-Key": key } } : undefined).then((r) => r.data.payment),
   remove: (id, reason) =>
     apiClient
       .delete(`/payments/${id}`, {

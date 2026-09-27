@@ -1,5 +1,6 @@
 import axios from "axios";
 import { localizeApiError } from "@/lib/utils";
+import { broadcastCaptchaReset, shouldResetCaptcha } from "./captchaReset";
 
 // Broadcast when an authenticated call fails with 401 so the app can
 // drop the stale user and bounce to /login without a manual reload.
@@ -51,14 +52,11 @@ function csrfToken() {
 }
 
 apiClient.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
   const token = csrfToken();
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers["X-CSRF-Token"] = token;
-  }
+  if (token) config.headers["X-CSRF-Token"] = token;
   // UI language for endpoints that generate text (AI): same localStorage
   // key LangContext persists, allowlisted so a stale value can't leak through.
-  config.headers = config.headers ?? {};
   config.headers["X-Locale"] = appLocale();
   return config;
 });
@@ -79,6 +77,7 @@ apiClient.interceptors.response.use(
     if (status === 401 && shouldBroadcastExpired(err.config?.url)) {
       broadcastAuthExpired();
     }
+    if (shouldResetCaptcha(err.config?.url)) broadcastCaptchaReset();
     const message = localizeApiError(
       err.response?.data?.error?.message ||
         err.message ||

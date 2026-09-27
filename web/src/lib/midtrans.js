@@ -10,6 +10,6 @@ export function loadMidtransSnap(isProduction = false) {
     script.onload = () => window.snap ? resolve(window.snap) : reject(new Error("Midtrans Snap failed to load"));
     script.onerror = () => reject(new Error("Midtrans Snap failed to load"));
     document.head.appendChild(script);
-  });
+  }).catch((e) => { snapPromise = undefined; throw e; });
   return snapPromise;
 }

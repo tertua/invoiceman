@@ -14,7 +14,7 @@ domain: SQL/GORM detail lives here, never inline in controllers) →
 
 | Domain | Backend controller | Model(s) | Routes | FE api / hook | FE pages | Platform / misc |
 |---|---|---|---|---|---|---|
-| Auth & session | `app/controllers/auth_controller.go` | `auth_model.go`, `user_model.go` | `public_routes.go` (register/login/forgot/reset), `webhook_routes.go` (provider webhooks), `private_routes.go` (me/logout) | `api/auth.js`, `context/AuthContext.jsx` | `Login.jsx`, `Register.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx` | `pkg/middleware/auth_middleware.go`, `platform/cache` (sessions), session issue/parse in `pkg/utils` |
+| Auth & session | `app/controllers/auth_controller.go` | `auth_model.go`, `user_model.go` | `public_routes.go` (register/login/forgot/reset), `webhook_routes.go` (provider webhooks), `private_routes.go` (me/logout) | `api/auth.js`, `api/captchaReset.js` (Turnstile reset on failed auth), `context/AuthContext.jsx` | `Login.jsx`, `Register.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx` | `pkg/middleware/auth_middleware.go`, `platform/cache` (sessions), session issue/parse in `pkg/utils` |
 | Users (admin) | `admin_controller.go` | `admin_model.go`, `user_model.go` | private | `api/admin.js`, `hooks/useAdminUsers.js` | `AdminUsers.jsx` | `pkg/middleware/role_middleware.go` |
 | Clients | `client_controller.go` | `client_model.go` | private | `api/clients.js`, `hooks/useClients.js` | `Clients.jsx`, `ClientDetail.jsx`, `components/clients/ClientCharts.jsx` | — |
 | Items | `item_controller.go` | `item_model.go` | private | `api/items.js`, `hooks/useItems.js` | `Items.jsx` | — |

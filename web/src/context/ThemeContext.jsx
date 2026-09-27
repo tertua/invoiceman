@@ -6,7 +6,7 @@ const STORAGE_KEY = "arr-theme";
 
 function resolveInitial() {
   if (typeof window === "undefined") return "light";
-  const stored = localStorage.getItem(STORAGE_KEY);
+  let stored; try { stored = localStorage.getItem(STORAGE_KEY); } catch { stored = null; }
   if (stored === "light" || stored === "dark") return stored;
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches
     ? "dark"
@@ -18,7 +18,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEY, theme);
+    try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* storage may be blocked */ }
   }, [theme]);
 
   const toggle = useCallback(

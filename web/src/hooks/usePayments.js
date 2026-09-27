@@ -17,7 +17,7 @@ export function usePaymentMutations() {
     qc.invalidateQueries({ queryKey: ["reports"] });
   };
   return {
-    create: useMutation({ mutationFn: paymentsApi.create, onSuccess: invalidate }),
+    create: useMutation({ mutationFn: ({ payload, key }) => paymentsApi.create(payload, key), onSuccess: invalidate }),
     remove: useMutation({ mutationFn: ({ id, reason }) => paymentsApi.remove(id, reason), onSuccess: invalidate }),
   };
 }

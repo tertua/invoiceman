@@ -6,7 +6,7 @@ import { aiApi, isAiUnavailable, isAiFailure, isAiRateLimited } from "@/api/ai";
 import { useLang } from "@/context/LangContext";
 import { formatMoney } from "@/lib/utils";
 
-export function CatalogPicker({ onPick }) {
+export function CatalogPicker({ onPick, currency }) {
   const { t } = useLang();
   const { data: items } = useItems();
   const [open, setOpen] = useState(false);
@@ -42,7 +42,7 @@ export function CatalogPicker({ onPick }) {
             >
               <span className="text-sm text-[var(--ink)] truncate">{it.name}</span>
               <span className="text-xs font-semibold tabular text-[var(--accent-strong)] shrink-0">
-                {formatMoney(it.rate)}
+                {formatMoney(it.rate, currency)}
               </span>
             </button>
           ))}

@@ -71,7 +71,7 @@ export default function InvoiceEditor() {
           discount: existing.discount || 0,
           notes: existing.notes || "",
           terms: existing.terms || "",
-          payment_method: existing.client_id ? existing.payment_method || "" : "",
+          payment_method: existing.payment_method || "",
           items: existing.items?.length
             ? existing.items.map((it) => ({
                 description: it.description,
@@ -169,9 +169,9 @@ export default function InvoiceEditor() {
     }));
 
   async function onSave(overrideStatus) {
-    if (inFlight.current) return; inFlight.current = true; setErr("");
     const status = overrideStatus || form.status;
     if (status === "sent" && !form.client_id) return setErr(t("api.client is required to send an invoice"));
+    if (inFlight.current) return; inFlight.current = true; setErr("");
     const payload = {
       ...form,
       status,
@@ -293,7 +293,7 @@ export default function InvoiceEditor() {
             <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
               <CardTitle>{t("invEditor.lineItems")}</CardTitle>
               <div className="flex items-center gap-2">
-                <CatalogPicker onPick={addCatalogItem} />
+                <CatalogPicker onPick={addCatalogItem} currency={form.currency} />
                 <ReceiptScanButton
                 onParsed={(res) => {
                   set({

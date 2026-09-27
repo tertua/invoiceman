@@ -8,7 +8,7 @@ const STORAGE_KEY = "arr-lang";
 
 function resolveInitial() {
   if (typeof window === "undefined") return "en";
-  const stored = localStorage.getItem(STORAGE_KEY);
+  let stored; try { stored = localStorage.getItem(STORAGE_KEY); } catch { stored = null; }
   if (stored === "en" || stored === "id") return stored;
   // No saved preference yet: follow the browser language so first-time
   // visitors see content in their own language (same rule as PublicPay).
@@ -21,7 +21,7 @@ export function LangProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.setAttribute("lang", lang);
-    localStorage.setItem(STORAGE_KEY, lang);
+    try { localStorage.setItem(STORAGE_KEY, lang); } catch { /* storage may be blocked */ }
     setLocale(lang);
   }, [lang]);
 
