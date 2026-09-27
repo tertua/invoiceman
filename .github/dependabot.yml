@@ -6,3 +6,13 @@ updates:
     interval: daily
     time: "11:00"
   open-pull-requests-limit: 10
+  # PRs must land on dev, never main: direct commits to main break
+  # make check-flow (main has to stay an ancestor of dev).
+  target-branch: dev
+- package-ecosystem: npm
+  directory: "/web"
+  schedule:
+    interval: weekly
+    time: "11:00"
+  open-pull-requests-limit: 5
+  target-branch: dev
