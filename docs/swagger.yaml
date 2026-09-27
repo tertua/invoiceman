@@ -2227,6 +2227,11 @@ paths:
         name: token
         required: true
         type: string
+      - description: Crypto asset (e.g. usdtbsc) whose live minimum filters the method
+          list
+        in: query
+        name: pay_currency
+        type: string
       produces:
       - application/json
       responses:

@@ -2671,6 +2671,12 @@ const docTemplate = `{
                         "name": "token",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Crypto asset (e.g. usdtbsc) whose live minimum filters the method list",
+                        "name": "pay_currency",
+                        "in": "query"
                     }
                 ],
                 "responses": {

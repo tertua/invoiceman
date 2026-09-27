@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Copy, Check, Download } from "lucide-react";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
-import { DEFAULT_CRYPTO_ASSET, cryptoLabel } from "@/lib/cryptoAssets";
+import { cryptoLabel } from "@/lib/cryptoAssets";
 import { useCryptoIntent } from "@/hooks/useCryptoIntent";
+import { useCryptoPayable } from "@/hooks/useCryptoPayable";
+import { Button } from "@/components/ui/Button";
 import CryptoAssetPicker from "./CryptoAssetPicker";
 
 const DEFAULT_TIMEOUT_SECONDS = 910;
@@ -25,22 +27,32 @@ function payErrorMessage(e, lang) {
 }
 
 // Dev path — on-page crypto widget (multi-asset)
-//   [done]  asset picker + direct payment: QR, address, amount, countdown,
-//           retry on 429, localized failure messages
-// Seam: props {token, lang, onError} + useCryptoIntent() — one UUID per
-// asset, stable across StrictMode double-effects and language toggles so a
-// re-run replays instead of double-charging.
+//   [done]  select-then-create: the asset starts unchosen and the gateway
+//           intent is only requested after the payer picks one and taps
+//           "create deposit address" — mounting the widget charges nothing.
+//           The chosen asset's own live minimum is preflighted before that
+//           tap; QR, address, amount, countdown, retry on 429, localized
+//           failure messages, and "change asset" returns to the picker
+//           without touching the API
+//   [later] show the network fee per asset before the request
+// Seam: props {token, lang, onError} + useCryptoIntent() (one UUID per
+// asset, so a retry of the same asset replays the same charge instead of
+// opening a second one) + useCryptoPayable() (asset-specific minimum).
 // End dev path
 export default function CryptoWidget({ token, lang, onError }) {
-  const [asset, setAsset] = useState(DEFAULT_CRYPTO_ASSET);
+  // "" = the payer has not picked an asset yet; nothing is requested then.
+  const [asset, setAsset] = useState("");
+  // select → loading → pay; nothing leaves the browser until "pay".
+  const [stage, setStage] = useState("select");
   const [intent, setIntent] = useState(null);
-  const [pending, setPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef(null);
   const { createIntent } = useCryptoIntent();
+  const { checking, payable } = useCryptoPayable(token, asset, stage === "select");
   const [left, setLeft] = useState(DEFAULT_TIMEOUT_SECONDS);
   const [qrSrc, setQrSrc] = useState("");
   const [saving, setSaving] = useState(false);
+  const requestRef = useRef(0);
 
   function qrFileName() {
     const id = String(intent?.payment_id || intent?.order_id || "").replace(/[^A-Za-z0-9-_]/g, "").slice(0, 48);
@@ -55,33 +67,46 @@ export default function CryptoWidget({ token, lang, onError }) {
     if (!ok) window.open(qrSrc, "_blank", "noopener");
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    setPending(true);
+  // In-flight responses become stale once the widget unmounts or the payer
+  // backs out to the picker, so a late reply never repaints the panel.
+  useEffect(() => () => {
+    requestRef.current += 1;
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
+
+  async function startPayment() {
+    if (stage === "loading" || !asset || checking || !payable) return;
+    const run = requestRef.current + 1;
+    requestRef.current = run;
+    setStage("loading");
     setIntent(null);
     setQrSrc("");
-    createIntent(token, asset)
-      .then((res) => {
-        if (cancelled) return;
-        if (res.address) {
-          setIntent(res);
-        } else if (res.payment_url) {
-          window.location.href = res.payment_url;
-        } else {
-          onError(t(lang, "public.payNoAddress"));
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) onError(payErrorMessage(e, lang));
-      })
-      .finally(() => {
-        if (!cancelled) setPending(false);
-      });
-    return () => {
-      cancelled = true;
-      if (copyTimer.current) clearTimeout(copyTimer.current);
-    };
-  }, [token, asset, lang, onError, createIntent]);
+    try {
+      const res = await createIntent(token, asset);
+      if (run !== requestRef.current) return;
+      if (res.address) {
+        setIntent(res);
+        setStage("pay");
+      } else if (res.payment_url) {
+        window.location.href = res.payment_url;
+      } else {
+        setStage("select");
+        onError(t(lang, "public.payNoAddress"));
+      }
+    } catch (e) {
+      if (run !== requestRef.current) return;
+      setStage("select");
+      onError(payErrorMessage(e, lang));
+    }
+  }
+
+  function changeAsset() {
+    requestRef.current += 1;
+    setIntent(null);
+    setQrSrc("");
+    setLeft(DEFAULT_TIMEOUT_SECONDS);
+    setStage("select");
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -99,6 +124,7 @@ export default function CryptoWidget({ token, lang, onError }) {
   }, [intent]);
 
   useEffect(() => {
+    if (!intent?.address) return undefined;
     const start = Date.now();
     const total = DEFAULT_TIMEOUT_SECONDS * 1000;
     const timer = setInterval(() => {
@@ -132,15 +158,31 @@ export default function CryptoWidget({ token, lang, onError }) {
         <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
           {t(lang, "public.cryptoTitle")}
         </div>
-        <div className="tabular text-xs font-semibold text-[var(--danger)]">
-          {t(lang, "public.cryptoExpires")} {formatCountdown(left)}
-        </div>
+        {stage === "pay" ? (
+          <div className="tabular text-xs font-semibold text-[var(--danger)]">
+            {t(lang, "public.cryptoExpires")} {formatCountdown(left)}
+          </div>
+        ) : null}
       </div>
 
-      <CryptoAssetPicker value={asset} onChange={setAsset} lang={lang} disabled={pending} />
-
-      {pending ? (
-        <div className="flex justify-center">
+      {stage === "select" ? (
+        <>
+          <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">{t(lang, "public.cryptoSelectHint")}</p>
+          <CryptoAssetPicker value={asset} onChange={setAsset} lang={lang} />
+          {!payable ? <p className="text-xs text-[var(--danger)]">{t(lang, "public.payAmountMinimum")}</p> : null}
+          <Button variant="accent" className="w-full" disabled={!asset || checking || !payable} onClick={startPayment}>
+            {checking ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <>
+                {t(lang, "public.cryptoCreateAddress")}
+                {asset ? ` · ${cryptoLabel(asset)}` : ""}
+              </>
+            )}
+          </Button>
+        </>
+      ) : stage === "loading" ? (
+        <div className="flex justify-center py-4">
           <Loader2 className="animate-spin text-[var(--accent-strong)]" size={20} />
         </div>
       ) : intent ? (
@@ -184,6 +226,10 @@ export default function CryptoWidget({ token, lang, onError }) {
           <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">
             {t(lang, "public.cryptoHint")}
           </p>
+
+          <Button variant="outline" className="w-full" onClick={changeAsset}>
+            {t(lang, "public.cryptoChangeAsset")}
+          </Button>
         </>
       ) : null}
     </div>

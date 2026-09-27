@@ -23,3 +23,13 @@ func IsSupportedPayCurrency(raw string) bool {
 	}
 	return false
 }
+
+// payCurrencyOrDefault maps "the payer has not picked an asset yet" onto the
+// canonical payout currency, so an unqualified request (a minimum check, a
+// legacy client) still has a currency to ask the provider for.
+func payCurrencyOrDefault(raw string) string {
+	if c := NormalizePayCurrency(raw); c != "" {
+		return c
+	}
+	return DefaultPayCurrency
+}

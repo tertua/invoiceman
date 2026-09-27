@@ -61,8 +61,10 @@ type ConfiguredProvider interface {
 // MinAmountChecker is an optional capability: providers with live
 // per-currency minimums report them so endpoints can hide a method whose
 // charge could never succeed, instead of failing after the payer commits.
-// currencyFrom is the charge currency (e.g. USD); the provider picks its own
-// canonical pay currency internally.
+// currencyFrom is the charge currency (e.g. USD); payCurrency is the payer's
+// chosen crypto asset (e.g. usdtbsc) so the minimum belongs to that asset —
+// empty means no asset has been picked yet and the provider falls back to
+// its canonical pay currency.
 type MinAmountChecker interface {
-	MinAmount(ctx context.Context, currencyFrom string) (decimal.Decimal, error)
+	MinAmount(ctx context.Context, currencyFrom, payCurrency string) (decimal.Decimal, error)
 }

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/shopspring/decimal"
@@ -11,7 +12,7 @@ import (
 	"github.com/tertua/invoiceman/platform/database"
 )
 
-func publicPaymentData(ctx context.Context, db database.Queries, link models.PaymentLink) (fiber.Map, error) {
+func publicPaymentData(ctx context.Context, db database.Queries, link models.PaymentLink, payCurrency string) (fiber.Map, error) {
 	detail, err := invoiceDetail(db, link.UserID, link.InvoiceID)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 			"client_key":    configs.Get().Midtrans.ClientKey,
 			"is_production": configs.Get().Midtrans.IsProd,
 		},
-		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist()),
+		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist(), payCurrency),
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
 }
@@ -69,6 +70,7 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 // @Tags Public Payments
 // @Produce json
 // @Param token path string true "Payment token"
+// @Param pay_currency query string false "Crypto asset (e.g. usdtbsc) whose live minimum filters the method list"
 // @Success 200 {object} map[string]interface{}
 // @Router /public/pay/{token} [get]
 func GetPublicPayment(c fiber.Ctx) error {
@@ -87,7 +89,13 @@ func GetPublicPayment(c fiber.Ctx) error {
 	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
 	}
-	data, err := publicPaymentData(c.Context(), *db, link)
+	// Optional crypto asset the payer picked: its own live minimum filters the
+	// list. No asset yet means no minimum gate — crypto stays offered.
+	payCurrency := strings.TrimSpace(c.Query("pay_currency"))
+	if len(payCurrency) > 32 {
+		payCurrency = ""
+	}
+	data, err := publicPaymentData(c.Context(), *db, link, payCurrency)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}

@@ -32,9 +32,11 @@ var minCache = struct {
 }{entries: make(map[string]minCacheEntry)}
 
 // MinAmount implements gateway.MinAmountChecker: the live minimum charge in
-// currencyFrom for a DefaultPayCurrency payout, served from a TTL cache.
-func (Gateway) MinAmount(ctx context.Context, currencyFrom string) (decimal.Decimal, error) {
-	return minAmount(ctx, FromEnv(), currencyFrom, DefaultPayCurrency)
+// currencyFrom that pays out in payCurrency, served from a TTL cache. An
+// empty payCurrency (no asset chosen yet) falls back to the canonical
+// DefaultPayCurrency payout.
+func (Gateway) MinAmount(ctx context.Context, currencyFrom, payCurrency string) (decimal.Decimal, error) {
+	return minAmount(ctx, FromEnv(), currencyFrom, payCurrencyOrDefault(payCurrency))
 }
 
 func minAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo string) (decimal.Decimal, error) {

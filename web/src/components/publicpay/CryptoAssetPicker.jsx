@@ -11,6 +11,9 @@ export default function CryptoAssetPicker({ value, onChange, lang, disabled }) {
         disabled={disabled}
         className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)] disabled:opacity-60"
       >
+        <option value="" disabled>
+          {t(lang, "public.cryptoPickAsset")}
+        </option>
         {CRYPTO_ASSETS.map((a) => (
           <option key={a.code} value={a.code}>
             {a.network ? `${a.ticker} · ${a.network}` : a.ticker}

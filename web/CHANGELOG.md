@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The public pay crypto widget no longer requests a deposit address the
+  moment it opens. Picking crypto now shows the asset picker with nothing
+  preselected, so the payer must choose an asset; the gateway is called only
+  after "Create deposit address", and "Change asset" returns to the picker
+  without charging anything.
+- The crypto minimum is checked against the asset the payer picked instead of
+  always USDT (BSC): `GET /public/pay/:token?pay_currency=` gates the method
+  list per asset (no asset chosen = no gate), and the widget preflights that
+  minimum before creating a deposit address.
+
 ## [v0.6.1] - 2026-09-27
 
 ### Fixed
