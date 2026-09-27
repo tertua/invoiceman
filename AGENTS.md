@@ -6,6 +6,7 @@ For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when 
 
 - Always respond in Bahasa Indonesia, regardless of the language used in code, commits, or docs.
 - Keep answers short and direct (CLI-friendly); no unnecessary preamble or postamble.
+- When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `question` tool instead of assuming — offer concrete options and a recommended first choice.
 
 ## File size limits (enforced, not advisory)
 
