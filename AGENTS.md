@@ -27,13 +27,14 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 - Gemini 429 surfaces as `ErrRateLimited` → HTTP 429 (`ai.rateLimited`). The free-tier quota is tiny (limit 20 requests), so verify AI with single calls, never probe loops. Code default model is `gemini-2.0-flash` (`pkg/configs`); `.env.example` overrides it.
 - `.env` is loaded automatically for local runs; empty `SQL_DSN` selects auto-created SQLite and empty `REDIS_HOST` selects in-memory stores. Local settings live in gitignored `.env.build`, symlinked as `.env` (godotenv autoload only reads that exact name). Sessions are in-memory when `REDIS_HOST` is empty, so every BE restart invalidates all logins (expect 401s until re-login).
 
-## Branching (main stable, dev active)
+## Branching (dev active, main stable, master production)
 
-- `dev` is daily work. `main` is stable only — never commit directly to `main`.
+- `dev` is daily work. `main` is stable only, `master` is production only — never commit directly to `main` or `master`.
 - Promote `dev` → `main` only when stable (tests/lint pass) via fast-forward, never merge-commit or force-push:
   `make promote` (= `git fetch` + `git checkout main` + `git merge --ff-only origin/dev` + `git push origin main`).
-- Keep history linear: `git pull --ff-only` / `git pull --rebase`; no `git merge --no-ff`, no `git push --force` on `main`/`dev`.
-- Verify with `make check-flow` (`main` must be ancestor of `dev`, no merge commits in `main..dev`); CI enforces this in `branch-flow.yml`.
+- Release `main` → `master` with `make promote-prod` (ff-only push of `origin/main` to `master` + annotated tag `v$(VERSION)` when that tag does not exist yet; re-running is a no-op). Release order: `make promote && make promote-prod`.
+- Keep history linear: `git pull --ff-only` / `git pull --rebase`; no `git merge --no-ff`, no `git push --force` on `dev`/`main`/`master`.
+- Verify with `make check-flow` (`master` ancestor of `main`, `main` ancestor of `dev`, no merge commits in `master..dev`); CI enforces this in `branch-flow.yml`.
 
 ## Development and verification
 

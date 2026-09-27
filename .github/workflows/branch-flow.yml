@@ -2,9 +2,9 @@ name: Branch Flow Check
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, master]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, master]
 
 jobs:
   flow:
@@ -14,18 +14,24 @@ jobs:
         with:
           fetch-depth: 0
       - run: |
-          git fetch origin main dev --prune
+          git fetch origin main dev master --prune
+          echo "count (master behind, main ahead): $(git rev-list --left-right --count origin/master...origin/main)"
           echo "count (main behind, dev ahead): $(git rev-list --left-right --count origin/main...origin/dev)"
+          git merge-base --is-ancestor origin/master origin/main || {
+            echo "FAIL: origin/master is not ancestor of origin/main."
+            echo "Release main -> master via fast-forward only (make promote-prod). No merge-commit, no force-push."
+            exit 1
+          }
           git merge-base --is-ancestor origin/main origin/dev || {
             echo "FAIL: origin/main is not ancestor of origin/dev."
             echo "Keep dev strictly ahead of main; promote via fast-forward only (make promote). No merge-commit, no force-push."
             exit 1
           }
-          merges="$(git log --merges --format=%H origin/main..origin/dev)"
+          merges="$(git log --merges --format=%H origin/master..origin/dev)"
           if [ -n "$merges" ]; then
-            echo "FAIL: merge commits found in origin/main..origin/dev:"
-            git log --merges --oneline origin/main..origin/dev
+            echo "FAIL: merge commits found in origin/master..origin/dev:"
+            git log --merges --oneline origin/master..origin/dev
             echo "Keep history linear via rebase (git pull --rebase / --ff-only)."
             exit 1
           fi
-          echo "OK: main ancestor of dev, no merge commits."
+          echo "OK: master ancestor of main ancestor of dev, no merge commits."

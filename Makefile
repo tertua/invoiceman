@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run web.check dev-be dev-fe promote check-flow
+.PHONY: clean critic security lint test build run web.check dev-be dev-fe promote promote-prod check-flow
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -94,8 +94,9 @@ docker.stop.redis:
 swag:
 	swag init
 
-# Branching: dev is daily work, main is stable only.
+# Branching: dev daily, main stable, master production.
 # Promote only via fast-forward, never merge-commit or force-push.
+# Release: make promote && make promote-prod
 promote:
 	git fetch origin --prune
 	git checkout main
@@ -103,9 +104,22 @@ promote:
 	git push origin main
 	git checkout dev
 
+# main -> master (ff-only by construction) + annotated tag v$(VERSION), idempotent.
+promote-prod:
+	git fetch origin --prune
+	git push origin origin/main:refs/heads/master
+	@if git rev-parse -q --verify "refs/tags/v$(VERSION)" >/dev/null; then \
+		echo "tag v$(VERSION) exists, skip"; \
+	else \
+		git tag -a "v$(VERSION)" -m "release v$(VERSION)" origin/master && git push origin "v$(VERSION)"; \
+	fi
+	@echo "OK: master at $$(git rev-parse --short origin/master), tag v$(VERSION)."
+
 check-flow:
 	git fetch origin --prune
+	@echo "master..main count (behind ahead): $$(git rev-list --left-right --count origin/master...origin/main)"
 	@echo "main..dev count (behind ahead): $$(git rev-list --left-right --count origin/main...origin/dev)"
+	@git merge-base --is-ancestor origin/master origin/main || (echo "FAIL: master is not ancestor of main (promote via make promote-prod, ff-only)"; exit 1)
 	@git merge-base --is-ancestor origin/main origin/dev || (echo "FAIL: main is not ancestor of dev (needs rebase/ff, no merge-commit/force-push)"; exit 1)
-	@test -z "$$(git log --merges --format=%H origin/main..origin/dev)" || (echo "FAIL: merge commits found in main..dev, keep history linear via rebase"; git log --merges --oneline origin/main..origin/dev; exit 1)
-	@echo "OK: main ancestor of dev, no merge commits."
+	@test -z "$$(git log --merges --format=%H origin/master..origin/dev)" || (echo "FAIL: merge commits found in master..dev:"; git log --merges --oneline origin/master..origin/dev; exit 1)
+	@echo "OK: master ancestor of main ancestor of dev, no merge commits."
