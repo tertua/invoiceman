@@ -256,8 +256,9 @@ func Login(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			recordLoginFailure(c, db, payload.Email, "not_found", uuid.Nil)
+			return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
 		}
-		return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to query user account", nil) // live DB error, not a bad credential
 	}
 	if !utils.ComparePasswords(user.PasswordHash, payload.Password) {
 		recordLoginFailure(c, db, payload.Email, "bad_password", user.ID)
