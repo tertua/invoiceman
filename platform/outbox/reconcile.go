@@ -119,6 +119,15 @@ func (w *Worker) reconcileOne(ctx context.Context, db *database.Queries, txn mod
 		recordErr("save reconcile touch", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 		return
 	}
+	if errors.Is(err, midtrans.ErrOrderNotFound) {
+		// The provider never heard of this order, so no payment can arrive:
+		// fail the row so it stops polling. The invoice itself is untouched
+		// and the next pay click recharges under a fresh order id.
+		txn.Status = models.GatewayStatusFailed
+		recordErr("save reconcile terminal", db.SaveTransaction(&txn), "order_id", txn.OrderID)
+		logger.L().Info("outbox reconcile order unknown at provider, marked failed", "order_id", txn.OrderID)
+		return
+	}
 	if err != nil {
 		recordErr("save reconcile touch", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 		logger.L().Warn("outbox reconcile poll failed", "order_id", txn.OrderID, "err", err)

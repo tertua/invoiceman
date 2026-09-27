@@ -14,6 +14,7 @@ import (
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/invoiceman/platform/midtrans"
 )
 
 // seedReconcileInvoice creates a user with one sent invoice for reconcile tests.
@@ -127,6 +128,33 @@ func TestReconcileSkippedWithoutGateway(t *testing.T) {
 	txn, err := db.GetTransaction(orderID)
 	require.NoError(t, err)
 	assert.Equal(t, models.GatewayStatusPending, txn.Status)
+}
+
+// TestReconcileUnknownOrderMarkedFailed terminally fails a row Midtrans never
+// heard of: no payment can arrive, the invoice stays untouched, and the row
+// leaves the pending poll set so the worker stops warning about it.
+func TestReconcileUnknownOrderMarkedFailed(t *testing.T) {
+	t.Setenv("MIDTRANS_SERVER_KEY", "test")
+	db := testDB(t)
+	uid, inv := seedReconcileInvoice(t, db, "100000")
+	orderID := seedPendingTxn(t, db, uid, &inv)
+	old := FetchTxStatus
+	FetchTxStatus = func(ctx context.Context, txn models.GatewayTransaction) (*txStatus, error) {
+		return nil, midtrans.ErrOrderNotFound
+	}
+	defer func() { FetchTxStatus = old }()
+
+	(&Worker{batch: 20}).reconcileGateway(context.Background())
+
+	txn, err := db.GetTransaction(orderID)
+	require.NoError(t, err)
+	assert.Equal(t, models.GatewayStatusFailed, txn.Status)
+	paid, err := db.PaidAmount(inv.ID)
+	require.NoError(t, err)
+	assert.True(t, paid.IsZero(), "unknown order must not record a payment")
+	updated, err := db.GetInvoice(uid, inv.ID)
+	require.NoError(t, err)
+	assert.Equal(t, models.InvoiceStatusSent, updated.Status)
 }
 
 // seedNowPaymentsTxn stores a stale pending direct-payment row the way the

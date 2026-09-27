@@ -14,6 +14,13 @@ import (
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
+// ErrOrderNotFound is returned when Midtrans has no such transaction: either
+// a real HTTP 404 or a 200 carrying the {"status_code":"404",
+// "status_message":"Transaction doesn't exist."} envelope (no
+// transaction_status, no gross_amount). Callers treat it as terminal: no
+// money can ever arrive for an unknown order.
+var ErrOrderNotFound = errors.New("midtrans: order not found")
+
 // TxStatus is the subset of the Core API transaction status used to
 // reconcile a stored gateway transaction. Status uses the same relay
 // vocabulary as webhook notifications (see MapStatus).
@@ -26,12 +33,26 @@ type TxStatus struct {
 }
 
 // statusResponse decodes the Core API GET /v2/{order_id}/status body.
+// StatusCode carries Midtrans' own envelope code ("200", "404", ...);
+// error envelopes (unknown order) have no transaction_status.
 type statusResponse struct {
+	StatusCode        string `json:"status_code"`
 	OrderID           string `json:"order_id"`
 	TransactionStatus string `json:"transaction_status"`
 	TransactionID     string `json:"transaction_id"`
 	PaymentType       string `json:"payment_type"`
 	GrossAmount       string `json:"gross_amount"`
+}
+
+// StatusURL returns the Core API transaction-status base.
+func (c Config) StatusURL() string {
+	if c.CoreBase != "" {
+		return strings.TrimRight(c.CoreBase, "/")
+	}
+	if c.IsProd {
+		return "https://api.midtrans.com"
+	}
+	return "https://api.sandbox.midtrans.com"
 }
 
 // FetchStatus polls the Midtrans Core API for one order. A non-2xx response
@@ -44,10 +65,8 @@ func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, er
 	if strings.TrimSpace(orderID) == "" {
 		return nil, errors.New("midtrans status: empty order id")
 	}
-	base := "https://api.sandbox.midtrans.com"
-	if cfg.IsProd {
-		base = "https://api.midtrans.com"
-	}
+	base := cfg.StatusURL()
+
 	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
 	defer cancel()
 
@@ -69,11 +88,17 @@ func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, er
 		return nil, fmt.Errorf("midtrans status: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("%w: %s", ErrOrderNotFound, orderID)
+		}
 		return nil, fmt.Errorf("midtrans status: %w", gateway.NewProviderError("midtrans", resp.StatusCode, truncate(string(raw), constants.MaxErrorBodyLog)))
 	}
 	out := &statusResponse{}
 	if err := json.Unmarshal(raw, out); err != nil {
 		return nil, fmt.Errorf("midtrans status decode: %w", err)
+	}
+	if strings.TrimSpace(out.TransactionStatus) == "" {
+		return nil, fmt.Errorf("%w: %s", ErrOrderNotFound, orderID)
 	}
 	gross, err := decimal.NewFromString(strings.TrimSpace(out.GrossAmount))
 	if err != nil {
