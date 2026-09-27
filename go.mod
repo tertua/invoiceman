@@ -6,7 +6,7 @@ toolchain go1.27.1
 
 require (
 	github.com/glebarez/sqlite v1.11.0
-	github.com/go-playground/validator/v10 v10.30.4
+	github.com/go-playground/validator/v10 v10.30.5
 	github.com/gofiber/contrib/v3/jwt v1.2.4
 	github.com/gofiber/contrib/v3/swaggo v1.0.11
 	github.com/gofiber/fiber/v3 v3.5.0
