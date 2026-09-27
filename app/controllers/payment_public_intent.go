@@ -365,7 +365,6 @@ func publicIntentSuffix(token, method, payCurrency string) string {
 func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
 	out := fiber.Map{
 		"order_id":     t.OrderID,
-		"gateway":      t.Gateway,
 		"redirect_url": t.RedirectURL,
 		"payment_url":  t.PaymentURL,
 		"address":      t.Address,

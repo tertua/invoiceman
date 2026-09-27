@@ -36,18 +36,22 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 	delete(detail, "client_id")
 	delete(detail, "client_email")
 	delete(detail, "payment_link")
-	if raw, ok := detail["payments"].([]fiber.Map); ok {
-		clean := make([]fiber.Map, 0, len(raw))
-		for _, p := range raw {
-			clean = append(clean, fiber.Map{
-				"id":      p["id"],
-				"amount":  p["amount"],
-				"paid_on": p["paid_on"],
-				"method":  p["method"],
-			})
-		}
-		detail["payments"] = clean
+	// The public list is rebuilt from the payment rows so each method can be
+	// relabeled without the provider name — the payer never needs to know it.
+	payments, err := db.GetInvoicePayments(invoice.ID)
+	if err != nil {
+		return nil, err
 	}
+	clean := make([]fiber.Map, 0, len(payments))
+	for _, p := range payments {
+		clean = append(clean, fiber.Map{
+			"id":      p.ID,
+			"amount":  p.Amount,
+			"paid_on": utils.FormatDate(p.PaidOn),
+			"method":  publicPayMethodLabel(db, p),
+		})
+	}
+	detail["payments"] = clean
 	return fiber.Map{
 		"invoice": detail,
 		"branding": fiber.Map{
@@ -55,7 +59,6 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 			"logo_url":     settings.LogoURL,
 		},
 		"gateway": fiber.Map{
-			"name":          "midtrans",
 			"client_key":    configs.Get().Midtrans.ClientKey,
 			"is_production": configs.Get().Midtrans.IsProd,
 		},
