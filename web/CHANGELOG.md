@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.0] - 2026-09-27
+
+### Added
+- The public pay QRIS widget renders the payment code itself from the raw
+  EMVCo payload (`qr_string`) now stored on the gateway transaction, so the
+  code appears as a self-contained `data:image/png;base64,...` image instead
+  of loading the provider's QR image URL. Intents created before this release
+  keep the hosted image as a fallback.
+
 ### Fixed
 - The public pay crypto widget no longer requests a deposit address the
   moment it opens. Picking crypto now shows the asset picker with nothing
