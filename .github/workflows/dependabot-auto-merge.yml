@@ -16,6 +16,10 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # gh pr checks --watch reads the check-run rollup; without read access it
+  # fails with "Resource not accessible by integration".
+  checks: read
+  statuses: read
 
 jobs:
   auto-merge:
