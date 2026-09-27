@@ -43,6 +43,11 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
     setPending("");
     setError(message);
   }, []);
+  const back = useCallback(() => {
+    setCrypto(false);
+    setQris(false);
+    setPending("");
+  }, []);
 
   async function pay(method) {
     if (pending) return;
@@ -81,7 +86,7 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
   }
 
   if (crypto) {
-    return <CryptoWidget key={token} token={token} lang={lang} onError={fail} onPaid={finish} />;
+    return <CryptoWidget key={token} token={token} lang={lang} onError={fail} onBack={back} />;
   }
   if (qris) {
     const chosen = methods.find((m) => m.id === "qris");
@@ -95,6 +100,7 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
         gateway={gateway}
         onError={fail}
         onPaid={finish}
+        onBack={back}
       />
     );
   }

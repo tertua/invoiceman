@@ -36,7 +36,7 @@ function formatCountdown(left) {
 // retries once with the same key. Stable, so the widget can be
 // rewritten in place.
 // End dev path
-export default function QrisWidget({ token, lang, amount, currency, gateway, onError, onPaid }) {
+export default function QrisWidget({ token, lang, amount, currency, gateway, onError, onPaid, onBack }) {
   const [intent, setIntent] = useState(null);
   const [pending, setPending] = useState(true);
   const [left, setLeft] = useState(DEFAULT_TTL);
@@ -153,8 +153,9 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
 
   if (pending) {
     return (
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex flex-col items-center gap-3">
         <Loader2 className="animate-spin text-[var(--accent-strong)]" size={20} />
+        {onBack ? <button type="button" onClick={onBack} className="text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">{t(lang, "common.back")}</button> : null}
       </div>
     );
   }
@@ -218,6 +219,7 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
       {expired ? null : (
         <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">{t(lang, "public.qrisHint")}</p>
       )}
+      {onBack ? <button type="button" onClick={onBack} className="w-full text-center text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">{t(lang, "common.back")}</button> : null}
     </div>
   );
 }

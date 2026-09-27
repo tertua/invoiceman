@@ -39,7 +39,7 @@ function payErrorMessage(e, lang) {
 // asset, so a retry of the same asset replays the same charge instead of
 // opening a second one) + useCryptoPayable() (asset-specific minimum).
 // End dev path
-export default function CryptoWidget({ token, lang, onError }) {
+export default function CryptoWidget({ token, lang, onError, onBack }) {
   // "" = the payer has not picked an asset yet; nothing is requested then.
   const [asset, setAsset] = useState("");
   // select → loading → pay; nothing leaves the browser until "pay".
@@ -232,6 +232,7 @@ export default function CryptoWidget({ token, lang, onError }) {
           </Button>
         </>
       ) : null}
+      {onBack ? <Button variant="ghost" className="w-full" onClick={onBack}>{t(lang, "common.back")}</Button> : null}
     </div>
   );
 }
