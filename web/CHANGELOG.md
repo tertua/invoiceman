@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.8] - 2026-09-27
+
+### Added
+- Payment method section in the invoice editor and detail, so owners can
+  record how an invoice is meant to be paid.
+
+### Changed
+- Midtrans is locked to QRIS: the payment method picker is removed from
+  owner settings, and the Snap fallback now opens the GoPay QRIS flow
+  directly instead of asking the payer to choose again.
+- Moderator role management is removed from the UI.
+- Online payment UX is simplified, with fewer steps between the invoice
+  and the payment page.
+
+### Fixed
+- Invoice double-submit is guarded, so a second click cannot create a
+  duplicate payment intent.
+- Dashboard collection rate no longer breaks when totals arrive as
+  non-numeric values.
+- The public pay page shows a clearer error when an invoice or payment
+  link is not found.
+
 ## [v0.5.7] - 2026-09-26
 
 ### Fixed
