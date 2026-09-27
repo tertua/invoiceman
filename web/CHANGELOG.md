@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.0] - 2026-09-27
+
+### Added
+- Crypto asset picker on the public pay page: payers choose between USDT
+  (TRC20/ERC20/BEP20), TRX, DOGE, or LTC, each with its own deposit address.
+
+### Fixed
+- Switching crypto assets opens a fresh deposit address instead of reusing
+  the first asset's address.
+- Unsupported crypto assets are rejected with a clear error.
+- Payment finish page handles Midtrans redirects directly.
+- Payment submission is idempotent, so retries never double-charge.
+- Stale Midtrans orders are failed fast instead of retried forever.
+
 ## [v0.5.8] - 2026-09-27
 
 ### Added
