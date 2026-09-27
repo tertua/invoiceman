@@ -25,6 +25,7 @@ type CreateTxResponse struct {
 	Token         string
 	RedirectURL   string
 	PaymentURL    string
+	QRString      string // raw EMVCo QRIS payload the provider returns with its QR image, for client-side rendering
 	Address       string
 	ExpiresAt     string
 	PaymentMethod string

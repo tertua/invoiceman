@@ -139,4 +139,11 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.Invoice{}, "payment_method")
 		},
 	},
+	{
+		Version:     15,
+		Description: "gateway transaction qr_string (on-page QRIS payload)",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "qr_string")
+		},
+	},
 }

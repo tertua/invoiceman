@@ -143,6 +143,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		claim.SnapToken = created.Token
 		claim.RedirectURL = created.RedirectURL
 		claim.PaymentURL = created.PaymentURL
+		claim.QRString = created.QRString
 		claim.Address = created.Address
 		claim.PayAmount = created.RawPayload
 		claim.PayCurrency = created.PayCurrency
@@ -367,6 +368,7 @@ func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
 		"order_id":     t.OrderID,
 		"redirect_url": t.RedirectURL,
 		"payment_url":  t.PaymentURL,
+		"qr_string":    t.QRString,
 		"address":      t.Address,
 		"pay_amount":   t.PayAmount,
 		"pay_currency": t.PayCurrency,

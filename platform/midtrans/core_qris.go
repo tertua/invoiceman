@@ -31,6 +31,7 @@ type coreChargeResponse struct {
 	TransactionStatus string             `json:"transaction_status"`
 	PaymentType       string             `json:"payment_type"`
 	ExpiryTime        string             `json:"expiry_time"`
+	QRString          string             `json:"qr_string"`
 	Actions           []coreChargeAction `json:"actions"`
 }
 
@@ -109,6 +110,7 @@ func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR
 	}
 	return &gateway.CreateTxResponse{
 		PaymentURL:    qrURL,
+		QRString:      strings.TrimSpace(out.QRString),
 		ExpiresAt:     normalizeExpiry(out.ExpiryTime),
 		PaymentMethod: gateway.MethodQRIS,
 	}, nil

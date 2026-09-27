@@ -51,6 +51,7 @@ func TestCreateQRISChargeMapsQRCode(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"transaction_id":"txn-1","order_id":"PAY-1-abc","payment_type":"qris",
 			"transaction_status":"pending","expiry_time":"2026-09-25 10:30:00",
+			"qr_string":"000201PAY-1-abc-EMVCO",
 			"actions":[
 				{"name":"generate-qr-code","method":"GET","url":"https://api.test/qris/txn-1/qr-code"},
 				{"name":"deeplink-redirect","method":"GET","url":"https://api.test/qris/txn-1/deeplink"}
@@ -74,6 +75,9 @@ func TestCreateQRISChargeMapsQRCode(t *testing.T) {
 	}
 	if res.PaymentURL != "https://api.test/qris/txn-1/qr-code" {
 		t.Fatalf("PaymentURL = %q", res.PaymentURL)
+	}
+	if res.QRString != "000201PAY-1-abc-EMVCO" {
+		t.Fatalf("QRString = %q, want the raw EMVCo payload", res.QRString)
 	}
 	if res.PaymentMethod != gateway.MethodQRIS {
 		t.Fatalf("PaymentMethod = %q", res.PaymentMethod)

@@ -8,6 +8,8 @@ import { formatMoney } from "@/lib/utils";
 
 const DEFAULT_TTL = 900;
 const REVOKE_DELAY = 4000; // ms to wait before revoking blob URL
+const QR_SIZE = 224;
+const QR_MARGIN = 1;
 
 function countdownFrom(expiresAt) {
   if (!expiresAt) return DEFAULT_TTL;
@@ -42,6 +44,7 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
   const [left, setLeft] = useState(DEFAULT_TTL);
   const [nonce, setNonce] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [qrSrc, setQrSrc] = useState("");
   const keysRef = useRef({});
   const clientKey = gateway?.client_key;
   const isProd = gateway?.is_production;
@@ -138,6 +141,19 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
     };
   }, [token, lang, clientKey, isProd, onError, onPaid, nonce]);
 
+  // Render the stored EMVCo payload locally (same lib as CryptoWidget) so the code does not depend on the provider's image host; an intent without a payload keeps the hosted image.
+  useEffect(() => {
+    let alive = true;
+    const payload = intent?.qr_string;
+    setQrSrc("");
+    if (!payload) return () => { alive = false; };
+    import("qrcode")
+      .then(({ default: QRCode }) => QRCode.toDataURL(payload, { margin: QR_MARGIN, width: QR_SIZE }))
+      .then((url) => { if (alive) setQrSrc(url); })
+      .catch((err) => console.warn("QR render failed:", err));
+    return () => { alive = false; };
+  }, [intent]);
+
   useEffect(() => {
     if (!intent) return undefined;
     const total = countdownFrom(intent.expires_at);
@@ -193,7 +209,7 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
       ) : (
         <div className="flex flex-col items-center gap-3">
           <img
-            src={intent.payment_url}
+            src={qrSrc || intent.payment_url}
             alt={t(lang, "public.qrisQrAlt")}
             className="h-56 w-56 rounded-xl border border-[var(--border)] bg-white p-2"
           />

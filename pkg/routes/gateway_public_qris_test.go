@@ -26,8 +26,8 @@ func newQRISCoreStub(t *testing.T, expiry string) (*httptest.Server, *atomic.Int
 		n := calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintf(w,
-			`{"transaction_id":"txn-qris-%d","order_id":"x","payment_type":"qris","transaction_status":"pending","expiry_time":%q,"actions":[{"name":"generate-qr-code","url":"https://api.test/qris/%d"}]}`,
-			n, expiry, n)
+			`{"transaction_id":"txn-qris-%d","order_id":"x","payment_type":"qris","transaction_status":"pending","expiry_time":%q,"qr_string":"000201-payload-%d","actions":[{"name":"generate-qr-code","url":"https://api.test/qris/%d"}]}`,
+			n, expiry, n, n)
 	}))
 	t.Cleanup(srv.Close)
 	return srv, calls
@@ -73,6 +73,7 @@ func TestPublicPayQrisReusedWhileLive(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	first := decodeBody(t, resp)
 	require.Equal(t, "https://api.test/qris/1", first["payment_url"])
+	require.Equal(t, "000201-payload-1", first["qr_string"])
 	require.Equal(t, "2099-01-01T00:00:00+07:00", first["expires_at"])
 
 	resp = doRequest(t, app, "POST", "/api/public/pay/"+token+"/transaction", `{"payment_method":"qris"}`, nil)
@@ -80,6 +81,7 @@ func TestPublicPayQrisReusedWhileLive(t *testing.T) {
 	second := decodeBody(t, resp)
 	assert.Equal(t, first["order_id"], second["order_id"], "live intent must be reused, not recharged")
 	assert.Equal(t, first["payment_url"], second["payment_url"])
+	assert.Equal(t, first["qr_string"], second["qr_string"], "the stored payload must be served on reuse, not just on charge")
 	assert.EqualValues(t, 1, calls.Load(), "second click must not hit the Core API again")
 }
 
