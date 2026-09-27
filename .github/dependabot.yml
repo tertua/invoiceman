@@ -9,6 +9,11 @@ updates:
   # PRs must land on dev, never main: direct commits to main break
   # make check-flow (main has to stay an ancestor of dev).
   target-branch: dev
+  # One PR per routine bump run (majors stay separate for manual review;
+  # security updates are not affected by this group).
+  groups:
+    go-minor-patch:
+      update-types: ["minor", "patch"]
 - package-ecosystem: npm
   directory: "/web"
   schedule:
@@ -16,3 +21,6 @@ updates:
     time: "11:00"
   open-pull-requests-limit: 5
   target-branch: dev
+  groups:
+    npm-minor-patch:
+      update-types: ["minor", "patch"]
