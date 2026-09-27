@@ -2,12 +2,14 @@
 //   1. web/package.json version == VERSION
 //   2. web/CHANGELOG.md has a "## [vX.Y.Z]" section for VERSION
 //   3. that section carries real notes (not the auto-inserted stub)
+//   4. the bump itself is a single-component +1 release bump (guard below)
 // VERSION is the single source of truth; never bump package.json by hand.
 //
 // Usage:
 //   npm --prefix web run sync:version          # sync package.json + stub changelog
 //   node ../scripts/sync-version.mjs --check   # CI: verify, never mutate
 import { readFile, writeFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -22,6 +24,51 @@ const UNRELEASED = "## [Unreleased]";
 const version = (await readFile(versionPath, "utf8")).trim();
 if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
   throw new Error(`Invalid version in VERSION file: ${JSON.stringify(version)}`);
+}
+
+// --- bump guard -------------------------------------------------------------
+// A release bump may change exactly one component by +1, resetting every
+// lower component to 0: 0.6.1 -> 0.6.2 (patch), 0.6.2 -> 0.7.0 (minor),
+// 0.7.0 -> 1.0.0 (major). Jumps (0.6.1 -> 0.8.0), downgrades and skips are
+// rejected so AI agents cannot run away with the version number. The
+// reference is the last committed VERSION (uncommitted bump vs HEAD) or,
+// when the worktree is clean, the previous commit that touched VERSION.
+function triple(v) {
+  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v);
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+
+function bumpKind(prev, next) {
+  const p = triple(prev);
+  const n = triple(next);
+  if (!p || !n) return null;
+  if (p[0] === n[0] && p[1] === n[1] && p[2] === n[2]) return "same";
+  if (n[0] === p[0] + 1 && n[1] === 0 && n[2] === 0) return "major";
+  if (n[0] === p[0] && n[1] === p[1] + 1 && n[2] === 0) return "minor";
+  if (n[0] === p[0] && n[1] === p[1] && n[2] === p[2] + 1) return "patch";
+  return null;
+}
+
+const gitOut = (cmd) => execSync(cmd, { cwd: root, encoding: "utf8" }).trim();
+
+try {
+  let base;
+  const head = gitOut("git show HEAD:VERSION");
+  if (head !== version) {
+    base = head;
+  } else {
+    const hashes = gitOut("git log -2 --format=%H -- VERSION").split("\n").filter(Boolean);
+    if (hashes.length >= 2) base = gitOut(`git show ${hashes[1]}:VERSION`);
+  }
+  if (base !== undefined && bumpKind(base, version) === null) {
+    console.error(
+      `FAIL: VERSION ${base} -> ${version} is not a valid release bump. ` +
+        `Allowed: one component +1 with lower ones reset (patch 0.6.1->0.6.2, minor 0.6.2->0.7.0, major 0.7.0->1.0.0).`
+    );
+    process.exit(1);
+  }
+} catch {
+  // Not a git checkout (or VERSION is new): bump guard does not apply.
 }
 
 const heading = `## [v${version}]`;
