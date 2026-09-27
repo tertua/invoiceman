@@ -40,8 +40,28 @@ jobs:
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Poll REST check-runs instead of `gh pr checks --watch`: the watch
+        # query also sees this very job ("auto-merge", pending) and would
+        # deadlock waiting for itself. Also avoids the GraphQL workflowRun
+        # permission the token does not get.
         run: |
-          gh pr checks "$PR_URL" --watch --interval 30
+          HEAD_SHA=$(gh pr view "$PR_URL" --json headRefOid --jq .headRefOid)
+          state="pending"
+          for i in $(seq 1 90); do
+            state=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100" --jq '
+              [.check_runs[] | select(.name != "auto-merge")] as $c
+              | if ($c | length) == 0 then "pending"
+                elif ([$c[] | select(.status != "completed")] | length) > 0 then "pending"
+                elif ([$c[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length) > 0 then "fail"
+                else "pass" end')
+            echo "poll $i: $state"
+            [ "$state" = "pending" ] || break
+            sleep 10
+          done
+          if [ "$state" != "pass" ]; then
+            echo "checks are ${state}; leaving PR for manual review"
+            exit 1
+          fi
           gh pr merge "$PR_URL" --squash --delete-branch
 
       - name: Leave major updates for manual review
