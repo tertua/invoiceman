@@ -265,6 +265,6 @@
  "web/src/pages/Reports.jsx": 129,
  "web/src/pages/ResetPassword.jsx": 133,
  "web/src/pages/Settings.jsx": 457,
- "web/src/routes.jsx": 88,
+  "web/src/routes.jsx": 72,
  "web/vite.config.js": 49
 }

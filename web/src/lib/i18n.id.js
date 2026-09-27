@@ -622,6 +622,15 @@ export const id = {
     "public.viewInvoice": "Lihat faktur",
     "public.pdfPreparing": "Menyiapkan PDF...",
     "public.pdfFailed": "PDF tidak dapat dibuat",
+    "finish.title": "Pembayaran selesai",
+    "finish.success": "Pembayaran berhasil",
+    "finish.successDesc": "Terima kasih! Pembayaran Anda telah diterima dan sedang dikonfirmasi.",
+    "finish.pending": "Pembayaran tertunda",
+    "finish.pendingDesc": "Pembayaran Anda menunggu konfirmasi. Tidak ada tindakan lanjutan yang diperlukan.",
+    "finish.failed": "Pembayaran tidak selesai",
+    "finish.failedDesc": "Pembayaran ini tidak selesai. Silakan coba lagi atau hubungi pengirim.",
+    "finish.orderLabel": "ID Order",
+    "finish.unknownDesc": "Jika Anda baru saja membayar, pembayaran sedang dikonfirmasi otomatis. Simpan ID order sebagai referensi.",
 
     /* ============================ reports ============================ */
     "reports.title": "Laporan & Analitik",

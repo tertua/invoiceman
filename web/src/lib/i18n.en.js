@@ -622,6 +622,15 @@ export const en = {
     "public.viewInvoice": "View invoice",
     "public.pdfPreparing": "Preparing PDF...",
     "public.pdfFailed": "PDF could not be generated",
+    "finish.title": "Payment finished",
+    "finish.success": "Payment successful",
+    "finish.successDesc": "Thank you! Your payment was received and is being confirmed.",
+    "finish.pending": "Payment pending",
+    "finish.pendingDesc": "Your payment is waiting for confirmation. No further action is needed.",
+    "finish.failed": "Payment not completed",
+    "finish.failedDesc": "This payment was not completed. Please try again or contact the sender.",
+    "finish.orderLabel": "Order ID",
+    "finish.unknownDesc": "If you just completed a payment, it is being confirmed automatically. Keep your order ID as reference.",
 
     /* ============================ reports ============================ */
     "reports.title": "Reports & Analytics",

@@ -4,15 +4,9 @@ import { AppShell } from "@/components/layout/AppShell";
 import RouteError from "@/components/ui/RouteError";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
-import { useAllowRegistration } from "@/hooks/useConfig";
+import { publicRoutes } from "@/routesPublic";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Login = lazy(() => import("@/pages/Login"));
-const Register = lazy(() => import("@/pages/Register"));
-const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
-const Landing = lazy(() => import("@/pages/Landing"));
-const PublicPay = lazy(() => import("@/pages/PublicPay"));
 const Invoices = lazy(() => import("@/pages/Invoices"));
 const InvoiceEditor = lazy(() => import("@/pages/InvoiceEditor"));
 const InvoiceDetail = lazy(() => import("@/pages/InvoiceDetail"));
@@ -51,18 +45,8 @@ function AdminPage({ children }) {
   return user?.role === "admin" ? children : <Navigate to="/dashboard" replace />;
 }
 
-function RegisterRoute() {
-  const allowRegistration = useAllowRegistration();
-  return allowRegistration ? <Register /> : <Navigate to="/login" replace />;
-}
-
 export const router = createBrowserRouter([
-  { path: "/", element: <Landing />, errorElement: <RouteError /> },
-  { path: "/login", element: <Login />, errorElement: <RouteError /> },
-  { path: "/register", element: <RegisterRoute />, errorElement: <RouteError /> },
-  { path: "/forgot-password", element: <ForgotPassword />, errorElement: <RouteError /> },
-  { path: "/reset-password", element: <ResetPassword />, errorElement: <RouteError /> },
-  { path: "/pay/:token", element: <PublicPay />, errorElement: <RouteError /> },
+  ...publicRoutes,
   {
     path: "/",
     element: <ProtectedShell />,
