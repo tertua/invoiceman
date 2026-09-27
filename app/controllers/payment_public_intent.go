@@ -44,7 +44,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
 	applyEnabledMethods(&spec, gw.Name())
-	base := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method))
+	base := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method, payCurrency))
 	if method == "" {
 		// Legacy default method: keep the pre-rename INV- intent reused
 		// forever instead of opening a duplicate at the gateway. Dead
@@ -126,8 +126,11 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 			if errors.Is(err, gateway.ErrRateLimited) {
 				return utils.Fail(c, fiber.StatusTooManyRequests, "payment gateway is rate limited, please retry", fiber.Map{"code": "rate_limited"})
 			}
+			if errors.Is(err, gateway.ErrUnsupportedPaymentMethod) {
+				return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
+			}
 			if isDuplicateOrderError(err) {
-				if winner, werr := db.LatestIntent("local", invoice.ID.String(), method); werr == nil && reusableIntent(winner, balance) {
+				if winner, werr := db.LatestIntentForBase("local", invoice.ID.String(), method, base); werr == nil && reusableIntent(winner, balance) {
 					return utils.OK(c, fiber.StatusOK, publicIntentResponse(winner))
 				}
 				continue
@@ -211,17 +214,18 @@ func waitForPublicIntent(ctx context.Context, db database.Queries, orderID strin
 }
 
 // publicRetryOrderID resolves the order id for one attempt: a still-payable
-// intent is returned for reuse, otherwise the next retry suffix (-rN) is
-// appended because the provider rejects duplicate order ids. The legacy
-// empty method keeps its suffix-less id forever. A fresh "processing" claim
-// (a sibling click whose charge is still in flight) is waited on instead of
+// intent owned by this base (same method + asset) is returned for reuse,
+// otherwise the next retry suffix (-rN) is appended because the provider
+// rejects duplicate order ids. The legacy empty method keeps its suffix-less
+// id forever. A fresh "processing" claim (a sibling click whose charge is
+// still in flight) is waited on instead of
 // being suffixed past — suffixing it would open a second charge at the
 // gateway for the same user click.
 func publicRetryOrderID(ctx context.Context, db database.Queries, base string, invoice models.Invoice, method string, balance decimal.Decimal) (string, *models.GatewayTransaction, error) {
 	if method == "" {
 		return base, nil, nil
 	}
-	latest, err := db.LatestIntent("local", invoice.ID.String(), method)
+	latest, err := db.LatestIntentForBase("local", invoice.ID.String(), method, base)
 	switch {
 	case err == nil:
 		if latest.Status == publicIntentProcessing && time.Since(latest.CreatedAt) < publicClaimStale {
@@ -235,7 +239,7 @@ func publicRetryOrderID(ctx context.Context, db database.Queries, base string, i
 		if reusableIntent(latest, balance) {
 			return "", &latest, nil
 		}
-		n, cerr := db.CountIntents("local", invoice.ID.String(), method)
+		n, cerr := db.CountIntentsForBase("local", invoice.ID.String(), method, base)
 		if cerr != nil {
 			return "", nil, cerr
 		}
@@ -344,12 +348,18 @@ func routePublicGateway(method string, allow map[string]bool) (gateway.Gateway, 
 }
 
 // publicIntentSuffix keeps distinct methods from colliding on one order id,
-// while an empty method preserves the legacy token-only suffix.
-func publicIntentSuffix(token, method string) string {
+// while an empty method preserves the legacy token-only suffix. Crypto
+// intents append the pay currency so switching assets opens a fresh charge
+// instead of reusing the first asset's deposit address.
+func publicIntentSuffix(token, method, payCurrency string) string {
 	if method == "" {
 		return token[:8]
 	}
-	return token[:8] + "-" + sanitizeExternal(method)
+	suffix := token[:8] + "-" + sanitizeExternal(method)
+	if method == gateway.MethodCrypto && strings.TrimSpace(payCurrency) != "" {
+		suffix += "-" + sanitizeExternal(strings.ToLower(strings.TrimSpace(payCurrency)))
+	}
+	return suffix
 }
 
 func publicIntentResponse(t models.GatewayTransaction) fiber.Map {

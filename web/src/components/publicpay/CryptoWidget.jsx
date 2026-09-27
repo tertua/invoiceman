@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Copy, Check, Download } from "lucide-react";
-import { createPublicTransaction, newIntentKey } from "@/api/publicIntent";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
+import { DEFAULT_CRYPTO_ASSET, cryptoLabel } from "@/lib/cryptoAssets";
+import { useCryptoIntent } from "@/hooks/useCryptoIntent";
+import CryptoAssetPicker from "./CryptoAssetPicker";
 
-const DEFAULT_TIMEOUT_SECONDS = 910; // ~NOWPayments default payment timeout
-const DEFAULT_PAY_CURRENCY = "usdttrc20";
-const COPIED_FEEDBACK_DURATION = 2000; // ms to show "copied" feedback
+const DEFAULT_TIMEOUT_SECONDS = 910;
+const COPIED_FEEDBACK_DURATION = 2000;
 const QR_SIZE = 200;
 const QR_MARGIN = 1;
 
@@ -23,31 +24,20 @@ function payErrorMessage(e, lang) {
   return t(lang, "public.payCreateFailed");
 }
 
-function currencyLabel(payCurrency) {
-  const c = (payCurrency || "").toLowerCase();
-  if (c.startsWith("usdt")) {
-    const network = c.slice(4);
-    return network ? `USDT (${network.toUpperCase()})` : "USDT";
-  }
-  return (payCurrency || "USDT").toUpperCase();
-}
-
-// Dev path — on-page crypto widget (scaffold, one network on purpose)
-//   [done]  USDT TRC20 direct payment: QR, address, amount, countdown,
+// Dev path — on-page crypto widget (multi-asset)
+//   [done]  asset picker + direct payment: QR, address, amount, countdown,
 //           retry on 429, localized failure messages
-//   [next]  DEFAULT_PAY_CURRENCY stays the single swap point for the pay currency
-//   [later] network picker (ERC20, BEP20) once the widget settles
-// Seam: props {token, lang, onError} + createPublicTransaction(token,
-// "crypto", extra, idempotencyKey) — one UUID per widget, stable across
-// StrictMode double-effects and language toggles so a re-run replays
-// instead of double-charging.
+// Seam: props {token, lang, onError} + useCryptoIntent() — one UUID per
+// asset, stable across StrictMode double-effects and language toggles so a
+// re-run replays instead of double-charging.
 // End dev path
 export default function CryptoWidget({ token, lang, onError }) {
+  const [asset, setAsset] = useState(DEFAULT_CRYPTO_ASSET);
   const [intent, setIntent] = useState(null);
   const [pending, setPending] = useState(true);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef(null);
-  const keysRef = useRef({});
+  const { createIntent } = useCryptoIntent();
   const [left, setLeft] = useState(DEFAULT_TIMEOUT_SECONDS);
   const [qrSrc, setQrSrc] = useState("");
   const [saving, setSaving] = useState(false);
@@ -68,8 +58,9 @@ export default function CryptoWidget({ token, lang, onError }) {
   useEffect(() => {
     let cancelled = false;
     setPending(true);
-    if (!keysRef.current.key) keysRef.current.key = newIntentKey(0);
-    createPublicTransaction(token, "crypto", { pay_currency: DEFAULT_PAY_CURRENCY }, keysRef.current.key)
+    setIntent(null);
+    setQrSrc("");
+    createIntent(token, asset)
       .then((res) => {
         if (cancelled) return;
         if (res.address) {
@@ -90,7 +81,7 @@ export default function CryptoWidget({ token, lang, onError }) {
       cancelled = true;
       if (copyTimer.current) clearTimeout(copyTimer.current);
     };
-  }, [token, lang, onError]);
+  }, [token, asset, lang, onError, createIntent]);
 
   useEffect(() => {
     let mounted = true;
@@ -118,7 +109,7 @@ export default function CryptoWidget({ token, lang, onError }) {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [intent]);
 
   function copy() {
     if (!intent?.address) return;
@@ -132,18 +123,8 @@ export default function CryptoWidget({ token, lang, onError }) {
     }
   }
 
-  if (pending) {
-    return (
-      <div className="mt-6 flex justify-center">
-        <Loader2 className="animate-spin text-[var(--accent-strong)]" size={20} />
-      </div>
-    );
-  }
-
-  if (!intent) return null;
-
-  const amount = intent.pay_amount || intent.amount || "—";
-  const currency = currencyLabel(intent.pay_currency);
+  const amount = intent?.pay_amount || intent?.amount || "—";
+  const currency = cryptoLabel(intent?.pay_currency || asset);
 
   return (
     <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4 space-y-4">
@@ -156,45 +137,55 @@ export default function CryptoWidget({ token, lang, onError }) {
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-3">
-        {qrSrc ? (
-          <img src={qrSrc} alt={intent.address} className="h-48 w-48 rounded-xl border border-[var(--border)] bg-white p-2" />
-        ) : (
-          <div className="flex h-48 items-center justify-center text-xs text-[var(--ink-muted)]">QR…</div>
-        )}
-        {qrSrc ? (
-          <button
-            type="button"
-            onClick={saveQr}
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
-          >
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-            {t(lang, "public.downloadQr")}
-          </button>
-        ) : null}
-      </div>
+      <CryptoAssetPicker value={asset} onChange={setAsset} lang={lang} disabled={pending} />
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-1.5">
-        <div className="text-xs text-[var(--ink-muted)]">{t(lang, "public.cryptoAddress")}</div>
-        <button
-          type="button"
-          onClick={copy}
-          className="flex w-full items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm font-mono text-[var(--ink)] hover:bg-[var(--surface-2)]"
-        >
-          <span className="truncate">{intent.address}</span>
-          {copied ? <Check size={15} className="shrink-0 text-[var(--success)]" /> : <Copy size={15} className="shrink-0 text-[var(--ink-muted)]" />}
-        </button>
-      </div>
+      {pending ? (
+        <div className="flex justify-center">
+          <Loader2 className="animate-spin text-[var(--accent-strong)]" size={20} />
+        </div>
+      ) : intent ? (
+        <>
+          <div className="flex flex-col items-center gap-3">
+            {qrSrc ? (
+              <img src={qrSrc} alt={intent.address} className="h-48 w-48 rounded-xl border border-[var(--border)] bg-white p-2" />
+            ) : (
+              <div className="flex h-48 items-center justify-center text-xs text-[var(--ink-muted)]">QR…</div>
+            )}
+            {qrSrc ? (
+              <button
+                type="button"
+                onClick={saveQr}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-60"
+              >
+                {saving ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                {t(lang, "public.downloadQr")}
+              </button>
+            ) : null}
+          </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
-        <span className="text-xs text-[var(--ink-muted)]">{t(lang, "public.cryptoAmount")}</span>
-        <span className="tabular text-sm font-semibold text-[var(--ink)]">{amount} {currency}</span>
-      </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-1.5">
+            <div className="text-xs text-[var(--ink-muted)]">{t(lang, "public.cryptoAddress")}</div>
+            <button
+              type="button"
+              onClick={copy}
+              className="flex w-full items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm font-mono text-[var(--ink)] hover:bg-[var(--surface-2)]"
+            >
+              <span className="truncate">{intent.address}</span>
+              {copied ? <Check size={15} className="shrink-0 text-[var(--success)]" /> : <Copy size={15} className="shrink-0 text-[var(--ink-muted)]" />}
+            </button>
+          </div>
 
-      <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">
-        {t(lang, "public.cryptoHint")}
-      </p>
+          <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
+            <span className="text-xs text-[var(--ink-muted)]">{t(lang, "public.cryptoAmount")}</span>
+            <span className="tabular text-sm font-semibold text-[var(--ink)]">{amount} {currency}</span>
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">
+            {t(lang, "public.cryptoHint")}
+          </p>
+        </>
+      ) : null}
     </div>
   );
 }

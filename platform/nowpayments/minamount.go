@@ -16,11 +16,6 @@ import (
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
-// DefaultPayCurrency is the on-page crypto pay currency (USDT TRC20). The
-// live minimum is checked against this currency; it is the single swap point
-// if the widget ever moves to another network.
-const DefaultPayCurrency = "usdttRC20"
-
 // minAmountTTL bounds how long a fetched minimum is trusted. Minimums move
 // with market rates, but every pay-page load must not become a live API call
 // (rate limits, latency). One hour keeps the list honest without hammering.

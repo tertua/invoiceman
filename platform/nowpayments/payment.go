@@ -31,6 +31,10 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	if cfg.APIKey == "" {
 		return nil, ErrNotConfigured
 	}
+	payCcy := NormalizePayCurrency(req.PayCurrency)
+	if !IsSupportedPayCurrency(payCcy) {
+		return nil, fmt.Errorf("nowpayments payment: %w", gateway.ErrUnsupportedPaymentMethod)
+	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.PriceAmount))
 	if err != nil {
 		return nil, fmt.Errorf("nowpayments payment: invalid amount %q: %w", req.PriceAmount, err)
@@ -38,7 +42,7 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	body, err := json.Marshal(map[string]any{
 		"price_amount":      json.Number(amount.String()),
 		"price_currency":    req.PriceCurrency,
-		"pay_currency":      req.PayCurrency,
+		"pay_currency":      payCcy,
 		"order_id":          req.OrderID,
 		"order_description": "Payment " + req.OrderID,
 		"ipn_callback_url":  cfg.CallbackURL(),
@@ -145,22 +149,14 @@ func postOnce(ctx context.Context, cfg Config, path string, body []byte) (raw []
 }
 
 // CreateTransaction creates a NOWPayments payment. Relayed intents reached
-// without a pay currency use the hosted crypto invoice; public-pay direct USDT
-// (PayCurrency set) returns an on-page deposit address instead of a redirect.
-//
-// Dev path — NOWPayments pay currency (scaffold):
-//
-//	[done]  one pay currency on purpose: USDT TRC20 via direct payment
-//	[later] replace the USDT prefix check with a table of supported networks
-//	        (usdterc20, usdtbep20, ...) and pass the network through
-//	        CreateTxRequest
-//
-// End dev path
+// without a pay currency use the hosted crypto invoice; public-pay direct
+// crypto (PayCurrency set) returns an on-page deposit address instead of a
+// redirect. Only allowlisted pay currencies are accepted (see assets.go).
 func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxRequest) (*gateway.CreateTxResponse, error) {
 	cfg := FromEnv()
-	if payCcy := strings.ToUpper(strings.TrimSpace(req.PayCurrency)); payCcy != "" {
-		if !strings.HasPrefix(payCcy, "USDT") {
-			return nil, errors.New("nowpayments: unsupported pay currency")
+	if payCcy := NormalizePayCurrency(req.PayCurrency); payCcy != "" {
+		if !IsSupportedPayCurrency(payCcy) {
+			return nil, fmt.Errorf("nowpayments payment: %w", gateway.ErrUnsupportedPaymentMethod)
 		}
 		dp, err := CreateDirectPayment(ctx, cfg, &DirectPaymentRequest{
 			OrderID:       req.OrderID,

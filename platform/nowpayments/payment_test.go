@@ -26,7 +26,7 @@ func TestCreateDirectPayment(t *testing.T) {
 	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
 
 	dp, err := CreateDirectPayment(context.Background(), FromEnv(), &DirectPaymentRequest{
-		OrderID: "INV-1-abc", PriceAmount: "25.50", PriceCurrency: "USD", PayCurrency: "USDTTTC20",
+		OrderID: "INV-1-abc", PriceAmount: "25.50", PriceCurrency: "USD", PayCurrency: "USDTTRC20",
 	})
 	if err != nil {
 		t.Fatalf("CreateDirectPayment: %v", err)
@@ -37,7 +37,7 @@ func TestCreateDirectPayment(t *testing.T) {
 	if gotPath != "/v1/payment" || gotKey != "test-key" {
 		t.Fatalf("unexpected request: %s key=%s", gotPath, gotKey)
 	}
-	if gotBody["pay_currency"] != "USDTTTC20" || gotBody["price_currency"] != "USD" {
+	if gotBody["pay_currency"] != "usdttrc20" || gotBody["price_currency"] != "USD" {
 		t.Fatalf("unexpected body: %v", gotBody)
 	}
 	if v, ok := gotBody["price_amount"].(float64); !ok || v != 25.5 {
@@ -135,7 +135,7 @@ func TestCreateDirectPaymentGateway(t *testing.T) {
 	t.Setenv("NOWPAYMENTS_API_KEY", "test-key")
 	t.Setenv("NOWPAYMENTS_BASE_URL", srv.URL+"/v1")
 
-	deposit := &gateway.CreateTxRequest{OrderID: "INV-1", AmountDecimal: "100", Currency: "USD", PayCurrency: "USDTTTC20"}
+	deposit := &gateway.CreateTxRequest{OrderID: "INV-1", AmountDecimal: "100", Currency: "USD", PayCurrency: "USDTTRC20"}
 	res, err := (Gateway{}).CreateTransaction(context.Background(), deposit)
 	if err != nil {
 		t.Fatalf("CreateTransaction: %v", err)
