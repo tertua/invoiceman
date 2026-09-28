@@ -82,12 +82,12 @@ export const en = {
     "sidebar.settings": "Settings",
     "sidebar.logOut": "Log out",
     "sidebar.account": "Account",
-    "sidebar.adminUsers": "Admin users",
-    "sidebar.adminGateway": "Payment gateway",
 
     /* ============================ admin ============================ */
-    "admin.console": "Admin console",
+    "admin.console": "Admin/Console",
     "admin.backToApp": "Back to app",
+    "admin.users": "Users",
+    "admin.gateway": "Gateway",
     "admin.title": "Admin users",
     "admin.desc": "Manage account roles and access across your workspace.",
     "admin.user": "User",

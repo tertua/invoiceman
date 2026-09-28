@@ -27,20 +27,23 @@ function AdminGuard({ children }) {
   return children;
 }
 
-export const adminRouter = createBrowserRouter([
-  {
-    path: "/",
-    element: (
-      <AdminGuard>
-        <AdminShell />
-      </AdminGuard>
-    ),
-    errorElement: <RouteError />,
-    children: [
-      { index: true, element: <Navigate to="users" replace /> },
-      { path: "users", element: <AdminUsers /> },
-      { path: "gateway", element: <AdminGateway /> },
-    ],
-  },
-  { path: "*", element: <Navigate to="/" replace /> },
-]);
+export const adminRouter = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: (
+        <AdminGuard>
+          <AdminShell />
+        </AdminGuard>
+      ),
+      errorElement: <RouteError />,
+      children: [
+        { index: true, element: <Navigate to="users" replace /> },
+        { path: "users", element: <AdminUsers /> },
+        { path: "gateway", element: <AdminGateway /> },
+      ],
+    },
+    { path: "*", element: <Navigate to="/" replace /> },
+  ],
+  { basename: "/admin" },
+);

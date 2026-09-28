@@ -82,12 +82,12 @@ export const id = {
     "sidebar.settings": "Setelan",
     "sidebar.logOut": "Keluar",
     "sidebar.account": "Akun",
-    "sidebar.adminUsers": "Pengguna",
-    "sidebar.adminGateway": "Gateway",
 
     /* ============================ admin ============================ */
-    "admin.console": "Konsol admin",
+    "admin.console": "Admin/Console",
     "admin.backToApp": "Kembali ke aplikasi",
+    "admin.users": "Pengguna",
+    "admin.gateway": "Gateway",
     "admin.title": "Akun Pengguna",
     "admin.desc": "Kelola peran dan akses akun di seluruh ruang kerja Anda.",
     "admin.user": "Pengguna",
