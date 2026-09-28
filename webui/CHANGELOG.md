@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.1.0] - 2026-09-28
+
+### Added
+- The notification bell is now live: invoice and payment events arrive over
+  a server-sent event stream, so the badge updates without a page refresh.
+- The public pay page polls the payment status adaptively (fast while a
+  payment is pending, slow otherwise) instead of hammering the API.
+
+### Changed
+- The product is branded TuPay across the console, emails and API metadata.
+- The webhook origin env is renamed to `TUPAY_PUBLIC_URL`; the old
+  `INVOICEMAN_PUBLIC_URL` keeps working as a fallback, and the default
+  SQLite path moves to `./data/db/tupay.db`.
+
 ## [v1.0.0] - 2026-09-28
 
 ### Added
