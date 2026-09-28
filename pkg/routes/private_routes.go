@@ -32,12 +32,12 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Delete("/clients/:id", controllers.DeleteClient) // delete a client
 
 	// Invoice routes:
-	route.Get("/invoices", controllers.ListInvoices)                     // get invoices with filters
+	route.Get("/invoices", controllers.ListInvoices)                                                               // get invoices with filters
 	route.Post("/invoices", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateInvoice) // create a new invoice
-	route.Get("/invoices/:id", controllers.GetInvoice)                   // get invoice with items and payments
-	route.Patch("/invoices/:id", controllers.UpdateInvoice)              // update an invoice
-	route.Patch("/invoices/:id/status", controllers.UpdateInvoiceStatus) // update invoice status
-	route.Delete("/invoices/:id", controllers.DeleteInvoice)             // delete an invoice
+	route.Get("/invoices/:id", controllers.GetInvoice)                                                             // get invoice with items and payments
+	route.Patch("/invoices/:id", controllers.UpdateInvoice)                                                        // update an invoice
+	route.Patch("/invoices/:id/status", controllers.UpdateInvoiceStatus)                                           // update invoice status
+	route.Delete("/invoices/:id", controllers.DeleteInvoice)                                                       // delete an invoice
 	// Local Snap intent for one invoice (session user, no service key).
 	// Kept under /invoices so the /gateway API-key group cannot shadow it.
 	route.Post("/invoices/:id/intents",

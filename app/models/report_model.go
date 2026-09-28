@@ -10,26 +10,26 @@ type ReportTotals struct {
 
 // ReportMonthlyPoint contains one month of revenue and expenses.
 type ReportMonthlyPoint struct {
-	Key      string          `json:"key,omitempty"`
-	Label    string          `json:"label"`
-	Revenue  Money `json:"revenue"`
-	Expenses Money `json:"expenses"`
+	Key      string `json:"key,omitempty"`
+	Label    string `json:"label"`
+	Revenue  Money  `json:"revenue"`
+	Expenses Money  `json:"expenses"`
 }
 
 // ReportValuePoint contains a labelled report value.
 type ReportValuePoint struct {
-	Key    string          `json:"key,omitempty"`
-	Name   string          `json:"name,omitempty"`
-	Bucket string          `json:"bucket,omitempty"`
-	Value Money `json:"value"`
+	Key    string `json:"key,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Bucket string `json:"bucket,omitempty"`
+	Value  Money  `json:"value"`
 }
 
 // ReportClientPoint contains billing totals for one client.
 type ReportClientPoint struct {
-	ID     string          `json:"id"`
-	Name   string          `json:"name"`
-	Billed Money `json:"billed"`
-	Paid   Money `json:"paid"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Billed Money  `json:"billed"`
+	Paid   Money  `json:"paid"`
 }
 
 // Reports contains the data used by the reports page.

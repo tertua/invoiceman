@@ -8,12 +8,12 @@ import (
 
 // PaymentInput describes a recorded payment.
 type PaymentInput struct {
-	InvoiceID string          `json:"invoiceId" validate:"required,uuid4"`
-	Amount    Money `json:"amount"`
-	Method    string          `json:"method" validate:"required,lte=50"`
-	PaidOn    string          `json:"paid_on" validate:"required"`
-	TxnID     string          `json:"txn_id" validate:"lte=255"`
-	Notes     string          `json:"notes"`
+	InvoiceID string `json:"invoiceId" validate:"required,uuid4"`
+	Amount    Money  `json:"amount"`
+	Method    string `json:"method" validate:"required,lte=50"`
+	PaidOn    string `json:"paid_on" validate:"required"`
+	TxnID     string `json:"txn_id" validate:"lte=255"`
+	Notes     string `json:"notes"`
 }
 
 // PaymentVoidInput describes a void request for a recorded payment.
@@ -29,17 +29,17 @@ type OnlineLinkEmailInput struct {
 
 // PaymentListRow contains payment data formatted for the payments page.
 type PaymentListRow struct {
-	PaymentID       uuid.UUID       `db:"payment_id"`
-	InvoiceID       uuid.UUID       `db:"invoice_id"`
-	InvoiceNumber   string          `db:"invoice_number"`
-	ClientName      string          `db:"client_name"`
-	InvoiceCurrency string          `db:"invoice_currency"`
-	Amount          Money `gorm:"type:decimal(19,4)" db:"amount"`
-	Method          string          `db:"method"`
-	PaidOn          *time.Time      `db:"paid_on"`
-	TxnID           string          `db:"txn_id"`
-	Notes           string          `db:"notes"`
-	GatewayOrderID  *string         `db:"gateway_order_id"`
+	PaymentID       uuid.UUID  `db:"payment_id"`
+	InvoiceID       uuid.UUID  `db:"invoice_id"`
+	InvoiceNumber   string     `db:"invoice_number"`
+	ClientName      string     `db:"client_name"`
+	InvoiceCurrency string     `db:"invoice_currency"`
+	Amount          Money      `gorm:"type:decimal(19,4)" db:"amount"`
+	Method          string     `db:"method"`
+	PaidOn          *time.Time `db:"paid_on"`
+	TxnID           string     `db:"txn_id"`
+	Notes           string     `db:"notes"`
+	GatewayOrderID  *string    `db:"gateway_order_id"`
 }
 
 // CanVoid reports whether a payment may be voided from the UI. Gateway

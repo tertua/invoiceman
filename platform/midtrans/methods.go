@@ -10,10 +10,10 @@ var paymentTypes = map[string]string{
 	"bank_transfer": gateway.MethodBankTransfer,
 	"bca":           gateway.MethodBankTransfer, "bni": gateway.MethodBankTransfer,
 	"bri": gateway.MethodBankTransfer, "echannel": gateway.MethodBankTransfer,
-	"permata": gateway.MethodBankTransfer,
-	"qris":    gateway.MethodQRIS,
-	"gopay":   gateway.MethodGopay,
-	"credit_card":    gateway.MethodCreditCard,
+	"permata":     gateway.MethodBankTransfer,
+	"qris":        gateway.MethodQRIS,
+	"gopay":       gateway.MethodGopay,
+	"credit_card": gateway.MethodCreditCard,
 }
 
 func (Gateway) Methods() []string {
