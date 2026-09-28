@@ -1,4 +1,4 @@
-# Tupay
+# TuPay
 
 Invoice management API + multi-page app (MPA): invoices, clients, payments with shareable public pay links (QRIS via Midtrans, crypto via NOWPayments), a gateway relay for third-party integrations, expenses, dashboards, reports, and AI-assisted text (Gemini, English/Indonesian).
 

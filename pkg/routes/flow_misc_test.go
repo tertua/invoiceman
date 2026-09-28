@@ -83,7 +83,7 @@ func TestAppConfig(t *testing.T) {
 	resp := doRequest(t, app, "GET", "/api/config", "", nil)
 	require.Equal(t, 200, resp.StatusCode)
 	body := decodeBody(t, resp)
-	assert.Equal(t, "Tupay", body["appName"])
+	assert.Equal(t, "TuPay", body["appName"])
 	assert.Equal(t, true, body["allowRegistration"])
 
 	t.Setenv("APP_NAME", "  Acme Billing  ")

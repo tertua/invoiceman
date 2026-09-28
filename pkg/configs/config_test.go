@@ -12,7 +12,7 @@ func TestLoadDefaults(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	assert.Equal(t, "dev", cfg.Stage)
-	assert.Equal(t, "Tupay", cfg.AppName)
+	assert.Equal(t, "TuPay", cfg.AppName)
 	assert.Equal(t, "0.0.0.0:5000", cfg.ListenAddr())
 	assert.Equal(t, 100, cfg.RateLimit.General)
 	assert.Equal(t, 10, cfg.RateLimit.Auth)

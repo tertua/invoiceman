@@ -1,8 +1,8 @@
 /**
- * Brand mark for Tupay — a teal invoice document with billing rows and a
+ * Brand mark for TuPay — a teal invoice document with billing rows and a
  * "$" seal. Renders at 48px, no frame.
  */
-const AILogo = ({ label = "Tupay" }) => {
+const AILogo = ({ label = "TuPay" }) => {
   return (
     <div className="relative h-12 w-12 flex items-center justify-center" aria-label={label}>
       <svg

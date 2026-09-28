@@ -494,7 +494,7 @@ info:
   contact:
     name: API Support
   description: |-
-    Tupay API. Two prefixes serve the same routes: /api/v1
+    TuPay API. Two prefixes serve the same routes: /api/v1
     (current, used by the MPA) and /api (legacy, deprecated —
     responses carry a Sunset header). Unless tagged otherwise,
     endpoints speak JSON with this envelope. Success: the data
@@ -531,7 +531,7 @@ info:
     name: GNU GPLv3
     url: https://www.gnu.org/licenses/gpl-3.0.html
   termsOfService: http://swagger.io/terms/
-  title: Tupay API
+  title: TuPay API
   version: "1.0"
 paths:
   /admin/audit-logs:

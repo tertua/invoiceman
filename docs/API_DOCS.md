@@ -14,7 +14,7 @@ The request uses project-owned `external_id` values for both the invoice and cus
 
 Payment intents select a payment method, not a provider. Send an optional
 provider-neutral `payment_method` such as `qris`, `bank_transfer`, `gopay`, or
-`crypto`; Tupay routes it to whichever configured provider supports it.
+`crypto`; TuPay routes it to whichever configured provider supports it.
 `GET /api/v1/gateway/methods` lists the methods available to the project. The
 optional `gateway` field is a legacy escape hatch for pinning a specific
 provider and should be omitted in new integrations.
@@ -28,7 +28,7 @@ amounts use `amount_decimal` with `currency`.
 ## Currency conversion
 
 Providers are not required to support every invoice currency (Midtrans is
-IDR-only). Tupay converts with a **manual** rate the account owner sets in
+IDR-only). TuPay converts with a **manual** rate the account owner sets in
 `PATCH /api/v1/settings` as `usd_to_idr` (IDR per 1 USD, e.g. `"18000"`); no
 realtime FX feed is ever used. A USD intent routed to an IDR-only provider is
 charged at that rate, and the transaction records `currency` (charged),

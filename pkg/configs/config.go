@@ -221,7 +221,7 @@ func (c Config) IsDev() bool { return c.Stage == "dev" }
 func Load() (Config, error) {
 	cfg := Config{
 		Stage:   envOr("STAGE_STATUS", "dev"),
-		AppName: envOr("APP_NAME", "Tupay"),
+		AppName: envOr("APP_NAME", "TuPay"),
 		Server: ServerConfig{
 			Host:           envOr("SERVER_HOST", "0.0.0.0"),
 			Port:           envOr("SERVER_PORT", "5000"),
