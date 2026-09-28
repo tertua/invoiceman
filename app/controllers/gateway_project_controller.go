@@ -105,16 +105,6 @@ func CreateProject(c fiber.Ctx) error {
 // @Param per_page query int false "Items per page (default 20, max 100)"
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects [get]
-
-// ListProjects returns one page of downstream projects for admins.
-// @Description List gateway projects.
-// @Summary list gateway projects
-// @Tags Admin
-// @Produce json
-// @Param page query int false "Page number (default 1)"
-// @Param per_page query int false "Items per page (default 20, max 100)"
-// @Success 200 {object} map[string]interface{}
-// @Router /admin/gateway/projects [get]
 func ListProjects(c fiber.Ctx) error {
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -135,17 +125,6 @@ func ListProjects(c fiber.Ctx) error {
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"projects": out, "meta": paging.Meta(total)})
 }
-
-// UpdateProject edits project metadata.
-// @Description Update a gateway project.
-// @Summary update gateway project
-// @Tags Admin
-// @Accept json
-// @Produce json
-// @Param slug path string true "Project slug"
-// @Param request body models.UpdateProjectInput true "Project payload"
-// @Success 200 {object} map[string]interface{}
-// @Router /admin/gateway/projects/{slug} [patch]
 
 // UpdateProject edits project metadata.
 // @Description Update a gateway project.
@@ -207,15 +186,6 @@ func UpdateProject(c fiber.Ctx) error {
 // @Param slug path string true "Project slug"
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects/{slug}/rotate-key [post]
-
-// RotateProjectKey issues a new API key for a project (old key stops working).
-// @Description Rotate a project API key.
-// @Summary rotate project key
-// @Tags Admin
-// @Produce json
-// @Param slug path string true "Project slug"
-// @Success 200 {object} map[string]interface{}
-// @Router /admin/gateway/projects/{slug}/rotate-key [post]
 func RotateProjectKey(c fiber.Ctx) error {
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -251,15 +221,6 @@ func RotateProjectKey(c fiber.Ctx) error {
 // @Param slug path string true "Project slug"
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects/{slug}/rotate-secret [post]
-
-// RotateProjectSecret issues a new webhook secret for a project.
-// @Description Rotate a project webhook secret.
-// @Summary rotate project secret
-// @Tags Admin
-// @Produce json
-// @Param slug path string true "Project slug"
-// @Success 200 {object} map[string]interface{}
-// @Router /admin/gateway/projects/{slug}/rotate-secret [post]
 func RotateProjectSecret(c fiber.Ctx) error {
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -286,16 +247,6 @@ func RotateProjectSecret(c fiber.Ctx) error {
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, "")})
 }
-
-// ListAllTransactions returns one page of relay transactions for admins.
-// @Description List relay transactions.
-// @Summary list relay transactions
-// @Tags Admin
-// @Produce json
-// @Param page query int false "Page number (default 1)"
-// @Param per_page query int false "Items per page (default 20, max 100)"
-// @Success 200 {object} map[string]interface{}
-// @Router /admin/gateway/transactions [get]
 
 // ListAllTransactions returns one page of relay transactions for admins.
 // @Description List relay transactions.
