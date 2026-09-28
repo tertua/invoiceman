@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"sort"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/utils"
@@ -18,28 +16,10 @@ import (
 // @Success 200 {object} models.GatewayMethodsResponse
 // @Router /gateway/methods [get]
 func ListGatewayMethods(c fiber.Ctx) error {
-	seen := make(map[string]bool)
-	methods := make([]models.GatewayMethod, 0)
-	for _, name := range gateway.Names() {
-		provider, err := gateway.Get(name)
-		if err != nil {
-			continue
-		}
-		capability, ok := provider.(gateway.PaymentMethodProvider)
-		if !ok {
-			continue
-		}
-		if configured, ok := provider.(gateway.ConfiguredProvider); ok && !configured.Configured() {
-			continue
-		}
-		for _, method := range capability.Methods() {
-			if seen[method] {
-				continue
-			}
-			seen[method] = true
-			methods = append(methods, models.GatewayMethod{ID: method, Name: gateway.MethodName(method)})
-		}
+	refs := gateway.OfferedMethods()
+	methods := make([]models.GatewayMethod, 0, len(refs))
+	for _, ref := range refs {
+		methods = append(methods, models.GatewayMethod{ID: ref.ID, Name: gateway.MethodName(ref.ID)})
 	}
-	sort.Slice(methods, func(i, j int) bool { return methods[i].ID < methods[j].ID })
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"methods": methods})
 }

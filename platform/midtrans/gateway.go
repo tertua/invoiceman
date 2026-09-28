@@ -14,6 +14,9 @@ func (Gateway) Name() string { return GatewayName }
 // Configured reports whether Midtrans credentials are present.
 func (Gateway) Configured() bool { return FromEnv().ServerKey != "" }
 
+// Sandbox reports whether Midtrans runs against its sandbox environment.
+func (Gateway) Sandbox() bool { return !FromEnv().IsProd }
+
 // ParseAndVerify decodes and verifies a Midtrans notification body.
 func (Gateway) ParseAndVerify(raw []byte) (*gateway.NotificationResult, error) {
 	notif, err := ParseNotification(raw)

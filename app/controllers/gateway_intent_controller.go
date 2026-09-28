@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/configs"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
@@ -129,24 +128,17 @@ func GatewayConfig(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /public/gateway/status [get]
 func GatewayStatus(c fiber.Ctx) error {
-	cfg := configs.Get()
 	names := gateway.Names()
 	sort.Strings(names)
 	out := make([]fiber.Map, 0, len(names))
 	for _, name := range names {
-		status := fiber.Map{"name": name}
-		switch name {
-		case "midtrans":
-			status["configured"] = cfg.Midtrans.ServerKey != ""
-			status["sandbox"] = !cfg.Midtrans.IsProd
-		case "nowpayments":
-			status["configured"] = cfg.NOWPayments.APIKey != ""
-			status["sandbox"] = cfg.NOWPayments.Sandbox
-		default:
-			// Provider-specific config is unknown here; report it as
-			// available and let intent creation surface real errors.
-			status["configured"] = true
-			status["sandbox"] = false
+		gw, err := gateway.Get(name)
+		if err != nil {
+			continue
+		}
+		status := fiber.Map{"name": name, "configured": gateway.ProviderReady(gw), "sandbox": false}
+		if provider, ok := gw.(gateway.SandboxProvider); ok {
+			status["sandbox"] = provider.Sandbox()
 		}
 		out = append(out, status)
 	}

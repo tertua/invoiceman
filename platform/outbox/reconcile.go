@@ -145,7 +145,7 @@ func (w *Worker) reconcileOne(ctx context.Context, db *database.Queries, txn mod
 	}
 	if st.Status == models.GatewayStatusSuccess && txn.ProjectSlug == "local" && txn.InvoiceID != nil && txn.UserID != nil {
 		gross := gateway.SettleAmount(st.GrossAmount, st.Currency, txn.InvoiceCurrency, txn.UsdToIdr)
-		if err := db.SaveTransactionAndSettleInvoice(&txn, gross, reconcileMethod(txn.Gateway)); err != nil {
+		if err := db.SaveTransactionAndSettleInvoice(&txn, gross, gateway.DisplayName(txn.Gateway)); err != nil {
 			logger.L().Warn("outbox reconcile settle failed", "order_id", txn.OrderID, "err", err)
 			return
 		}
@@ -155,16 +155,4 @@ func (w *Worker) reconcileOne(ctx context.Context, db *database.Queries, txn mod
 	}
 	recordErr("save reconciled transaction", db.SaveTransaction(&txn), "order_id", txn.OrderID)
 	logger.L().Info("outbox reconcile updated transaction", "order_id", txn.OrderID, "status", txn.Status)
-}
-
-// reconcileMethod mirrors the webhook payment label for locally settled rows.
-func reconcileMethod(provider string) string {
-	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "", "midtrans":
-		return "Midtrans"
-	case "nowpayments":
-		return "NOWPayments"
-	default:
-		return provider
-	}
 }

@@ -59,6 +59,11 @@ type ConfiguredProvider interface {
 	Configured() bool
 }
 
+// SandboxProvider is an optional capability: providers that can tell whether they are running against a test environment report it so status endpoints never hardcode provider names.
+type SandboxProvider interface {
+	Sandbox() bool
+}
+
 // MinAmountChecker is an optional capability: providers with live
 // per-currency minimums report them so endpoints can hide a method whose
 // charge could never succeed, instead of failing after the payer commits.

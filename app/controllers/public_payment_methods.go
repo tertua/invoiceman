@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"sort"
 	"strings"
 
 	"github.com/shopspring/decimal"
@@ -30,51 +29,27 @@ type publicChargeMethod struct {
 // list (payCurrency empty) offers crypto and lets the asset's own minimum gate
 // it once picked. Any minimum-fetch failure keeps the method visible (fail-open)
 // and lets intent creation return the authoritative error.
-//
-// Dev path — public method list (scaffold):
-//
-//	[done]  flat provider-neutral list, sorted by id
-//	[done]  live-minimum filter for checker providers (crypto), per chosen asset
-//	[next]  group/order per audience (IDR methods first for domestic payers)
-//	        while keeping publicChargeMethod unchanged
-//
-// End dev path
+// Later: group and order this list per audience (IDR methods first for domestic payers) while keeping publicChargeMethod unchanged.
 func availableChargeMethods(ctx context.Context, invoiceCurrency string, balance, usdToIdr decimal.Decimal, midtransAllow map[string]bool, payCurrency string) []publicChargeMethod {
-	seen := make(map[string]bool)
 	out := make([]publicChargeMethod, 0)
-	for _, name := range gateway.Names() {
-		gw, err := gateway.Get(name)
-		if err != nil || !gateway.ProviderReady(gw) {
+	for _, ref := range gateway.OfferedMethods() {
+		if ref.Provider.Name() == "midtrans" && !methodAllowed(midtransAllow, ref.ID) {
 			continue
 		}
-		provider, ok := gw.(gateway.PaymentMethodProvider)
-		if !ok {
-			continue
-		}
-		spec, err := buildCharge(gw, invoiceCurrency, balance, usdToIdr)
+		spec, err := buildCharge(ref.Provider, invoiceCurrency, balance, usdToIdr)
 		if err != nil {
 			continue
 		}
-		for _, method := range provider.Methods() {
-			if seen[method] {
-				continue
-			}
-			if name == "midtrans" && !methodAllowed(midtransAllow, method) {
-				continue
-			}
-			if belowLiveMinimum(ctx, gw, method, spec, payCurrency) {
-				continue
-			}
-			seen[method] = true
-			out = append(out, publicChargeMethod{
-				ID:       method,
-				Name:     gateway.MethodName(method),
-				Currency: spec.Currency,
-				Amount:   spec.chargeAmount(),
-			})
+		if belowLiveMinimum(ctx, ref.Provider, ref.ID, spec, payCurrency) {
+			continue
 		}
+		out = append(out, publicChargeMethod{
+			ID:       ref.ID,
+			Name:     gateway.MethodName(ref.ID),
+			Currency: spec.Currency,
+			Amount:   spec.chargeAmount(),
+		})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
 
