@@ -15,7 +15,6 @@ import (
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/gateway"
-	"gorm.io/gorm"
 )
 
 // publicIntentRequest is the optional body for creating a public pay intent.
@@ -53,7 +52,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		// loop below, which adopts or joins them.
 		if existing, err := db.GetTransaction(base); err == nil && !isDeadClaim(existing) {
 			if existing.Status == publicIntentProcessing {
-				if winner := waitForPublicIntent(c.Context(), db, base, balance); winner != nil {
+				if winner := waitForClaim(c.Context(), db, base, balance, nil); winner != nil {
 					return utils.OK(c, fiber.StatusOK, publicIntentResponse(*winner))
 				}
 			} else {
@@ -98,7 +97,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
 		}
 		if !claimed {
-			if winner := waitForPublicIntent(c.Context(), db, orderID, balance); winner != nil {
+			if winner := waitForClaim(c.Context(), db, orderID, balance, nil); winner != nil {
 				return utils.OK(c, fiber.StatusOK, publicIntentResponse(*winner))
 			}
 			continue
@@ -159,61 +158,6 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	return utils.Fail(c, fiber.StatusBadGateway, "failed to create gateway transaction", nil)
 }
 
-// publicIntentProcessing marks an order id claimed in the database while its
-// provider charge is still in flight. It is deliberately not one of the
-// GatewayStatus values: reusableIntent only reuses pending rows and the
-// reconciler only polls pending rows, so a claim is invisible to both until
-// it completes. Status is a free-form string column, so no migration is
-// needed for this value.
-const publicIntentProcessing = "processing"
-
-// publicClaimWait bounds how long a losing click waits for the winner's
-// charge before falling through to a retry suffix. The winner's Core API
-// call typically resolves in ~2s against a 15s timeout, so this covers it
-// without holding the payer's request.
-const publicClaimWait = 12 * time.Second
-
-// publicClaimStep is the poll interval while waiting for a claimed intent.
-const publicClaimStep = 100 * time.Millisecond
-
-// publicClaimStale is the age past which a "processing" claim is treated as
-// crashed instead of in flight: the provider call it guards always resolves
-// within seconds, so an older claim can never complete and must not block a
-// new click for the full wait window.
-const publicClaimStale = 60 * time.Second
-
-// waitForPublicIntent polls a claimed order id until its charge completes.
-// It returns the winner while it is still payable, or nil when the claim
-// failed or is still in flight past the deadline (the caller then retries
-// under a fresh suffix).
-func waitForPublicIntent(ctx context.Context, db database.Queries, orderID string, balance decimal.Decimal) *models.GatewayTransaction {
-	deadline := time.Now().Add(publicClaimWait)
-	step := publicClaimStep
-	for time.Now().Before(deadline) {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(step):
-		}
-		step *= 2
-		if step > time.Second {
-			step = time.Second
-		}
-		txn, err := db.GetTransaction(orderID)
-		if err != nil {
-			continue
-		}
-		if txn.Status == publicIntentProcessing {
-			continue
-		}
-		if reusableIntent(txn, balance) {
-			return &txn
-		}
-		return nil
-	}
-	return nil
-}
-
 // publicRetryOrderID resolves the order id for one attempt: a still-payable
 // intent owned by this base (same method + asset) is returned for reuse,
 // otherwise the next retry suffix (-rN) is appended because the provider
@@ -230,7 +174,7 @@ func publicRetryOrderID(ctx context.Context, db database.Queries, base string, i
 	switch {
 	case err == nil:
 		if latest.Status == publicIntentProcessing && time.Since(latest.CreatedAt) < publicClaimStale {
-			if winner := waitForPublicIntent(ctx, db, latest.OrderID, balance); winner != nil {
+			if winner := waitForClaim(ctx, db, latest.OrderID, balance, nil); winner != nil {
 				return "", winner, nil
 			}
 		}
@@ -252,87 +196,11 @@ func publicRetryOrderID(ctx context.Context, db database.Queries, base string, i
 	}
 }
 
-// isDeadClaim reports a claim that provably never reached the provider: it
-// failed while holding no provider payload (no Snap token, redirect, QR, or
-// deposit address). Its order id is safe to adopt because the gateway never
-// saw it, so adopting can never double-charge.
-func isDeadClaim(t models.GatewayTransaction) bool {
-	if t.Status != models.GatewayStatusFailed {
-		return false
-	}
-	return t.SnapToken == "" && t.RedirectURL == "" && t.PaymentURL == "" && t.Address == ""
-}
-
-// claimPublicOrderID atomically claims an order id for the caller's charge.
-// A fresh id is inserted; a collision on a dead claim (failed before reaching
-// the provider) or a stale one (processing past publicClaimStale, whose
-// guarded provider call can never still be running) adopts that row (reset
-// to processing); a collision on anything else reports false so the caller
-// joins the live claim via wait. A non-duplicate storage error is returned.
-func claimPublicOrderID(db database.Queries, claim *models.GatewayTransaction) (bool, error) {
-	if err := db.CreateTransaction(claim); err == nil {
-		return true, nil
-	} else if !isDuplicateKeyError(err) {
-		return false, err
-	}
-	existing, gerr := db.GetTransaction(claim.OrderID)
-	if gerr != nil {
-		return false, nil
-	}
-	if !isDeadClaim(existing) && !isStaleClaim(existing) {
-		return false, nil
-	}
-	existing.Status = publicIntentProcessing
-	existing.UpdatedAt = time.Now()
-	if serr := db.SaveTransaction(&existing); serr != nil {
-		return false, serr
-	}
-	*claim = existing
-	return true, nil
-}
-
-// isStaleClaim reports a processing claim older than publicClaimStale. The
-// provider call it guarded always resolves within seconds, so an older claim
-// belongs to a crashed attempt and its slot may be adopted.
-func isStaleClaim(t models.GatewayTransaction) bool {
-	return t.Status == publicIntentProcessing && time.Since(t.CreatedAt) > publicClaimStale
-}
-func isDuplicateKeyError(err error) bool {
-	if err == nil {
-		return false
-	}
-	// Typed check first: both dialectors translate unique violations to
-	// gorm.ErrDuplicatedKey (TranslateError is enabled in platform/database).
-	if errors.Is(err, gorm.ErrDuplicatedKey) {
-		return true
-	}
-	// Fallback for untranslated driver errors.
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "unique constraint") || strings.Contains(msg, "unique_index") || strings.Contains(msg, "primary key")
-}
-
 // isDuplicateOrderError reports a provider-side duplicate order id rejection
 // (Midtrans refuses to recharge an order id it already holds).
 func isDuplicateOrderError(err error) bool {
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "already used") || strings.Contains(msg, "order_id")
-}
-
-// reusableIntent reports whether a stored public intent can still be paid:
-// pending, not past the expiry the provider itself reported (QRIS ~15 minutes,
-// crypto deposit windows too; Snap/gopay rows carry none), and still covering
-// the current balance. Failed/settled/foreign-amount rows are never reused.
-func reusableIntent(t models.GatewayTransaction, balance decimal.Decimal) bool {
-	if t.Status != models.GatewayStatusPending {
-		return false
-	}
-	if t.ExpiresAt != "" {
-		if at, err := time.Parse(time.RFC3339, t.ExpiresAt); err == nil && !at.After(time.Now()) {
-			return false
-		}
-	}
-	// Rows written before conversion existed carry no currency to compare.
-	return t.InvoiceCurrency == "" || t.InvoiceAmount.Equal(balance)
 }
 
 // routePublicGateway resolves the provider for a public charge: an explicit
@@ -343,7 +211,7 @@ func routePublicGateway(method string, allow map[string]bool) (gateway.Gateway, 
 	if method == "" {
 		return gateway.Get("midtrans")
 	}
-	return gateway.RouteWhere("", method, func(provider, m string) bool {
+	return gateway.Route("", method, func(provider, m string) bool {
 		return provider != "midtrans" || methodAllowed(allow, m)
 	})
 }

@@ -1,9 +1,7 @@
 package controllers
 
 import (
-	"context"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -124,7 +122,7 @@ func createRelayIntent(c fiber.Ctx) error {
 		// A sibling request owns this slot: join its charge instead of
 		// opening a second one. Only a stuck claim falls through, and the
 		// provider call below is then genuinely the only live attempt.
-		if winner := waitForRelayClaim(c.Context(), *db, project.Slug, input.ExternalOrderID, claimID, balance); winner != nil {
+		if winner := waitForClaim(c.Context(), *db, claimID, balance, relayClaimLookup(*db, project.Slug, input.ExternalOrderID, balance)); winner != nil {
 			return utils.OK(c, fiber.StatusOK, intentResponse(*winner))
 		}
 		logger.L().Warn("relay intent claim stuck, charging without slot", "project", project.Slug, "external", input.ExternalOrderID)
@@ -195,52 +193,15 @@ func relayClaimID(projectSlug, external, method, currency string, amount decimal
 	return queries.RelayClaimPrefix + sanitizeExternal(projectSlug) + "-" + hex.EncodeToString(sum[:])[:16]
 }
 
-// waitForRelayClaim polls a sibling claim until its charge resolves. A
-// vanished claim means the winner atomically swapped it for the real intent,
-// so the newest real row is returned while payable. Stale claims and terminal
-// rows resolve to nil so the caller proceeds with its own charge.
-func waitForRelayClaim(ctx context.Context, db database.Queries, projectSlug, external, claimID string, balance decimal.Decimal) *models.GatewayTransaction {
-	deadline := time.Now().Add(publicClaimWait)
-	step := publicClaimStep
-	for time.Now().Before(deadline) {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(step):
-		}
-		step *= 2
-		if step > time.Second {
-			step = time.Second
-		}
-		txn, err := db.GetTransaction(claimID)
-		if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			continue
-		}
-		if swapped, rerr := db.LatestRelayIntent(projectSlug, external); rerr == nil && reusableRelayIntent(swapped, balance) {
-			return &swapped
-		}
+// relayClaimLookup resolves a vanished CLM- claim: the winner swapped it for the real intent, so the newest payable relay row for this external id is returned.
+func relayClaimLookup(db database.Queries, projectSlug, external string, balance decimal.Decimal) func() *models.GatewayTransaction {
+	return func() *models.GatewayTransaction {
+		swapped, err := db.LatestRelayIntent(projectSlug, external)
+		if err != nil || !reusableIntent(swapped, balance) {
 			return nil
 		}
-		if txn.Status == publicIntentProcessing {
-			if time.Since(txn.CreatedAt) > publicClaimStale {
-				return nil
-			}
-			continue
-		}
-		return nil
+		return &swapped
 	}
-	return nil
-}
-
-// reusableRelayIntent reports whether a swapped-in intent is still payable.
-// Relay rows carry no expiry of their own; the provider is the source of
-// truth past this point, so pending is enough to join.
-func reusableRelayIntent(t models.GatewayTransaction, balance decimal.Decimal) bool {
-	if t.Status != models.GatewayStatusPending {
-		return false
-	}
-	return t.InvoiceCurrency == "" || t.InvoiceAmount.Equal(balance)
 }
 
 // swapRelayClaim atomically exchanges a held claim slot for the charged
