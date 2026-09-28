@@ -10,7 +10,7 @@ import (
 )
 
 // The invoice payment_method validator enum must stay in lockstep with the
-// SPA's shared list (web/src/lib/paymentMethods.js): a drifted list would
+// SPA's shared list (webui/src/lib/paymentMethods.js): a drifted list would
 // either reject choices the UI offers or show options the API rejects.
 func TestInvoicePaymentMethodEnumMatchesFrontend(t *testing.T) {
 	oneof, ok := oneOfValues(fieldValidateTag(t, InvoiceInput{}, "PaymentMethod"))
@@ -18,7 +18,7 @@ func TestInvoicePaymentMethodEnumMatchesFrontend(t *testing.T) {
 		t.Fatal("InvoiceInput.PaymentMethod has no oneof validate tag")
 	}
 
-	path := filepath.Join("..", "..", "web", "src", "lib", "paymentMethods.js")
+	path := filepath.Join("..", "..", "webui", "src", "lib", "paymentMethods.js")
 	src, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read frontend enum: %v", err)
@@ -26,7 +26,7 @@ func TestInvoicePaymentMethodEnumMatchesFrontend(t *testing.T) {
 	frontend := jsStringArray(t, src, "PAYMENT_METHODS")
 
 	if !reflect.DeepEqual(oneof, frontend) {
-		t.Fatalf("InvoiceInput.PaymentMethod oneof = %v, want web PAYMENT_METHODS = %v", oneof, frontend)
+		t.Fatalf("InvoiceInput.PaymentMethod oneof = %v, want webui PAYMENT_METHODS = %v", oneof, frontend)
 	}
 
 	// The bare Invoice column repeats the tag for swagger; keep both Go tags

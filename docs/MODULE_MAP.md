@@ -4,13 +4,13 @@ Read first: `AGENTS.md`, then this file, then `main.go` →
 `pkg/routes/versioning.go`. After that, jump straight to the domain row
 below; you should not need to grep the codebase to find an owner file.
 
-Request path: `web/src/pages/*.jsx` → `web/src/hooks/*` →
-`web/src/api/*.js` (axios only in `http.js`) → `pkg/routes/*` →
+Request path: `webui/src/pages/*.jsx` → `webui/src/hooks/*` →
+`webui/src/api/*.js` (axios only in `http.js`) → `pkg/routes/*` →
 `pkg/middleware/*` → `app/controllers/*` → `app/queries/*` (one file per
 domain: SQL/GORM detail lives here, never inline in controllers) →
 `platform/*` + `pkg/*`.
 
-Two FE entries (Vite MPA): the product app `web/index.html` → `web/src/main.jsx` → `web/src/routes.jsx`, and the admin console `web/admin.html` → `web/src/admin.jsx` → `web/src/adminRoutes.jsx` (`basename: /admin`, guard in `AdminGuard`, shell in `AdminShell.jsx`).
+Two FE entries (Vite MPA): the product app `webui/index.html` → `webui/src/main.jsx` → `webui/src/routes.jsx`, and the admin console `webui/admin.html` → `webui/src/admin.jsx` → `webui/src/adminRoutes.jsx` (`basename: /admin`, guard in `AdminGuard`, shell in `AdminShell.jsx`).
 
 ## Domains
 
@@ -40,7 +40,7 @@ Two FE entries (Vite MPA): the product app `web/index.html` → `web/src/main.js
 - **Cache** (dual-backend: Redis when `REDIS_HOST` set, memory otherwise): `platform/cache` (`session_store.go` sessions, `aggregates.go` dashboard/reports with singleflight), invalidated from controllers via `cache_helper.go` (`invalidateAggregates`).
 - **DB/schema**: `platform/database` (GORM `AutoMigrate`, backend health, `migrations.go` reversible registry + `POST /admin/migrate/down` rollback) with a forward-only version guard via `schema_migration_model.go` — a newer DB than the binary refuses to start.
 - **Money**: `app/models/money.go` (fixed-point decimal type and constructors for monetary fields).
-- **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `not_found_route.go` (JSON 404 for unknown `/api/*`), `uploads_route.go` (`MountUploads`: local `/uploads/logos/*` only — receipts stay behind the auth proxy), `spa_route.go` (`MountSPA`: optional embedded `web/dist` via `SERVE_SPA_DIR` — MPA entries: `index.html` for the product app, `admin.html` for `/admin/*` (dev rewrite mirrors it in `web/vite.config.js`); non-API misses fall back to `index.html`; `Dockerfile.dev` builds it in), `swagger_route.go` (`/swagger`), `VERSION` file (read once at startup).
+- **Health/ops**: `app/controllers/health_controller.go`, `pkg/routes/health_routes.go` (`/healthz`, `/readyz`), `metrics_routes.go` (`/metrics`), `not_found_route.go` (JSON 404 for unknown `/api/*`), `uploads_route.go` (`MountUploads`: local `/uploads/logos/*` only — receipts stay behind the auth proxy), `webui_route.go` (`MountWebUI`: optional embedded `webui/dist` via `SERVE_WEBUI` — MPA entries: `index.html` for the product app, `admin.html` for `/admin/*` (dev rewrite mirrors it in `webui/vite.config.js`); non-API misses fall back to `index.html`; `Dockerfile.dev` builds it in), `swagger_route.go` (`/swagger`), `VERSION` file (read once at startup).
 - **Captcha**: `platform/captcha` (Turnstile) — enforced on login/register.
 - **Docs**: Swagger annotations → `swag init` → committed `docs/` (`swagger.json/yaml`, `docs/docs.go`); `docs/API_DOCS.md` is a stub.
 

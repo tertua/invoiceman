@@ -42,7 +42,7 @@ func payMethodLabel(method string, txn *models.GatewayTransaction) string {
 	return method
 }
 
-// cryptoAssetLabels mirrors web/src/lib/cryptoAssets.js (display-only
+// cryptoAssetLabels mirrors webui/src/lib/cryptoAssets.js (display-only
 // labels for the platform/nowpayments allowlist codes).
 var cryptoAssetLabels = map[string]string{
 	"usdttrc20": "USDT (TRC20)",

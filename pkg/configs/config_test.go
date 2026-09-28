@@ -26,7 +26,7 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, 60, cfg.Cache.AggTTLSeconds)
 	assert.Equal(t, "local", cfg.Storage.Backend)
 	assert.True(t, cfg.Auth.AllowRegistration)
-	assert.Empty(t, cfg.SPA.Dir)
+	assert.Empty(t, cfg.WebUI.Dir)
 	assert.Empty(t, cfg.Server.TrustedProxies)
 	assert.Equal(t, "X-Forwarded-For", cfg.Server.ProxyHeader)
 }

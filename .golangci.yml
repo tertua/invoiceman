@@ -3,7 +3,7 @@ linters:
   exclusions:
     paths:
       # Third-party code vendored via npm; not ours to lint.
-      - web/node_modules/...
+      - webui/node_modules/...
     rules:
       # Test response bodies are consumed by decode helpers; Close errors
       # carry no signal in tests.

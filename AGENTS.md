@@ -1,6 +1,6 @@
 # Repository guide
 
-For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when owner files or domain wiring change (`npm --prefix web run check:map` is enforced in CI).
+For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when owner files or domain wiring change (`npm --prefix webui run check:map` is enforced in CI).
 
 ## Chat output (assistant)
 
@@ -11,7 +11,7 @@ For domain ownership and request flow, use `docs/MODULE_MAP.md`; update it when 
 
 ## File size limits (enforced, not advisory)
 
-One file = one responsibility. `npm --prefix web run check:size` fails CI; run it locally after any Go/JS file change.
+One file = one responsibility. `npm --prefix webui run check:size` fails CI; run it locally after any Go/JS file change.
 
 - Two hard rules: a file already listed in `scripts/file-size-baseline.json` may **never grow past its recorded entry** — even when it sits far below its category budget (e.g. `admin_model.go` is capped at its entry of 33, not at 200). A file *not* in the baseline (new or post-split) must fit its budget: controllers ≤400, queries ≤300, models ≤200, route tests ≤400, pages ≤250, components ≤250, hooks/api ≤150, per-language i18n ≤900 lines.
 - So appending to almost any existing file fails CI. Split first, the way the repo already does: controllers by route area (`gateway_*_controller.go`), pages by extracting `components/*` cards (`InvoiceDocument.jsx`/`PublicPay.jsx` splits), flow tests by domain (`flow_*_test.go`), i18n by language (`i18n.en.js`/`i18n.id.js` + `i18n.*.settings.js`).
@@ -19,7 +19,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 
 ## Architecture and contracts
 
-- `main.go` wires the Fiber API, migrations, gateways, background worker, and optional SPA (Vite MPA: `web/src/main.jsx` is the product entry, `web/src/admin.jsx` the admin console under `/admin`); follow the request path and domain rows in `docs/MODULE_MAP.md` before changing a feature.
+- `main.go` wires the Fiber API, migrations, gateways, background worker, and optional SPA (Vite MPA: `webui/src/main.jsx` is the product entry, `webui/src/admin.jsx` the admin console under `/admin`); follow the request path and domain rows in `docs/MODULE_MAP.md` before changing a feature.
 - Keep SQL/GORM queries in `app/queries`; raw SQL is restricted to `platform/database`. Queries and migrations must work with both SQLite and PostgreSQL (`.github/workflows/dialect-check.yml`).
 - Startup runs GORM `AutoMigrate`; rollback steps live in `platform/database/migrations.go`. New rollback steps must use backend-agnostic GORM migrator calls and undo only their own additions.
 - Route order is significant: register `/api/v1` before legacy `/api`, and register public, gateway, then private routes within each prefix (`pkg/routes/versioning.go`). Gateway routes authenticate by API key; session routes use middleware-provided identity (`utils.CurrentUserID` / `utils.CurrentServiceProject`). Session-cookie mutations require `X-CSRF-Token`; money-moving mutations require an `Idempotency-Key`.
@@ -35,7 +35,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 - Promote `dev` → `main` only when stable (tests/lint pass) via fast-forward, never merge-commit or force-push:
   `make promote` (= `git fetch` + `git checkout main` + `git merge --ff-only origin/dev` + `git push origin main`).
 - Release `main` → `master` with `make promote-prod` (ff-only push of `origin/main` to `master` + annotated tag `v$(VERSION)` when that tag does not exist yet; re-running is a no-op). Release order: `make promote && make promote-prod`.
-- `VERSION` changes only as part of a release, never inside feat/fix commits. The agent picks the number from the change (`fix` → patch, `feat` → minor, breaking → major), then `npm --prefix web run sync:version` + real notes in `web/CHANGELOG.md` before promoting. `sync-version.mjs --check` (CI `version-check.yml`) rejects any bump that is not a single-component +1 with lower components reset (`0.6.1→0.6.2`, `0.6.2→0.7.0`, `0.7.0→1.0.0`) — jumps and downgrades fail the build.
+- `VERSION` changes only as part of a release, never inside feat/fix commits. The agent picks the number from the change (`fix` → patch, `feat` → minor, breaking → major), then `npm --prefix webui run sync:version` + real notes in `webui/CHANGELOG.md` before promoting. `sync-version.mjs --check` (CI `version-check.yml`) rejects any bump that is not a single-component +1 with lower components reset (`0.6.1→0.6.2`, `0.6.2→0.7.0`, `0.7.0→1.0.0`) — jumps and downgrades fail the build.
 - Keep history linear: `git pull --ff-only` / `git pull --rebase`; no `git merge --no-ff`, no `git push --force` on `dev`/`main`/`master`.
 - Verify with `make check-flow` (`master` ancestor of `main`, `main` ancestor of `dev`, no merge commits in `master..dev`); CI enforces this in `branch-flow.yml`.
 - Dependabot: PRs target `dev` with minor+patch grouped per ecosystem (`.github/dependabot.yml`); `.github/workflows/dependabot-auto-merge.yml` squash-merges them once every reported check is green (majors stay manual). The repo has merge commits disabled (squash/rebase only) so PR merges can never break `check-flow`.
@@ -47,9 +47,9 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 - Flow tests build fixtures through `pkg/routes/flow_fixtures_test.go` (`newInvoice`/`createInvoice`/`createClient`) — never hand-write invoice JSON in a test; `check:fixtures` fails on a raw `POST /api/invoices` literal. Cross-field invoice rules live once in `app/controllers/invoice_rules.go` (`validateInvoice`); add new invariants there, not inline at each call site.
 - `make test` runs clean, gocritic, gosec, golangci-lint, then coverage tests — and `make build` depends on `make test`, so never use it for a quick binary (use `make dev-be`). After any `go.mod`/`go.sum` change, run `govulncheck ./...` before committing (CI also runs it on push/PR plus weekly on schedule). `make run` runs `swag init`, builds, then starts the API. Lint scope is intentional: `.golangci.yml` excludes vendored/test noise and the `critic` target lists packages explicitly with `hugeParam,rangeValCopy` disabled — don't revert to bare `./...`.
 - Swagger annotations changed: run `swag init`; generated `docs/` files are committed.
-- Cheap pre-push guards are plain Node scripts that need **no `npm ci`** (CI runs them bare): `npm --prefix web run check:map`, `check:size`, `check:fixtures`, and `node scripts/sync-version.mjs --check`.
-- Frontend CI uses Node 22 (local may differ): `npm ci`, then in `web/` `npm run lint`, `npm test`, `npm run check:charts`, `npm run build`, `npm run check:bundles:strict`. `make web.check` runs all of those plus `check:fixtures`.
-- `VERSION` is canonical; after changing it run `npm --prefix web run sync:version`, which syncs `web/package.json` and ensures `web/CHANGELOG.md` has a `## [vX.Y.Z]` section (auto-inserts a stub, then fill in the notes). CI (`version-check.yml`) runs the same check and fails on a missing or still-stubbed section.
+- Cheap pre-push guards are plain Node scripts that need **no `npm ci`** (CI runs them bare): `npm --prefix webui run check:map`, `check:size`, `check:fixtures`, and `node scripts/sync-version.mjs --check`.
+- Frontend CI uses Node 22 (local may differ): `npm ci`, then in `webui/` `npm run lint`, `npm test`, `npm run check:charts`, `npm run build`, `npm run check:bundles:strict`. `make webui.check` runs all of those plus `check:fixtures`.
+- `VERSION` is canonical; after changing it run `npm --prefix webui run sync:version`, which syncs `webui/package.json` and ensures `webui/CHANGELOG.md` has a `## [vX.Y.Z]` section (auto-inserts a stub, then fill in the notes). CI (`version-check.yml`) runs the same check and fails on a missing or still-stubbed section.
 
 ## Local dev run (this machine)
 
@@ -61,7 +61,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 
 ## Frontend constraints
 
-- Axios imports belong only in `web/src/api/http.js`. Vite aliases `@` to `web/src` and proxies `/api` and `/uploads` to `localhost:5000` on port 5173.
+- Axios imports belong only in `webui/src/api/http.js`. Vite aliases `@` to `webui/src` and proxies `/api` and `/uploads` to `localhost:5000` on port 5173.
 - Keep `@react-pdf/renderer` imports in `InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`; keep `recharts` in the Dashboard, Client, and Reports chart components. Bundle limits are checked by `check:bundles:strict`.
-- User-visible strings belong in `web/src/lib/i18n.en.js` (`en`) and `web/src/lib/i18n.id.js` (`id`) — `web/src/lib/i18n.js` is only the re-export entrypoint — not hardcoded in components.
-- Money crosses the API as decimal **strings** (`models.Money`); Recharts `Pie` silently draws nothing for strings. Route pie data through `chartNumbers` (`web/src/lib/chartData.js`); `check:charts` enforces it and `npm test` covers the helper.
+- User-visible strings belong in `webui/src/lib/i18n.en.js` (`en`) and `webui/src/lib/i18n.id.js` (`id`) — `webui/src/lib/i18n.js` is only the re-export entrypoint — not hardcoded in components.
+- Money crosses the API as decimal **strings** (`models.Money`); Recharts `Pie` silently draws nothing for strings. Route pie data through `chartNumbers` (`webui/src/lib/chartData.js`); `check:charts` enforces it and `npm test` covers the helper.

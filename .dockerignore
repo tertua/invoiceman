@@ -29,8 +29,8 @@ tmp/
 scripts/
 
 # Frontend: the Go image never serves the SPA source (282M+ node_modules).
-# The SPA is built and hosted separately; see web/ and make web.check.
-web/
+# The SPA is built and hosted separately; see webui/ and make webui.check.
+webui/
 
 # Local runtime data: dev SQLite DB and local upload storage must never be
 # baked into the image. Production gets a fresh volume/mount instead.

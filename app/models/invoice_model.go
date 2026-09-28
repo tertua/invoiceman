@@ -43,7 +43,7 @@ type Invoice struct {
 	Terms         string     `db:"terms" json:"terms"`
 	// PaymentMethod is the informational "how to pay" choice shown on the
 	// invoice, not a gateway routing key. Keep the oneof list in sync with
-	// web/src/lib/paymentMethods.js (PAYMENT_METHODS).
+	// webui/src/lib/paymentMethods.js (PAYMENT_METHODS).
 	PaymentMethod string `db:"payment_method" json:"payment_method" gorm:"size:32;default:''" validate:"omitempty,lte=32,oneof=Cash 'Bank transfer' Online"`
 	Subtotal      Money  `gorm:"type:decimal(19,4)" db:"subtotal" json:"subtotal"`
 	TaxAmount     Money  `gorm:"type:decimal(19,4)" db:"tax_amount" json:"tax_amount"`

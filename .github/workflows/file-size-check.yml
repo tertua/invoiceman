@@ -8,7 +8,7 @@ on:
       - "app/**"
       - "pkg/**"
       - "platform/**"
-      - "web/src/**"
+      - "webui/src/**"
       - ".github/workflows/file-size-check.yml"
   pull_request:
     paths:
@@ -17,7 +17,7 @@ on:
       - "app/**"
       - "pkg/**"
       - "platform/**"
-      - "web/src/**"
+      - "webui/src/**"
       - ".github/workflows/file-size-check.yml"
 
 jobs:
@@ -25,4 +25,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm --prefix web run check:size
+      - run: npm --prefix webui run check:size

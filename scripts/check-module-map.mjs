@@ -3,7 +3,7 @@
 //      path or basename), so new domains can't slip in undocumented;
 //   2. every backticked .go/.js/.jsx path in the map must exist, so renames
 //      and deletions can't leave dead pointers.
-// Usage: npm --prefix web run check:map
+// Usage: npm --prefix webui run check:map
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -26,10 +26,10 @@ const owned = [
   ...(await listFiles("app/models", [".go"])),
   ...(await listFiles("app/queries", [".go"])),
   ...(await listFiles("pkg/routes", [".go"])),
-  ...(await listFiles("web/src/api", [".js"])),
-  ...(await listFiles("web/src/hooks", [".js"])),
-  ...(await listFiles("web/src/pages", [".jsx"])),
-  ...(await listFiles("web/src/context", [".jsx"])),
+  ...(await listFiles("webui/src/api", [".js"])),
+  ...(await listFiles("webui/src/hooks", [".js"])),
+  ...(await listFiles("webui/src/pages", [".jsx"])),
+  ...(await listFiles("webui/src/context", [".jsx"])),
 ];
 
 // Top-level platform areas (files or packages, docs excluded).
@@ -81,7 +81,7 @@ for (const f of uniqueDead) {
   failed = true;
 }
 if (failed) {
-  console.error("\nUpdate docs/MODULE_MAP.md, then re-run: npm --prefix web run check:map");
+  console.error("\nUpdate docs/MODULE_MAP.md, then re-run: npm --prefix webui run check:map");
   process.exit(1);
 }
 console.log(`map OK: ${owned.length} owner files referenced, no dead links.`);

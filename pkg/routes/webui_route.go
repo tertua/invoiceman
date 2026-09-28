@@ -9,8 +9,8 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/static"
 )
 
-// MountSPA serves the built Vite entries in dir (SERVE_SPA_DIR, empty = API-only): index.html for the product app and admin.html under /admin — registered after every API/special route so unknown /api/* keeps the JSON 404.
-func MountSPA(a *fiber.App, dir string) {
+// MountWebUI serves the built Vite entries in dir (SERVE_WEBUI, empty = API-only): index.html for the product app and admin.html under /admin — registered after every API/special route so unknown /api/* keeps the JSON 404.
+func MountWebUI(a *fiber.App, dir string) {
 	if strings.TrimSpace(dir) == "" {
 		return
 	}

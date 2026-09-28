@@ -15,7 +15,7 @@ updates:
     go-minor-patch:
       update-types: ["minor", "patch"]
 - package-ecosystem: npm
-  directory: "/web"
+  directory: "/webui"
   schedule:
     interval: weekly
     time: "11:00"

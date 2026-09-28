@@ -12,7 +12,7 @@
 // cards (see InvoiceDetail.jsx split), flow tests by domain (see
 // flow_*_test.go), i18n by language (see i18n.en/id.js).
 //
-// Usage: npm --prefix web run check:size
+// Usage: npm --prefix webui run check:size
 // After an intentional split, lower that file's baseline entry (never raise).
 import { execSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -26,11 +26,11 @@ const BUDGETS = [
   ["app/queries/", 300],
   ["app/models/", 200],
   ["pkg/routes/", 400],
-  ["web/src/pages/", 250],
-  ["web/src/components/", 250],
-  ["web/src/lib/i18n.", 900], // per-language dictionaries
-  ["web/src/hooks/", 150],
-  ["web/src/api/", 150],
+  ["webui/src/pages/", 250],
+  ["webui/src/components/", 250],
+  ["webui/src/lib/i18n.", 900], // per-language dictionaries
+  ["webui/src/hooks/", 150],
+  ["webui/src/api/", 150],
 ];
 const DEFAULT_BUDGET = 400;
 const GENERATED = new Set(["docs/docs.go"]);
@@ -66,7 +66,7 @@ for (const f of files) {
   }
 }
 if (failed) {
-  console.error("\nSplit the file (see header comment), then re-run: npm --prefix web run check:size");
+  console.error("\nSplit the file (see header comment), then re-run: npm --prefix webui run check:size");
   process.exit(1);
 }
 console.log(`size OK: ${files.length} files within ratchet.`);

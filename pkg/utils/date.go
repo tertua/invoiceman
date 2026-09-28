@@ -6,7 +6,7 @@ import (
 
 // DateLayout is the single date format exchanged with the frontend (YYYY-MM-DD).
 // Keep all parsing/formatting here so app/controllers stays consistent and
-// frontend parsing in web/src stays aligned.
+// frontend parsing in webui/src stays aligned.
 const DateLayout = "2006-01-02"
 
 // ParseDate parses an optional YYYY-MM-DD date string.

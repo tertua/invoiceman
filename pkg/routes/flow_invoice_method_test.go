@@ -9,7 +9,7 @@ import (
 
 // The invoice payment_method field is informational (how the client should
 // pay), not gateway routing: it round-trips through create/detail/update and
-// only accepts the shared enum from web/src/lib/paymentMethods.js.
+// only accepts the shared enum from webui/src/lib/paymentMethods.js.
 func TestInvoicePaymentMethodFlow(t *testing.T) {
 	app := newTestApp()
 

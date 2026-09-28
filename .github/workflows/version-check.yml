@@ -4,15 +4,15 @@ on:
   push:
     paths:
       - "VERSION"
-      - "web/package.json"
-      - "web/CHANGELOG.md"
+      - "webui/package.json"
+      - "webui/CHANGELOG.md"
       - "scripts/sync-version.mjs"
       - ".github/workflows/version-check.yml"
   pull_request:
     paths:
       - "VERSION"
-      - "web/package.json"
-      - "web/CHANGELOG.md"
+      - "webui/package.json"
+      - "webui/CHANGELOG.md"
       - "scripts/sync-version.mjs"
       - ".github/workflows/version-check.yml"
 
@@ -25,7 +25,7 @@ jobs:
           # The bump guard compares VERSION with the previous commit that
           # touched it, so it needs full history (shallow clone = no guard).
           fetch-depth: 0
-      # Fails when VERSION, web/package.json and web/CHANGELOG.md disagree:
+      # Fails when VERSION, webui/package.json and webui/CHANGELOG.md disagree:
       # the changelog needs a "## [vX.Y.Z]" section with real notes, and the
       # bump itself must be a single-component +1 release bump.
       - run: node scripts/sync-version.mjs --check

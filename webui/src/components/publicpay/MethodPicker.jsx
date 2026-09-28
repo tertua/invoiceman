@@ -7,7 +7,7 @@ import { formatMoney } from "@/lib/utils";
 // Placeholder brand mark per provider-neutral method id (see
 // gateway.MethodBankTransfer/MethodQRIS/... in platform/gateway).
 // Logo seam — real brand assets go here WITHOUT touching the row layout:
-//   1. drop files as web/public/pay-logos/<id>.svg (id = m.id, e.g. qris.svg)
+//   1. drop files as webui/public/pay-logos/<id>.svg (id = m.id, e.g. qris.svg)
 //   2. point the matching entry below at its public path, e.g. qris: "/pay-logos/qris.svg"
 //   3. leave the rest null — rows keep rendering the lucide fallback icon.
 // (Kept as a code comment on purpose: docs go stale, this travels with the UI.)

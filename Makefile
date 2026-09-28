@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run web.check dev-be dev-fe promote promote-prod check-flow
+.PHONY: clean critic security lint test build run webui.check dev-be dev-fe promote promote-prod check-flow
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -8,7 +8,7 @@ LDFLAGS := -w -s -X github.com/tertua/invoiceman/pkg/constants.Version=$(VERSION
 clean:
 	rm -rf ./build
 
-# Packages are listed explicitly so third-party code under web/node_modules
+# Packages are listed explicitly so third-party code under webui/node_modules
 # is never linted. hugeParam/rangeValCopy are style/perf suggestions whose
 # refactors would churn many call sites for no behavior change.
 critic:
@@ -36,15 +36,15 @@ dev-be:
 	go build -ldflags="$(LDFLAGS)" -o /tmp/opencode/invoiceman . && /tmp/opencode/invoiceman
 
 dev-fe:
-	npm --prefix web run dev -- --host 0.0.0.0
+	npm --prefix webui run dev -- --host 0.0.0.0
 
-web.check:
-	npm --prefix web run lint
-	npm --prefix web test
-	npm --prefix web run check:charts
-	npm --prefix web run check:fixtures
-	npm --prefix web run build
-	npm --prefix web run check:bundles:strict
+webui.check:
+	npm --prefix webui run lint
+	npm --prefix webui test
+	npm --prefix webui run check:charts
+	npm --prefix webui run check:fixtures
+	npm --prefix webui run build
+	npm --prefix webui run check:bundles:strict
 
 docker.run: docker.network docker.postgres swag docker.fiber docker.redis
 

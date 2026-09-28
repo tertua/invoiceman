@@ -27,10 +27,10 @@ func TestSupportedPayCurrencies(t *testing.T) {
 }
 
 // TestPayCurrencyAllowlistMatchesWeb guards the frontend mirror: the asset
-// picker in web/src/lib/cryptoAssets.js must list exactly the pay currencies
+// picker in webui/src/lib/cryptoAssets.js must list exactly the pay currencies
 // the backend will accept, in the same order.
 func TestPayCurrencyAllowlistMatchesWeb(t *testing.T) {
-	raw, err := os.ReadFile("../../web/src/lib/cryptoAssets.js")
+	raw, err := os.ReadFile("../../webui/src/lib/cryptoAssets.js")
 	if err != nil {
 		t.Fatalf("read cryptoAssets.js: %v", err)
 	}
@@ -40,6 +40,6 @@ func TestPayCurrencyAllowlistMatchesWeb(t *testing.T) {
 		web = append(web, m[1])
 	}
 	if !slices.Equal(web, supportedPayCurrencies) {
-		t.Fatalf("web crypto assets %v != backend allowlist %v (keep web/src/lib/cryptoAssets.js in sync)", web, supportedPayCurrencies)
+		t.Fatalf("web crypto assets %v != backend allowlist %v (keep webui/src/lib/cryptoAssets.js in sync)", web, supportedPayCurrencies)
 	}
 }

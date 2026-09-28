@@ -36,10 +36,10 @@ func htmlBody(t *testing.T, app *fiber.App, path string) string {
 	return string(raw)
 }
 
-// TestMountSPASplitEntries pins the MPA contract: /admin and /admin/* get admin.html, other app routes keep index.html.
-func TestMountSPASplitEntries(t *testing.T) {
+// TestMountWebUISplitEntries pins the MPA contract: /admin and /admin/* get admin.html, other app routes keep index.html.
+func TestMountWebUISplitEntries(t *testing.T) {
 	app := fiber.New()
-	MountSPA(app, adminFixture(t))
+	MountWebUI(app, adminFixture(t))
 
 	for _, path := range []string{"/admin", "/admin/users", "/admin/gateway"} {
 		assert.Contains(t, htmlBody(t, app, path), "console", path)
@@ -47,20 +47,20 @@ func TestMountSPASplitEntries(t *testing.T) {
 	assert.Contains(t, htmlBody(t, app, "/dashboard"), "product")
 }
 
-// TestMountSPAAdminPrefixIsExact guards against over-matching: /adminfoo is not the console.
-func TestMountSPAAdminPrefixIsExact(t *testing.T) {
+// TestMountWebUIAdminPrefixIsExact guards against over-matching: /adminfoo is not the console.
+func TestMountWebUIAdminPrefixIsExact(t *testing.T) {
 	app := fiber.New()
-	MountSPA(app, adminFixture(t))
+	MountWebUI(app, adminFixture(t))
 
 	assert.Contains(t, htmlBody(t, app, "/adminfoo"), "product")
 }
 
-// TestMountSPAWithoutAdminEntry: an index-only dist (pre-MPA build) still answers /admin with the product shell instead of erroring.
-func TestMountSPAWithoutAdminEntry(t *testing.T) {
+// TestMountWebUIWithoutAdminEntry: an index-only dist (pre-MPA build) still answers /admin with the product shell instead of erroring.
+func TestMountWebUIWithoutAdminEntry(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html>product</html>"), 0o644))
 	app := fiber.New()
-	MountSPA(app, dir)
+	MountWebUI(app, dir)
 
 	assert.Contains(t, htmlBody(t, app, "/admin/users"), "product")
 }

@@ -3,7 +3,7 @@
 Invoice management API + SPA: invoices, clients, payments with shareable public pay links (QRIS via Midtrans, crypto via NOWPayments), a gateway relay for third-party integrations, expenses, dashboards, reports, and AI-assisted text (Gemini, English/Indonesian).
 
 - Backend: Go (Fiber), GORM over SQLite/PostgreSQL, optional Redis.
-- Frontend: React + Vite SPA in `web/`.
+- Frontend: React + Vite SPA in `webui/`.
 - API docs: Swagger UI at http://127.0.0.1:5000/swagger/index.html (regenerate with `make swag` after changing annotations).
 
 ## Quick start
@@ -45,7 +45,7 @@ The image contains only the binary — never bake secrets in. Inject at run time
 
 There are two deploy modes:
 
-- **Split (default, `Dockerfile`)**: API-only. Build the FE (`make web.check`) then host it separately (nginx/Cloudflare). Because the FE calls `/api/v1` relatively, the FE host must proxy `/api` and `/uploads` to the BE — for a different origin, set `CORS_ORIGINS` and use HTTPS (the `Secure` session cookie does not work over plain HTTP/IP). One BE can serve many FEs.
+- **Split (default, `Dockerfile`)**: API-only. Build the FE (`make webui.check`) then host it separately (nginx/Cloudflare). Because the FE calls `/api/v1` relatively, the FE host must proxy `/api` and `/uploads` to the BE — for a different origin, set `CORS_ORIGINS` and use HTTPS (the `Secure` session cookie does not work over plain HTTP/IP). One BE can serve many FEs.
 - **Single container (`Dockerfile.dev`)**: FE embedded into the image, `/api/*` same-origin — no CORS, proxy, or second domain.
 
   ```bash
@@ -79,15 +79,15 @@ Both keys must come from the same Cloudflare pair. When unused, leave them empty
 - `make run` — `swag init`, build, then start the API.
 - `make test` — clean, gocritic, gosec, golangci-lint, then coverage tests. `make build` depends on it, so it is not a quick binary.
 - `go test ./...` — default suite, no external services; focus a route flow with `go test ./pkg/routes -run TestName -v`.
-- `make web.check` — FE lint, tests, chart/bundle checks, and build.
+- `make webui.check` — FE lint, tests, chart/bundle checks, and build.
 - `make docker.run` / `make docker.stop` — Docker Postgres + Redis + API.
 
-`VERSION` is canonical (see `VERSION`); changes are noted in `web/CHANGELOG.md`.
+`VERSION` is canonical (see `VERSION`); changes are noted in `webui/CHANGELOG.md`.
 
 ## Frontend bundle boundaries
 
 The SPA lazy-loads routes and keeps heavy dependencies out of the initial bundle:
 
-- `@react-pdf/renderer` may only be imported by `web/src/components/invoice/InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`.
+- `@react-pdf/renderer` may only be imported by `webui/src/components/invoice/InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`.
 - `recharts` is reserved for the full chart pages: Dashboard, ClientDetail, and Reports. Small dashboard sparklines use SVG.
-- Run `npm --prefix web run check:bundles` for an advisory report or `make web.check` for strict lint, build, and bundle-budget checks.
+- Run `npm --prefix webui run check:bundles` for an advisory report or `make webui.check` for strict lint, build, and bundle-budget checks.

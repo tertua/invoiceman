@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// spaFixture builds a minimal web/dist stand-in (index + one asset).
-func spaFixture(t *testing.T) string {
+// webuiFixture builds a minimal webui/dist stand-in (index + one asset).
+func webuiFixture(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html>spa</html>"), 0o644))
@@ -22,12 +22,12 @@ func spaFixture(t *testing.T) string {
 	return dir
 }
 
-// TestMountSPAEmptyDirIsNoOp keeps the default (API-only) image untouched:
+// TestMountWebUIEmptyDirIsNoOp keeps the default (API-only) image untouched:
 // no dir configured means no extra routes are registered.
-func TestMountSPAEmptyDirIsNoOp(t *testing.T) {
+func TestMountWebUIEmptyDirIsNoOp(t *testing.T) {
 	app := fiber.New()
 	NotFoundRoute(app)
-	MountSPA(app, "")
+	MountWebUI(app, "")
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/dashboard", http.NoBody), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
@@ -36,12 +36,12 @@ func TestMountSPAEmptyDirIsNoOp(t *testing.T) {
 	resp.Body.Close()
 }
 
-// TestMountSPA covers the embedded-frontend contract: SPA routes fall back
+// TestMountWebUI covers the embedded-frontend contract: SPA routes fall back
 // to index.html, assets are served, and unknown /api/* keeps the JSON 404.
-func TestMountSPA(t *testing.T) {
+func TestMountWebUI(t *testing.T) {
 	app := fiber.New()
 	// Mirror main.go ordering: SPA fallback before the final JSON 404.
-	MountSPA(app, spaFixture(t))
+	MountWebUI(app, webuiFixture(t))
 	NotFoundRoute(app)
 
 	// Client-side route falls back to the SPA shell.

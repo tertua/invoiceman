@@ -3,12 +3,12 @@ name: Web Check
 on:
   push:
     paths:
-      - "web/**"
+      - "webui/**"
       - "Makefile"
       - ".github/workflows/web-check.yml"
   pull_request:
     paths:
-      - "web/**"
+      - "webui/**"
       - "Makefile"
       - ".github/workflows/web-check.yml"
 
@@ -17,14 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: web
+        working-directory: webui
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: webui/package-lock.json
       - run: npm ci
       - run: npm run lint
       - run: npm test
