@@ -91,7 +91,7 @@ export function SettlementPanel() {
                 <th className="px-4 py-3">{t("gateway.orderId")}</th>
                 <th className="px-4 py-3">{t("gateway.gateway")}</th>
                 <th className="px-4 py-3">{t("gateway.method")}</th>
-                <th className="py-3 pl-4 pr-8 text-right">{t("gateway.amount")}</th>
+                <th className="px-4 py-3 text-right">{t("gateway.amount")}</th>
                 <th className="px-4 py-3">{t("gateway.status")}</th>
               </tr>
             </thead>
@@ -113,7 +113,7 @@ export function SettlementPanel() {
                   </td>
                   <td className="px-4 py-3 text-sm">{tx.gateway}</td>
                   <td className="px-4 py-3 text-sm text-[var(--ink-muted)]">{tx.payment_method || "—"}</td>
-                  <td className="py-3 pl-4 pr-8 text-sm text-right tabular">{formatMoney(tx.amount_idr, "IDR")}</td>
+                  <td className="px-4 py-3 text-sm text-right tabular whitespace-nowrap">{formatMoney(tx.amount_idr, "IDR")}</td>
                   <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
                 </tr>
               ))}
