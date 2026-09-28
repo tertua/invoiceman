@@ -1,5 +1,7 @@
 {
   "entryRawBytes": 150000,
   "entryGzipBytes": 45000,
+  "adminEntryRawBytes": 15000,
+  "adminEntryGzipBytes": 5000,
   "requiredChunks": ["pdf", "charts", "framework", "motion"]
 }

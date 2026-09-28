@@ -19,7 +19,7 @@ One file = one responsibility. `npm --prefix web run check:size` fails CI; run i
 
 ## Architecture and contracts
 
-- `main.go` wires the Fiber API, migrations, gateways, background worker, and optional SPA; `web/src/main.jsx` is the React/Vite entrypoint. Follow the request path and domain rows in `docs/MODULE_MAP.md` before changing a feature.
+- `main.go` wires the Fiber API, migrations, gateways, background worker, and optional SPA (Vite MPA: `web/src/main.jsx` is the product entry, `web/src/admin.jsx` the admin console under `/admin`); follow the request path and domain rows in `docs/MODULE_MAP.md` before changing a feature.
 - Keep SQL/GORM queries in `app/queries`; raw SQL is restricted to `platform/database`. Queries and migrations must work with both SQLite and PostgreSQL (`.github/workflows/dialect-check.yml`).
 - Startup runs GORM `AutoMigrate`; rollback steps live in `platform/database/migrations.go`. New rollback steps must use backend-agnostic GORM migrator calls and undo only their own additions.
 - Route order is significant: register `/api/v1` before legacy `/api`, and register public, gateway, then private routes within each prefix (`pkg/routes/versioning.go`). Gateway routes authenticate by API key; session routes use middleware-provided identity (`utils.CurrentUserID` / `utils.CurrentServiceProject`). Session-cookie mutations require `X-CSRF-Token`; money-moving mutations require an `Idempotency-Key`.

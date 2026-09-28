@@ -172,7 +172,7 @@
  "platform/storage/storage.go": 105,
  "platform/storage/storage_test.go": 77,
  "web/eslint.config.js": 27,
- "web/src/App.jsx": 55,
+ "web/src/App.jsx": 45,
  "web/src/api/admin.js": 22,
  "web/src/api/ai.js": 29,
  "web/src/api/auth.js": 18,
@@ -265,6 +265,6 @@
  "web/src/pages/Reports.jsx": 129,
  "web/src/pages/ResetPassword.jsx": 133,
  "web/src/pages/Settings.jsx": 457,
-  "web/src/routes.jsx": 72,
+  "web/src/routes.jsx": 58,
  "web/vite.config.js": 49
 }

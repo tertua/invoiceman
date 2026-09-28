@@ -86,6 +86,8 @@ export const en = {
     "sidebar.adminGateway": "Payment gateway",
 
     /* ============================ admin ============================ */
+    "admin.console": "Admin console",
+    "admin.backToApp": "Back to app",
     "admin.title": "Admin users",
     "admin.desc": "Manage account roles and access across your workspace.",
     "admin.user": "User",

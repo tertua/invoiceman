@@ -66,6 +66,17 @@ function formatBytes(bytes) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+// Resolve an entry chunk from its HTML file instead of a filename regex — dist holds other admin-*.js chunks (e.g. src/api/admin.js).
+async function entryFile(htmlName) {
+  try {
+    const html = await readFile(path.join(root, "dist", htmlName), "utf8");
+    const match = html.match(/<script[^>]+src="\/assets\/([\w-]+\.js)"/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   const baseline = JSON.parse(await readFile(baselinePath, "utf8"));
   const violations = await checkImports();
@@ -77,8 +88,10 @@ async function main() {
     bundles = [];
   }
 
-  const entry = bundles.find(({ file }) => /^index-[\w-]+\.js$/.test(file));
-  if (!entry) violations.push("entry JavaScript chunk (index-*.js) is missing");
+  const entrySpecs = [
+    { html: "index.html", label: "product entry", raw: baseline.entryRawBytes, gzip: baseline.entryGzipBytes },
+    { html: "admin.html", label: "admin entry", raw: baseline.adminEntryRawBytes, gzip: baseline.adminEntryGzipBytes },
+  ];
 
   const namedChunks = new Set(bundles.map(({ file }) => file.split("-")[0]));
   for (const required of baseline.requiredChunks) {
@@ -86,11 +99,19 @@ async function main() {
   }
 
   const budgetViolations = [];
-  if (entry && entry.bytes > baseline.entryRawBytes) {
-    budgetViolations.push(`entry raw size ${formatBytes(entry.bytes)} exceeds ${formatBytes(baseline.entryRawBytes)}`);
-  }
-  if (entry && entry.gzipBytes > baseline.entryGzipBytes) {
-    budgetViolations.push(`entry gzip size ${formatBytes(entry.gzipBytes)} exceeds ${formatBytes(baseline.entryGzipBytes)}`);
+  for (const spec of entrySpecs) {
+    const file = await entryFile(spec.html);
+    const entry = file && bundles.find((bundle) => bundle.file === file);
+    if (!entry) {
+      violations.push(`${spec.label} chunk missing (${spec.html} not in dist; run npm run build)`);
+      continue;
+    }
+    if (entry.bytes > spec.raw) {
+      budgetViolations.push(`${spec.label} raw size ${formatBytes(entry.bytes)} exceeds ${formatBytes(spec.raw)}`);
+    }
+    if (entry.gzipBytes > spec.gzip) {
+      budgetViolations.push(`${spec.label} gzip size ${formatBytes(entry.gzipBytes)} exceeds ${formatBytes(spec.gzip)}`);
+    }
   }
 
   console.log(`Bundle check (${strict ? "strict" : "advisory"})`);

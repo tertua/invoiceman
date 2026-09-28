@@ -39,28 +39,27 @@ const LABEL_BASE =
   "transition-[opacity,transform] duration-200 ease-out " +
   "group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 group-hover/sidebar:delay-100";
 
-function NavItem({ to, icon: Icon, labelKey }) {
+// href = cross-entry link (the admin console lives in admin.html, so it is a full page load, not a NavLink transition).
+function NavItem({ to, href, icon: Icon, labelKey }) {
   const { t } = useLang();
   const label = t(labelKey);
-  return (
-    <NavLink to={to} title={label} className="block">
-      {({ isActive }) => (
-        <div
-          className={cn(
-            ROW_BASE,
-            isActive
-              ? "bg-[var(--ink)] text-[var(--bg)] shadow-card"
-              : "text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]",
-          )}
-        >
-          <span className="h-11 w-11 flex items-center justify-center shrink-0">
-            <Icon size={18} strokeWidth={2} />
-          </span>
-          <span className={LABEL_BASE}>{label}</span>
-        </div>
+  const row = (isActive) => (
+    <div
+      className={cn(
+        ROW_BASE,
+        isActive
+          ? "bg-[var(--ink)] text-[var(--bg)] shadow-card"
+          : "text-[var(--ink-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]",
       )}
-    </NavLink>
+    >
+      <span className="h-11 w-11 flex items-center justify-center shrink-0">
+        <Icon size={18} strokeWidth={2} />
+      </span>
+      <span className={LABEL_BASE}>{label}</span>
+    </div>
   );
+  if (href) return <a href={href} title={label} className="block">{row(false)}</a>;
+  return <NavLink to={to} title={label} className="block">{({ isActive }) => row(isActive)}</NavLink>;
 }
 
 function ActionRow({ icon: Icon, label, onClick, to }) {
@@ -142,8 +141,8 @@ export function Sidebar() {
       <div className="flex flex-col items-center gap-2 w-full">
         {user?.role === "admin" && (
           <>
-            <NavItem to="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
-            <NavItem to="/admin/gateway" icon={Waypoints} labelKey="sidebar.adminGateway" />
+            <NavItem href="/admin/users" icon={ShieldCheck} labelKey="sidebar.adminUsers" />
+            <NavItem href="/admin/gateway" icon={Waypoints} labelKey="sidebar.adminGateway" />
           </>
         )}
         <ActionRow icon={Settings} label={t("sidebar.settings")} to="/settings" />

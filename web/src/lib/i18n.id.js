@@ -86,6 +86,8 @@ export const id = {
     "sidebar.adminGateway": "Gateway",
 
     /* ============================ admin ============================ */
+    "admin.console": "Konsol admin",
+    "admin.backToApp": "Kembali ke aplikasi",
     "admin.title": "Akun Pengguna",
     "admin.desc": "Kelola peran dan akses akun di seluruh ruang kerja Anda.",
     "admin.user": "Pengguna",
