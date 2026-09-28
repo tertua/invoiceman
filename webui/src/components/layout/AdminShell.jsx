@@ -31,7 +31,7 @@ export function AdminShell() {
   }, [appName, t]);
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)]">
-      <header className="border-b border-[var(--border)] bg-[var(--surface)]">
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="mx-auto max-w-[1600px] px-6 md:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
