@@ -1256,6 +1256,21 @@ paths:
       summary: get dashboard aggregates
       tags:
       - Dashboard
+  /events:
+    get:
+      description: Live aggregate-change events for the current user.
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: event stream
+          schema:
+            type: string
+      security:
+      - SessionCookie: []
+      summary: subscribe to live events
+      tags:
+      - Events
   /expenses:
     get:
       description: Get expenses of current user.

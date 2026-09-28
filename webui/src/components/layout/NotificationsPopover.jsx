@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, FileText, CheckCircle2, AlertTriangle, Send } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { useDashboard } from "@/hooks/useDashboard";
+import { useBellBadge } from "@/hooks/useBellBadge";
 import { useLang } from "@/context/LangContext";
 import { cn, relativeTime, formatMoney } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ const ICON = {
 export function NotificationsPopover() {
   const navigate = useNavigate();
   const { t } = useLang();
-  const { data } = useDashboard();
+  const { data } = useBellBadge();
   const invoices = data?.recentInvoices || [];
   const overdue = data?.stats?.overdueCount || 0;
 

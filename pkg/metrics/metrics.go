@@ -13,7 +13,7 @@ package metrics
 //   - tupay_db_open_conns{backend}, _idle, _in_use
 //
 // Route labels use the matched Fiber route template (e.g. /api/clients/:id),
-// never raw paths, to bound cardinality. /metrics itself is not recorded.
+// never raw paths, to bound cardinality. /metrics and /events are not recorded.
 
 import (
 	"fmt"
@@ -143,8 +143,8 @@ func Recorder() fiber.Handler {
 }
 
 // SkipMetrics reports whether the path must not be recorded nor counted
-// (the scrape endpoint measuring itself).
-func SkipMetrics(path string) bool { return path == "/metrics" }
+// (the scrape endpoint measuring itself, the never-closing event stream).
+func SkipMetrics(path string) bool { return path == "/metrics" || strings.HasSuffix(path, "/events") }
 
 // Render exposes the registry in Prometheus text exposition format.
 func (r *Registry) Render() string {

@@ -47,6 +47,9 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	// Dashboard routes:
 	route.Get("/dashboard", controllers.GetDashboard) // get dashboard aggregates
 
+	// Live event stream (SSE, session cookie, no per-request timeout):
+	route.Get("/events", controllers.StreamEvents) // subscribe to aggregate-change events
+
 	// Catalog item routes:
 	route.Get("/items", controllers.ListItems)
 	route.Post("/items", controllers.CreateItem)

@@ -20,7 +20,7 @@
  "app/controllers/invoice_status_controller.go": 93,
  "app/controllers/item_controller.go": 172,
  "app/controllers/notification_controller.go": 388,
- "app/controllers/notification_helper.go": 143,
+ "app/controllers/notification_helper.go": 90,
  "app/controllers/payment_controller.go": 406,
  "app/controllers/payment_public_controller.go": 182,
  "app/controllers/report_controller.go": 45,

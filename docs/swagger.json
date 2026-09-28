@@ -1140,6 +1140,31 @@
                 }
             }
         },
+        "/events": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Live aggregate-change events for the current user.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "Events"
+                ],
+                "summary": "subscribe to live events",
+                "responses": {
+                    "200": {
+                        "description": "event stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/expenses": {
             "get": {
                 "security": [
