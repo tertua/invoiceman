@@ -55,7 +55,7 @@ One file = one responsibility. `npm --prefix webui run check:size` fails CI; run
 
 - BE: `make dev-be` (builds to `/tmp/opencode/invoiceman`, serves `:5000`). Health: `curl localhost:5000/healthz`. Restart after BE code changes: rebuild, `pkill -f /tmp/opencode/invoiceman`, start again.
 - FE: `make dev-fe` (vite dev on `:5173`, proxies `/api`+`/uploads` to BE). Hot-reloads; no restart needed after FE changes.
-- Local state lives in gitignored `data/` (`SQLITE_PATH=./data/invoiceman.db`, `STORAGE_DIR=./data/uploads`) — survives BE restarts; test runs use in-memory SQLite instead.
+- Local state lives in gitignored `data/` (`SQLITE_PATH=./data/db/invoiceman.db`, `STORAGE_DIR=./data/uploads`) — survives BE restarts; test runs use in-memory SQLite instead.
 - README's Quick start is Docker (`make docker.run` = Postgres + Redis + API) — for this machine use `make dev-be` / `make dev-fe`; README also documents the two deploy modes and the Turnstile build-time vs runtime key split.
 - Scratch binaries/logs go ONLY to `/tmp/opencode/` (pre-approved); never the repo root or bare `/tmp`.
 

@@ -238,7 +238,7 @@ func Load() (Config, error) {
 		},
 		DB: DBConfig{
 			DSN:            strings.TrimSpace(os.Getenv("SQL_DSN")),
-			SQLitePath:     envOr("SQLITE_PATH", "./data/invoiceman.db"),
+			SQLitePath:     envOr("SQLITE_PATH", "./data/db/invoiceman.db"),
 			MaxConn:        envInt("DB_MAX_CONNECTIONS", 100),
 			MaxIdle:        envInt("DB_MAX_IDLE_CONNECTIONS", 10),
 			MaxLifetimeSec: envInt("DB_MAX_LIFETIME_CONNECTIONS", 2),
