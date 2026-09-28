@@ -14,10 +14,10 @@ import (
 //   - otherwise the project default, then "midtrans".
 func routeIntentGateway(input *models.IntentInput, projectDefault string) (gateway.Gateway, error) {
 	if requested := strings.TrimSpace(input.Gateway); requested != "" {
-		return gateway.Route(requested, input.PaymentMethod)
+		return gateway.Route(requested, input.PaymentMethod, nil)
 	}
 	if strings.TrimSpace(input.PaymentMethod) != "" {
-		return gateway.Route("", input.PaymentMethod)
+		return gateway.Route("", input.PaymentMethod, nil)
 	}
-	return gateway.Route(resolveGateway("", projectDefault), "")
+	return gateway.Route(resolveGateway("", projectDefault), "", nil)
 }

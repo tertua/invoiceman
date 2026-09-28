@@ -25,7 +25,7 @@ func TestRouteSelectsProviderByMethod(t *testing.T) {
 		mu.Unlock()
 	})
 
-	selected, err := Route("", MethodBankTransfer)
+	selected, err := Route("", MethodBankTransfer, nil)
 	if err != nil {
 		t.Fatalf("Route() error = %v", err)
 	}
@@ -43,7 +43,7 @@ func TestRouteRejectsUnsupportedMethod(t *testing.T) {
 		delete(registry, "route-test-crypto")
 		mu.Unlock()
 	})
-	if _, err := Route("route-test-bank", MethodCrypto); err != ErrUnsupportedPaymentMethod {
+	if _, err := Route("route-test-bank", MethodCrypto, nil); err != ErrUnsupportedPaymentMethod {
 		t.Fatalf("Route() error = %v, want %v", err, ErrUnsupportedPaymentMethod)
 	}
 }
@@ -55,7 +55,7 @@ func TestRouteHonorsPreferredProvider(t *testing.T) {
 		delete(registry, "route-test-preferred")
 		mu.Unlock()
 	})
-	selected, err := Route("route-test-preferred", MethodBankTransfer)
+	selected, err := Route("route-test-preferred", MethodBankTransfer, nil)
 	if err != nil {
 		t.Fatalf("Route() error = %v", err)
 	}
@@ -74,7 +74,7 @@ func TestRouteIsDeterministicWithoutPreferred(t *testing.T) {
 		delete(registry, "route-test-a")
 		mu.Unlock()
 	})
-	selected, err := Route("", MethodCreditCard)
+	selected, err := Route("", MethodCreditCard, nil)
 	if err != nil {
 		t.Fatalf("Route() error = %v", err)
 	}

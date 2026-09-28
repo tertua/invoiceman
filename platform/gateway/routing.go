@@ -8,28 +8,10 @@ import (
 
 var ErrUnsupportedPaymentMethod = errors.New("payment method is not supported")
 
-// Route selects a registered provider for the requested method. A preferred
-// provider (explicit request or project default) is honored when it supports
-// the method; an empty method uses it for compatibility. With no preferred
-// provider the registry is searched in deterministic name order so routing
-// never depends on Go map iteration.
-func Route(preferredProvider, method string) (Gateway, error) {
-	return RouteWhere(preferredProvider, method, nil)
-}
-
-// RouteWhere is Route with an extra predicate that can veto a provider for a
-// method (e.g. a per-account method allowlist). A nil predicate allows every
-// provider. The predicate is consulted before a provider is selected, so a
-// vetoed provider is skipped and the next candidate is tried.
-//
-// Dev path — provider routing (product decision):
-//
-//	routing is deterministic method -> provider; no automatic failover
-//	between gateways until the UI/UX for it exists
-//	[later] opt-in fallback would live here, behind an explicit caller flag
-//
-// End dev path
-func RouteWhere(preferredProvider, method string, allow func(provider, method string) bool) (Gateway, error) {
+// Route selects a registered provider for the requested method, honoring a preferred provider when it supports it and otherwise searching the registry in deterministic name order so routing never depends on Go map iteration.
+// The optional allow predicate vetoes a provider for a method (e.g. a per-account method allowlist) before it is considered, so a vetoed provider is skipped and the next candidate is tried.
+// Routing stays deterministic method -> provider with no automatic failover until the UI/UX for it exists; an opt-in fallback would live here behind an explicit caller flag.
+func Route(preferredProvider, method string, allow func(provider, method string) bool) (Gateway, error) {
 	method = strings.ToLower(strings.TrimSpace(method))
 	preferredProvider = strings.ToLower(strings.TrimSpace(preferredProvider))
 	permitted := func(name string) bool { return allow == nil || allow(name, method) }
