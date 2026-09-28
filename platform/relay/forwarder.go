@@ -39,6 +39,6 @@ func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payloa
 	if err != nil {
 		return &ForwardResult{StatusCode: resp.StatusCode}, err
 	}
-	body := string(raw[:min(len(raw), constants.MaxRelayBodyLog)])
+	body := constants.TruncateLog(string(raw))
 	return &ForwardResult{StatusCode: resp.StatusCode, Body: body}, nil
 }

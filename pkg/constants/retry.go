@@ -21,6 +21,14 @@ const (
 	MaxRelayBodyLog      = 4000
 )
 
+// TruncateLog caps a logged response body or error string at MaxRelayBodyLog, so the forwarder, the outbox worker and the webhook controller store the same shape.
+func TruncateLog(s string) string {
+	if len(s) > MaxRelayBodyLog {
+		return s[:MaxRelayBodyLog]
+	}
+	return s
+}
+
 // ParseRetryAfter extracts the provider's requested wait from a
 // Retry-After header value (delay seconds or HTTP-date). It reports false
 // when the header is missing or unparsable so callers fall back to backoff.

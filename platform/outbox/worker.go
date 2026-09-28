@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
 	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/platform/database"
 	"github.com/tertua/invoiceman/platform/mail"
@@ -33,7 +34,6 @@ const (
 	maxAttempts  = 10
 	maxBackoff   = 2 * time.Hour
 	drainTimeout = 5 * time.Second
-	responseCap  = 4000
 )
 
 // Backoff returns the delay before attempt n (1-based).
@@ -221,12 +221,12 @@ func (w *Worker) forwardOne(ctx context.Context, db *database.Queries, d models.
 	result, ferr := relay.Forward(ctx, d.TargetURL, project.Slug, "evt_retry_"+d.ID.String(), payload, project.WebhookSecret)
 	if ferr != nil {
 		retry := nextRetryAt(d.Attempt, now)
-		failDelivery(db, d.ID, d.Attempt, retry, truncateErr(ferr.Error()), now)
+		failDelivery(db, d.ID, d.Attempt, retry, constants.TruncateLog(ferr.Error()), now)
 		logger.L().Warn("outbox delivery failed", "delivery_id", d.ID.String(), "order_id", d.OrderID, "attempt", d.Attempt, "err", ferr)
 		return
 	}
 	d.RespCode = result.StatusCode
-	d.RespBody = truncateBody(result.Body)
+	d.RespBody = constants.TruncateLog(result.Body)
 	if result.StatusCode >= 200 && result.StatusCode < 300 {
 		d.Status = "delivered"
 		d.NextRetryAt = nil
@@ -294,17 +294,17 @@ func (w *Worker) forwardOneNotification(ctx context.Context, db *database.Querie
 	result, ferr := ForwardNotification(ctx, d.TargetURL, "evt_retry_"+d.ID.String(), payload, endpoint.Secret)
 	if ferr != nil {
 		retry := nextRetryAt(d.Attempt, now)
-		recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt, retry, 0, truncateErr(ferr.Error()), now), "delivery_id", d.ID.String())
+		recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt, retry, 0, constants.TruncateLog(ferr.Error()), now), "delivery_id", d.ID.String())
 		logger.L().Warn("outbox notification failed", "delivery_id", d.ID.String(), "event_type", d.EventType, "attempt", d.Attempt, "err", ferr)
 		return
 	}
 	if result.StatusCode >= 200 && result.StatusCode < 300 {
-		recordErr("mark notification sent", db.MarkNotificationSent(d.ID, result.StatusCode, truncateBody(result.Body), now), "delivery_id", d.ID.String())
+		recordErr("mark notification sent", db.MarkNotificationSent(d.ID, result.StatusCode, constants.TruncateLog(result.Body), now), "delivery_id", d.ID.String())
 		logger.L().Info("outbox notification sent", "delivery_id", d.ID.String(), "event_type", d.EventType, "attempt", d.Attempt)
 		return
 	}
 	retry := nextRetryAt(d.Attempt, now)
-	recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt, retry, result.StatusCode, truncateBody(result.Body), now), "delivery_id", d.ID.String())
+	recordErr("mark notification failed", db.MarkNotificationFailed(d.ID, d.Attempt, retry, result.StatusCode, constants.TruncateLog(result.Body), now), "delivery_id", d.ID.String())
 }
 
 func (w *Worker) purgeIdempotency() {
@@ -315,18 +315,4 @@ func (w *Worker) purgeIdempotency() {
 	if n, err := db.DeleteExpiredIdempotencyKeys(time.Now()); err == nil && n > 0 {
 		logger.L().Info("outbox purged expired idempotency keys", "count", n)
 	}
-}
-
-func truncateErr(s string) string {
-	if len(s) > 1000 {
-		return s[:1000]
-	}
-	return s
-}
-
-func truncateBody(s string) string {
-	if len(s) > responseCap {
-		return s[:responseCap]
-	}
-	return s
 }

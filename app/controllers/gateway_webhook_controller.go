@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/invoiceman/pkg/constants"
 	"github.com/tertua/invoiceman/pkg/logger"
 	"github.com/tertua/invoiceman/pkg/utils"
 	"github.com/tertua/invoiceman/platform/cache"
@@ -106,7 +107,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		if verr := checkWebhookAmount(c, txn, notif); verr != nil {
 			return verr
 		}
-		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gatewayDisplayName(gatewayName)); err != nil {
+		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gateway.DisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
 		if err := cache.InvalidateUser(c.Context(), txn.UserID.String()); err != nil {
@@ -165,25 +166,6 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 	// The background worker forwards and retries; the provider gets a fast
 	// acknowledgement and downstream state is tracked in webhook_deliveries.
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true, "queued": true})
-}
-
-func truncateErr(s string) string {
-	if len(s) > 1000 {
-		return s[:1000]
-	}
-	return s
-}
-
-// gatewayDisplayName maps a registry name to a human payment method label.
-func gatewayDisplayName(name string) string {
-	switch strings.ToLower(strings.TrimSpace(name)) {
-	case "nowpayments":
-		return "NOWPayments"
-	case "", "midtrans":
-		return "Midtrans"
-	default:
-		return strings.TrimSpace(name)
-	}
 }
 
 // ListDeliveries returns one page of recent relay deliveries for admins.
@@ -282,7 +264,7 @@ func RetryDelivery(c fiber.Ctx) error {
 	if ferr != nil {
 		retryAt := time.Now().Add(5 * time.Minute)
 		delivery.Status = "failed"
-		delivery.RespBody = truncateErr(ferr.Error())
+		delivery.RespBody = constants.TruncateLog(ferr.Error())
 		delivery.NextRetryAt = &retryAt
 		if serr := db.SaveDelivery(&delivery); serr != nil {
 			logger.L().Warn("delivery retry state store failed", "delivery_id", delivery.ID.String(), "err", serr)
