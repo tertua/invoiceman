@@ -53,7 +53,7 @@ One file = one responsibility. `npm --prefix webui run check:size` fails CI; run
 
 ## Local dev run (this machine)
 
-- BE: `make dev-be` (builds to `/tmp/opencode/invoiceman`, serves `:5000`). Health: `curl localhost:5000/healthz`. Restart after BE code changes: rebuild, `pkill -f /tmp/opencode/invoiceman`, start again.
+- BE: `make dev-be` (builds to `/tmp/opencode/invoiceman`, serves `:5000`). Health: `curl localhost:5000/healthz`. Restart after BE code changes: rebuild, `pkill -f '[/]tmp/opencode/invoiceman'`, start again. Never `pkill -f` with a literal pattern (e.g. `"vite --host"`) — it matches the caller's own shell cmdline and kills the session; always disguise one char with brackets (e.g. `[v]ite`).
 - FE: `make dev-fe` (vite dev on `:5173`, proxies `/api`+`/uploads` to BE). Hot-reloads; no restart needed after FE changes.
 - Local state lives in gitignored `data/` (`SQLITE_PATH=./data/db/invoiceman.db`, `STORAGE_DIR=./data/uploads`) — survives BE restarts; test runs use in-memory SQLite instead.
 - README's Quick start is Docker (`make docker.run` = Postgres + Redis + API) — for this machine use `make dev-be` / `make dev-fe`; README also documents the two deploy modes and the Turnstile build-time vs runtime key split.
