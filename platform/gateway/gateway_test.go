@@ -27,8 +27,8 @@ func TestRegistry(t *testing.T) {
 	if g.Name() != "stubcoin" {
 		t.Fatalf("unexpected gateway: %s", g.Name())
 	}
-	if _, err := Get("nope"); !errors.Is(err, ErrUnknownGateway) && err == nil {
-		t.Fatalf("expected unknown gateway error, got %v", err)
+	if _, err := Get("nope"); !errors.Is(err, ErrUnknownGateway) {
+		t.Fatalf("expected ErrUnknownGateway, got %v", err)
 	}
 	if len(Names()) == 0 {
 		t.Fatal("expected registered names")

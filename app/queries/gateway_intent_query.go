@@ -19,17 +19,6 @@ func (q *GatewayQueries) LatestIntent(projectSlug, external, method string) (mod
 	return t, notFound(err)
 }
 
-// CountIntents counts the transactions for one project + external id + method;
-// the public pay page uses it to pick the next retry suffix (base + "-rN").
-func (q *GatewayQueries) CountIntents(projectSlug, external, method string) (int64, error) {
-	var n int64
-	err := q.Model(&models.GatewayTransaction{}).
-		Where("project_slug = ? AND external_order_id = ? AND payment_method = ?",
-			projectSlug, external, method).
-		Count(&n).Error
-	return n, err
-}
-
 // intentBelongsToBase reports whether an order id belongs to one public pay
 // base: the base itself or one of its retry suffixes (base-rN).
 func intentBelongsToBase(orderID, base string) bool {

@@ -1,21 +1,21 @@
 package midtrans
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/tertua/invoiceman/platform/gateway"
+)
+
+var statusMap = map[string]string{
+	"settlement": gateway.StatusSuccess, "capture": gateway.StatusSuccess,
+	"expire": gateway.StatusExpired, "deny": gateway.StatusFailed, "cancel": gateway.StatusFailed, "failure": gateway.StatusFailed,
+	"refund": gateway.StatusRefunded, "partial_refund": gateway.StatusPartialRefunded,
+}
 
 // MapStatus converts a Midtrans transaction_status to a relay status.
 func MapStatus(transactionStatus string) string {
-	switch strings.ToLower(strings.TrimSpace(transactionStatus)) {
-	case "settlement", "capture":
-		return "success"
-	case "expire":
-		return "expired"
-	case "deny", "cancel", "failure":
-		return "failed"
-	case "refund":
-		return "refunded"
-	case "partial_refund":
-		return "partially_refunded"
-	default:
-		return "pending"
+	if status, ok := statusMap[strings.ToLower(strings.TrimSpace(transactionStatus))]; ok {
+		return status
 	}
+	return gateway.StatusPending
 }

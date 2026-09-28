@@ -68,7 +68,7 @@ func Get(name string) (Gateway, error) {
 	defer mu.RUnlock()
 	g, ok := registry[name]
 	if !ok {
-		return nil, fmt.Errorf("payment gateway %q is not registered", name)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownGateway, name)
 	}
 	return g, nil
 }

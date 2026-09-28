@@ -76,16 +76,6 @@ func (q *GatewayQueries) GetTransaction(orderID string) (models.GatewayTransacti
 	return t, nil
 }
 
-// GetTransactionByExternal returns the latest transaction for a project + external id.
-func (q *GatewayQueries) GetTransactionByExternal(projectSlug, external string) (models.GatewayTransaction, error) {
-	t := models.GatewayTransaction{}
-	if err := q.Where("project_slug = ? AND external_order_id = ?", projectSlug, external).
-		Order("created_at DESC").First(&t).Error; err != nil {
-		return t, notFound(err)
-	}
-	return t, nil
-}
-
 // ListTransactionsByProject returns one page of transactions for one
 // project, newest first.
 func (q *GatewayQueries) ListTransactionsByProject(projectSlug string, limit, offset int) ([]models.GatewayTransaction, error) {
