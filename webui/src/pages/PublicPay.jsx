@@ -92,13 +92,16 @@ export default function PublicPay() {
 
   useEffect(() => {
     if (!data || (data.can_pay === false && data.invoice?.effective_status !== "pending")) return undefined;
-    let cancelled = false, delay = 5000, timer;
+    const live = data.invoice?.effective_status === "pending";
+    let cancelled = false, timer, delay = live ? 2500 : 10000;
     const poll = async () => {
       try {
-        const status = await publicPayApi.status(token);
-        if (cancelled) return;
-        delay = 5000;
-        if (status.status === "paid") { const r = await publicPayApi.get(token); if (!cancelled) setData(r); }
+        if (!document.hidden) {
+          const status = await publicPayApi.status(token);
+          if (cancelled) return;
+          if (status.status === "paid") { const r = await publicPayApi.get(token); if (!cancelled) setData(r); }
+        }
+        delay = live ? 2500 : 10000;
       } catch {
         delay = Math.min(delay * 2, 30000); // back off while the status call keeps failing
       }
