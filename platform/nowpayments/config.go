@@ -19,7 +19,7 @@ type Config struct {
 	// Endpoint overrides the API base URL (used by tests).
 	Endpoint string
 	// CallbackBase is the public API origin used to build the per-invoice
-	// IPN callback URL (INVOICEMAN_PUBLIC_URL).
+	// IPN callback URL (TUPAY_PUBLIC_URL, fallback INVOICEMAN_PUBLIC_URL).
 	CallbackBase string
 }
 

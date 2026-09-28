@@ -137,9 +137,9 @@ type MailConfig struct {
 	AppPublicURL string // APP_PUBLIC_URL (links inside emails)
 }
 
-// RelayConfig holds the public origin of this API for callbacks.
+// RelayConfig holds this API's public origin for provider webhooks.
 type RelayConfig struct {
-	PublicURL string // INVOICEMAN_PUBLIC_URL
+	PublicURL string // TUPAY_PUBLIC_URL (fallback INVOICEMAN_PUBLIC_URL)
 }
 
 // IdempotencyConfig holds replay protection for mutating payment routes.
@@ -289,7 +289,7 @@ func Load() (Config, error) {
 			BaseURL:   strings.TrimSpace(os.Getenv("NOWPAYMENTS_BASE_URL")),
 		},
 		Relay: RelayConfig{
-			PublicURL: envOr("INVOICEMAN_PUBLIC_URL", "http://localhost:5000"),
+			PublicURL: envOr("TUPAY_PUBLIC_URL", envOr("INVOICEMAN_PUBLIC_URL", "http://localhost:5000")),
 		},
 		Idempotency: IdempotencyConfig{
 			TTLHours: envInt("IDEMPOTENCY_TTL_HOURS", 24),
