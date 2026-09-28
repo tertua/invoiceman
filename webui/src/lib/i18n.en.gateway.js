@@ -24,6 +24,8 @@ export const gatewayEn = {
     "gateway.credentialsDesc": "The API key and webhook secret are shown once. Store them in the connected project environment.",
     "gateway.copy": "Copy credential",
     "gateway.created": "Project connected",
+    "gateway.deleted": "Project deleted",
+    "gateway.confirmDelete": "Delete {name}? Only projects without transactions can be deleted.",
     "gateway.saveFailed": "Couldn't save gateway project",
     "gateway.loadFailed": "Couldn't load gateway data",
     "gateway.empty": "No projects connected",

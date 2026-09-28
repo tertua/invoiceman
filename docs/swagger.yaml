@@ -648,6 +648,35 @@ paths:
       tags:
       - Admin
   /admin/gateway/projects/{slug}:
+    delete:
+      description: Delete an unused gateway project.
+      parameters:
+      - description: Project slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      summary: delete gateway project
+      tags:
+      - Admin
     patch:
       consumes:
       - application/json

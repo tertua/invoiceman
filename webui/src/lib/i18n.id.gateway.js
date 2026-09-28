@@ -24,6 +24,8 @@ export const gatewayId = {
     "gateway.credentialsDesc": "API key dan webhook secret hanya ditampilkan sekali. Simpan di environment project yang terhubung.",
     "gateway.copy": "Salin kredensial",
     "gateway.created": "Proyek terhubung",
+    "gateway.deleted": "Proyek dihapus",
+    "gateway.confirmDelete": "Hapus {name}? Hanya proyek tanpa transaksi yang bisa dihapus.",
     "gateway.saveFailed": "Gagal menyimpan proyek gateway",
     "gateway.loadFailed": "Gagal memuat data gateway",
     "gateway.empty": "Belum ada proyek terhubung",

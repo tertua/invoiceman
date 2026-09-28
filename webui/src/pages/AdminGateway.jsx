@@ -6,7 +6,6 @@ import {
   Loader2,
   Network,
   Plus,
-  RotateCw,
   ShieldCheck,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -15,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { GatewayDeliveries } from "@/components/gateway/GatewayDeliveries";
+import { ProjectsTable } from "@/components/gateway/ProjectsTable";
 import { Input } from "@/components/ui/Input";
 import { useLang } from "@/context/LangContext";
 import { toast } from "sonner";
@@ -22,12 +22,8 @@ import {
   useCreateGatewayProject,
   useGatewayProjects,
   useGatewayStatus,
-  useRotateGatewayKey,
-  useRotateGatewaySecret,
-  useUpdateGatewayProject,
 } from "@/hooks/useGatewayAdmin";
 import { cn } from "@/lib/utils";
-import { StatusPill } from "@/components/gateway/StatusPill";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 
 function SecretNotice({ project, onClose }) {
@@ -147,61 +143,6 @@ function CreateProjectForm({ onCreated }) {
           </Button>
         </div>
       </form>
-    </Card>
-  );
-}
-
-function ProjectsTable({ projects, onCredentials }) {
-  const { t } = useLang();
-  const rotateKey = useRotateGatewayKey();
-  const rotateSecret = useRotateGatewaySecret();
-  const update = useUpdateGatewayProject();
-  async function rotate(mutation, slug) {
-    try {
-      onCredentials(await mutation.mutateAsync(slug));
-    } catch (error) {
-      if (error.status !== 401) toast.error(error.message || t("gateway.saveFailed"));
-    }
-  }
-  async function toggle(project) {
-    try {
-      await update.mutateAsync({ slug: project.slug, payload: { is_active: !project.is_active } });
-    } catch (error) {
-      if (error.status !== 401) toast.error(error.message || t("gateway.saveFailed"));
-    }
-  }
-  return (
-    <Card padding="none" className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
-          <thead className="bg-[var(--surface-2)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-            <tr>
-              <th className="px-4 py-3">{t("gateway.project")}</th>
-              <th className="px-4 py-3">{t("gateway.gateway")}</th>
-              <th className="px-4 py-3">{t("gateway.webhook")}</th>
-              <th className="px-4 py-3">{t("gateway.status")}</th>
-              <th className="px-4 py-3 text-right">{t("gateway.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((project) => (
-              <tr key={project.slug} className="border-t border-[var(--border)] align-top">
-                <td className="px-4 py-4"><div className="font-medium text-[var(--ink)]">{project.name}</div><div className="mt-1 text-xs text-[var(--ink-muted)]">{project.slug}</div></td>
-                <td className="px-4 py-4"><code className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs">{project.default_gateway || "midtrans"}</code></td>
-                <td className="max-w-[260px] truncate px-4 py-4 text-xs text-[var(--ink-muted)]" title={project.webhook_url}>{project.webhook_url}</td>
-                <td className="px-4 py-4"><StatusPill active={project.is_active} t={t} /></td>
-                <td className="px-4 py-4 text-right">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => toggle(project)} disabled={update.isPending}>{project.is_active ? t("gateway.disable") : t("gateway.enable")}</Button>
-                    <Button size="sm" variant="outline" onClick={() => rotate(rotateKey, project.slug)} disabled={rotateKey.isPending}><KeyRound size={13} />{t("gateway.rotateKey")}</Button>
-                    <Button size="sm" variant="outline" onClick={() => rotate(rotateSecret, project.slug)} disabled={rotateSecret.isPending}><RotateCw size={13} />{t("gateway.rotateSecret")}</Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </Card>
   );
 }
