@@ -48,10 +48,21 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 		PaymentMethod: input.PaymentMethod,
 	}
 
-	items := make([]models.InvoiceItem, 0, len(input.Items))
-	for position, entry := range input.Items {
-		if entry.Rate.IsNegative() || input.Discount.IsNegative() {
-			return nil, nil, errors.New("money values cannot be negative")
+	items, err := addItemRows(invoice, input.Items)
+	if err != nil {
+		return nil, nil, err
+	}
+	applyInvoiceTotals(invoice)
+
+	return invoice, items, nil
+}
+
+// addItemRows builds the item rows and accumulates the invoice subtotal, rejecting negative money values; both create paths run it.
+func addItemRows(invoice *models.Invoice, entries []models.InvoiceItemInput) ([]models.InvoiceItem, error) {
+	items := make([]models.InvoiceItem, 0, len(entries))
+	for position, entry := range entries {
+		if entry.Rate.IsNegative() || invoice.Discount.IsNegative() {
+			return nil, errors.New("money values cannot be negative")
 		}
 		amount := models.DecimalFromFloat(entry.Quantity).Mul(entry.Rate)
 		invoice.Subtotal = invoice.Subtotal.Add(amount)
@@ -65,15 +76,17 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 			Position:    position,
 		})
 	}
+	return items, nil
+}
 
+// applyInvoiceTotals derives taxable, tax and total from the subtotal, the discount and the tax rate.
+func applyInvoiceTotals(invoice *models.Invoice) {
 	taxable := invoice.Subtotal.Sub(invoice.Discount)
 	if taxable.IsNegative() {
 		taxable = decimal.Zero
 	}
 	invoice.TaxAmount = taxable.Mul(models.DecimalFromFloat(invoice.TaxRate)).Div(decimal.NewFromInt(100))
 	invoice.Total = taxable.Add(invoice.TaxAmount)
-
-	return invoice, items, nil
 }
 
 // invoiceDetail loads the full invoice response for the frontend.

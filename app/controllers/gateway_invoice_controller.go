@@ -68,22 +68,11 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 		TaxRate: input.TaxRate, Discount: input.Discount, Notes: input.Notes, Terms: input.Terms}
 	projectSlug, externalID := project.Slug, input.ExternalID
 	invoice.GatewayProjectSlug, invoice.ExternalID = &projectSlug, &externalID
-	items := make([]models.InvoiceItem, 0, len(input.Items))
-	for position, entry := range input.Items {
-		if entry.Rate.IsNegative() {
-			return utils.Fail(c, fiber.StatusBadRequest, "money values cannot be negative", nil)
-		}
-		amount := models.DecimalFromFloat(entry.Quantity).Mul(entry.Rate)
-		invoice.Subtotal = invoice.Subtotal.Add(amount)
-		items = append(items, models.InvoiceItem{ID: uuid.New(), InvoiceID: invoice.ID, Description: entry.Description,
-			Quantity: entry.Quantity, Rate: entry.Rate, Amount: amount, Position: position})
+	items, itemErr := addItemRows(invoice, input.Items)
+	if itemErr != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, itemErr.Error(), nil)
 	}
-	taxable := invoice.Subtotal.Sub(invoice.Discount)
-	if taxable.IsNegative() {
-		taxable = models.ZeroMoney
-	}
-	invoice.TaxAmount = taxable.Mul(models.DecimalFromFloat(invoice.TaxRate)).Div(models.DecimalFromFloat(100))
-	invoice.Total = taxable.Add(invoice.TaxAmount)
+	applyInvoiceTotals(invoice)
 	err = db.InvoiceQueries.Transaction(func(tx *gorm.DB) error {
 		client := models.Client{}
 		if lookupErr := tx.Where("gateway_project_slug = ? AND external_id = ?", project.Slug, input.Customer.ExternalID).First(&client).Error; errors.Is(lookupErr, gorm.ErrRecordNotFound) {
@@ -97,17 +86,11 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 			return lookupErr
 		}
 		invoice.ClientID = &client.ID
-		settings := models.Settings{UserID: *project.OwnerUserID}
-		if err := tx.Where("user_id = ?", *project.OwnerUserID).FirstOrCreate(&settings, models.Settings{UserID: *project.OwnerUserID}).Error; err != nil {
-			return err
+		number, nerr := db.ReserveInvoiceNumber(tx, *project.OwnerUserID)
+		if nerr != nil {
+			return nerr
 		}
-		if err := tx.Model(&models.Settings{}).Where("user_id = ?", *project.OwnerUserID).UpdateColumn("invoice_seq", gorm.Expr("invoice_seq + 1")).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("user_id = ?", *project.OwnerUserID).First(&settings).Error; err != nil {
-			return err
-		}
-		invoice.InvoiceNumber = models.FormatInvoiceSeq(settings.InvoicePrefix, settings.InvoiceSeq)
+		invoice.InvoiceNumber = number
 		if err := tx.Create(invoice).Error; err != nil {
 			return err
 		}

@@ -190,28 +190,11 @@ func (q *InvoiceQueries) PaidAmount(invoiceID uuid.UUID) (decimal.Decimal, error
 func (q *InvoiceQueries) CreateInvoice(userID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
 	return DoRetry(func() error {
 		return q.Transaction(func(tx *gorm.DB) error {
-			settings := models.Settings{UserID: userID}
-			if err := tx.Where("user_id = ?", userID).FirstOrCreate(
-				&settings, models.Settings{UserID: userID},
-			).Error; err != nil {
+			number, err := q.ReserveInvoiceNumber(tx, userID)
+			if err != nil {
 				return err
 			}
-			// Fill defaults on first creation.
-			if settings.InvoicePrefix == "" {
-				defaults := models.DefaultSettings(userID)
-				settings.Currency = defaults.Currency
-				settings.TaxRate = defaults.TaxRate
-				settings.InvoicePrefix = defaults.InvoicePrefix
-			}
-
-			if err := tx.Model(&models.Settings{}).Where("user_id = ?", userID).
-				UpdateColumn("invoice_seq", gorm.Expr("invoice_seq + 1")).Error; err != nil {
-				return err
-			}
-			if err := tx.Where("user_id = ?", userID).First(&settings).Error; err != nil {
-				return err
-			}
-			invoice.InvoiceNumber = models.FormatInvoiceSeq(settings.InvoicePrefix, settings.InvoiceSeq)
+			invoice.InvoiceNumber = number
 
 			if err := tx.Create(invoice).Error; err != nil {
 				return err
