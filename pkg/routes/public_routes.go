@@ -36,7 +36,7 @@ func PublicRoutesAt(a *fiber.App, prefix string) {
 	route.Get("/public/gateway/config", publicPay, controllers.GatewayConfig)
 	route.Get("/public/gateway/status", publicPay, controllers.GatewayStatus)
 
-	route.Get("/config", controllers.AppConfig) // public branding for the SPA
+	route.Get("/config", controllers.AppConfig) // public branding for the MPA
 
 	registerWebhooks(route)
 }

@@ -11,7 +11,7 @@ func AppName() string {
 	return configs.Get().AppName
 }
 
-// AppConfig returns public branding configuration for the SPA.
+// AppConfig returns public branding configuration for the MPA.
 // @Description Get public application configuration.
 // @Summary get app config
 // @Tags Config

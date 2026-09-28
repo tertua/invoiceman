@@ -32,7 +32,7 @@ import (
 // @title Invoiceman API
 // @version 1.0
 // @description Invoiceman API. Two prefixes serve the same routes: /api/v1
-// @description (current, used by the SPA) and /api (legacy, deprecated —
+// @description (current, used by the MPA) and /api (legacy, deprecated —
 // @description responses carry a Sunset header). Unless tagged otherwise,
 // @description endpoints speak JSON with this envelope. Success: the data
 // @description keys directly, e.g. {"expense": {...}} or

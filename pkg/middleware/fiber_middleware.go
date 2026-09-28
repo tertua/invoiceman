@@ -29,7 +29,7 @@ func FiberMiddleware(a *fiber.App) {
 			Header: "X-Request-ID",
 		}),
 		// Security headers. CSP is intentionally empty: this service is a
-		// pure JSON API, the SPA is served separately via Vite.
+		// pure JSON API, the MPA is served separately via Vite.
 		helmet.New(helmet.Config{
 			ContentSecurityPolicy: "",
 		}),

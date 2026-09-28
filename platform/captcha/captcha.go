@@ -22,7 +22,7 @@ var ErrNotConfigured = errors.New("captcha is not configured")
 // ErrFailed is returned when the provider rejects the token.
 var ErrFailed = errors.New("captcha verification failed")
 
-// TokenHeader carries the client token (set by the SPA widget).
+// TokenHeader carries the client token (set by the MPA widget).
 const TokenHeader = "X-Captcha-Token" // #nosec G101 -- header name, not a credential
 
 // verifyURL is a variable so tests can point at a fake provider.

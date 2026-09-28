@@ -17,7 +17,7 @@ import (
 // The server sets a csrf_token cookie (readable by JS) on login/register;
 // every session-authenticated POST/PATCH/DELETE must echo it back in the
 // X-CSRF-Token header. An attacker site cannot read the cookie (same-origin
-// policy) and therefore cannot forge the header, while the SPA reads it
+// policy) and therefore cannot forge the header, while the MPA reads it
 // trivially. API-key relay routes and public GETs are exempt (no cookies).
 const (
 	CSRFCookieName = "csrf_token"

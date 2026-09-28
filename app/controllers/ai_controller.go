@@ -18,7 +18,7 @@ import (
 const maxReceiptSize = 10 << 20
 
 // aiLocale resolves the answer language from the X-Locale header sent by
-// the SPA (its localStorage language). Only en/id are supported; anything
+// the MPA (its localStorage language). Only en/id are supported; anything
 // missing or unknown falls back to en so a bad header never breaks generation.
 func aiLocale(c fiber.Ctx) string {
 	return resolveLocale(c.Get("X-Locale"))

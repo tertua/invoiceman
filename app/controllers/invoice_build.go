@@ -137,7 +137,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		}
 	}
 
-	// Expose the existing public payment link (if any) so the SPA can
+	// Expose the existing public payment link (if any) so the MPA can
 	// render it persistently instead of keeping it in transient state.
 	var paymentLink fiber.Map
 	if link, err := db.GetPaymentLinkForInvoice(id, userID); err == nil {

@@ -29,7 +29,7 @@ const STATE_META = {
 };
 
 // Static thank-you page for the Midtrans Finish Redirect URL.
-// Register `{SPA}/payment/finish` in the Midtrans dashboard; Midtrans appends
+// Register `{ORIGIN}/payment/finish` in the Midtrans dashboard; Midtrans appends
 // `?order_id=&status_code=&transaction_status=`. No backend call: the page
 // only reflects the redirect params, settlement truth stays on webhooks.
 export default function PaymentFinish() {

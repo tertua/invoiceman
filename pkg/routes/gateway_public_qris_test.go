@@ -196,7 +196,7 @@ func TestPublicPayQrisConcurrentClicksCollapse(t *testing.T) {
 
 // The same Idempotency-Key replays the first charge: one Core API call, the
 // second response carries the replay marker. This is the enterprise path the
-// SPA uses (one UUID per QR generation); the race test above is the safety
+// MPA uses (one UUID per QR generation); the race test above is the safety
 // net for clients that send none.
 func TestPublicPayQrisIdempotencyKeyReplay(t *testing.T) {
 	core, calls := newQRISCoreStub(t, "2099-01-01 00:00:00")

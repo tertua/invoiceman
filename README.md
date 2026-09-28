@@ -1,9 +1,9 @@
 # Invoiceman
 
-Invoice management API + SPA: invoices, clients, payments with shareable public pay links (QRIS via Midtrans, crypto via NOWPayments), a gateway relay for third-party integrations, expenses, dashboards, reports, and AI-assisted text (Gemini, English/Indonesian).
+Invoice management API + multi-page app (MPA): invoices, clients, payments with shareable public pay links (QRIS via Midtrans, crypto via NOWPayments), a gateway relay for third-party integrations, expenses, dashboards, reports, and AI-assisted text (Gemini, English/Indonesian).
 
 - Backend: Go (Fiber), GORM over SQLite/PostgreSQL, optional Redis.
-- Frontend: React + Vite SPA in `webui/`.
+- Frontend: React + Vite MPA in `webui/` — product app (`index.html` → `src/main.jsx`) and admin console (`admin.html` → `src/admin.jsx`, served under `/admin`).
 - API docs: Swagger UI at http://127.0.0.1:5000/swagger/index.html (regenerate with `make swag` after changing annotations).
 
 ## Quick start
@@ -86,7 +86,7 @@ Both keys must come from the same Cloudflare pair. When unused, leave them empty
 
 ## Frontend bundle boundaries
 
-The SPA lazy-loads routes and keeps heavy dependencies out of the initial bundle:
+The MPA lazy-loads routes and keeps heavy dependencies out of the initial bundle:
 
 - `@react-pdf/renderer` may only be imported by `webui/src/components/invoice/InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`.
 - `recharts` is reserved for the full chart pages: Dashboard, ClientDetail, and Reports. Small dashboard sparklines use SVG.

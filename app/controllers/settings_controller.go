@@ -82,7 +82,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settings})
 }
 
-// maxLogoSize caps uploaded company logos (matches the SPA hint).
+// maxLogoSize caps uploaded company logos (matches the MPA hint).
 const maxLogoSize = 400 << 10
 
 var allowedLogoTypes = map[string]string{

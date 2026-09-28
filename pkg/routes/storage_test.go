@@ -28,7 +28,7 @@ var tinyPNG = []byte{
 	0x42, 0x60, 0x82,
 }
 
-// multipartFile builds a file upload request, mirroring the SPA (which
+// multipartFile builds a file upload request, mirroring the MPA (which
 // echoes the CSRF cookie as its header).
 func multipartFile(t *testing.T, app *fiber.App, method, route, field, filename, contentType string, data []byte, cookies []*http.Cookie) *http.Response {
 	t.Helper()

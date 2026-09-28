@@ -495,7 +495,7 @@ info:
     name: API Support
   description: |-
     Invoiceman API. Two prefixes serve the same routes: /api/v1
-    (current, used by the SPA) and /api (legacy, deprecated —
+    (current, used by the MPA) and /api (legacy, deprecated —
     responses carry a Sunset header). Unless tagged otherwise,
     endpoints speak JSON with this envelope. Success: the data
     keys directly, e.g. {"expense": {...}} or

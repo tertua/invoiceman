@@ -1,4 +1,4 @@
-# Build context for Dockerfile.dev (all-in-one API + SPA).
+# Build context for Dockerfile.dev (all-in-one API + MPA).
 # BuildKit picks this up automatically for `-f Dockerfile.dev`, so webui/
 # SOURCES stay in context (unlike the API-only .dockerignore) while host
 # node_modules and stale dist never enter the image.

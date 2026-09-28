@@ -10,7 +10,7 @@ import (
 )
 
 // The invoice payment_method validator enum must stay in lockstep with the
-// SPA's shared list (webui/src/lib/paymentMethods.js): a drifted list would
+// MPA's shared list (webui/src/lib/paymentMethods.js): a drifted list would
 // either reject choices the UI offers or show options the API rejects.
 func TestInvoicePaymentMethodEnumMatchesFrontend(t *testing.T) {
 	oneof, ok := oneOfValues(fieldValidateTag(t, InvoiceInput{}, "PaymentMethod"))

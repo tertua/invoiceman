@@ -1,4 +1,4 @@
-# Dev/all-in-one image: API + embedded Vite SPA in a single container.
+# Dev/all-in-one image: API + embedded Vite MPA in a single container.
 # Production default stays split (Dockerfile = API-only, FE hosted
 # separately); use this when one container is simpler (VPS, demo).
 #
@@ -8,7 +8,7 @@
 #   docker build -f Dockerfile.dev \
 #     --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t invoiceman:dev .
 # Run:   docker run --rm -p 5000:5000 --env-file .env invoiceman:dev
-# Then open http://localhost:5000 (SPA) — /api/* is served same-origin,
+# Then open http://localhost:5000 (MPA) — /api/* is served same-origin,
 # so no CORS or vite proxy is needed.
 
 FROM node:24-alpine AS frontend
@@ -17,7 +17,7 @@ COPY webui/package.json webui/package-lock.json ./
 RUN npm ci
 COPY webui/ ./
 # Turnstile SITE key is build-time: Vite inlines VITE_* into the bundle, so
-# an embedded SPA must receive it here, not at runtime. Pass it with
+# an embedded MPA must receive it here, not at runtime. Pass it with
 # --build-arg when the API enforces captcha; empty = widget hidden.
 # The matching SECRET key is runtime-only (docker --env-file) — never here.
 ARG VITE_TURNSTILE_SITE_KEY=""

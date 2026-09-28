@@ -40,7 +40,7 @@ func doGatewayRequest(t *testing.T, app *fiber.App, method, route, body string, 
 	}
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
-		// Mirror the SPA: echo the CSRF cookie as its header.
+		// Mirror the MPA: echo the CSRF cookie as its header.
 		if cookie.Name == "csrf_token" && cookie.Value != "" {
 			req.Header.Set("X-CSRF-Token", cookie.Value)
 		}
