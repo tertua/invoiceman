@@ -10,11 +10,7 @@ func GatewayRoutes(a *fiber.App) {
 	GatewayRoutesAt(a, APILegacyPrefix)
 }
 
-// GatewayRoutesAt registers relay endpoints under prefix (see versioning.go).
-// It must be registered BEFORE PrivateRoutes: the session AuthRequired
-// group matches the prefix, so anything registered after it would
-// be forced through cookie sessions. Service identity here comes only
-// from the API key header (see GatewayAuth).
+// GatewayRoutesAt registers relay endpoints under prefix (see versioning.go); it must run BEFORE PrivateRoutes, whose session AuthRequired group would otherwise capture this prefix, and service identity here comes only from the API key header (see GatewayAuth).
 func GatewayRoutesAt(a *fiber.App, prefix string) {
 	gateway := a.Group(prefix+"/gateway", middleware.GatewayLimiter(), middleware.GatewayAuth())
 	gateway.Post("/intents", middleware.Idempotency(middleware.GatewayIdempotencyScope), controllers.CreateIntent)
@@ -30,6 +26,7 @@ func GatewayRoutesAt(a *fiber.App, prefix string) {
 	admin.Post("/projects/:slug/rotate-key", controllers.RotateProjectKey)
 	admin.Post("/projects/:slug/rotate-secret", controllers.RotateProjectSecret)
 	admin.Get("/transactions", controllers.ListAllTransactions)
+	admin.Get("/settlement", controllers.GetSettlement)
 	admin.Get("/deliveries", controllers.ListDeliveries)
 	admin.Post("/deliveries/:id/retry", controllers.RetryDelivery)
 }

@@ -297,6 +297,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/gateway/settlement": {
+            "get": {
+                "description": "Settlement summary grouped by transaction status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "settlement summary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/gateway/transactions": {
             "get": {
                 "description": "List relay transactions.",

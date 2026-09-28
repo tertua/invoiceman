@@ -41,7 +41,7 @@ func TestMountWebUISplitEntries(t *testing.T) {
 	app := fiber.New()
 	MountWebUI(app, adminFixture(t))
 
-	for _, path := range []string{"/admin", "/admin/users", "/admin/gateway"} {
+	for _, path := range []string{"/admin", "/admin/users", "/admin/gateway", "/admin/settlement"} {
 		assert.Contains(t, htmlBody(t, app, path), "console", path)
 	}
 	assert.Contains(t, htmlBody(t, app, "/dashboard"), "product")

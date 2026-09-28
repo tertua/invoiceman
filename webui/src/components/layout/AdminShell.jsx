@@ -33,23 +33,26 @@ export function AdminShell() {
     <div className="min-h-screen flex flex-col bg-[var(--bg)]">
       <header className="border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="mx-auto max-w-[1600px] px-6 md:px-8 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
               <ShieldCheck size={16} className="text-[var(--accent)]" />
               {t("admin.console")}
             </span>
-            <nav className="flex items-center gap-1">
-              <AdminTab to="/users">{t("admin.users")}</AdminTab>
-              <AdminTab to="/gateway">{t("admin.gateway")}</AdminTab>
-            </nav>
           </div>
-          <a
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-sm font-medium text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors shrink-0"
-          >
-            <ArrowLeft size={16} />
-            {t("admin.backToApp")}
-          </a>
+            <nav className="flex items-center gap-1">
+              <AdminTab to="/gateway">{t("admin.gateway")}</AdminTab>
+              <AdminTab to="/settlement">{t("gateway.settlement")}</AdminTab>
+              <AdminTab to="/users">{t("admin.users")}</AdminTab>
+            </nav>
+          <div className="flex-1 flex justify-end">
+            <a
+              href="/dashboard"
+              className="flex items-center gap-1.5 text-sm font-medium text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors shrink-0"
+            >
+              <ArrowLeft size={16} />
+              {t("admin.backToApp")}
+            </a>
+          </div>
         </div>
       </header>
       <main className="flex-1 px-6 md:px-8 py-6 max-w-[1600px] mx-auto w-full">

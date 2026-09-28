@@ -1,6 +1,7 @@
 // Indonesian dictionary — mirrors `i18n.en.js` keys.
 // Missing keys fall back to `en` at lookup time (see `i18n.js`).
 import { settingsId } from "./i18n.id.settings.js";
+import { gatewayId } from "./i18n.id.gateway.js";
 export const id = {
     ...settingsId,
     /* ============================ common ============================ */
@@ -64,6 +65,11 @@ export const id = {
     "status.sent": "Terkirim",
     "status.paid": "Lunas",
     "status.overdue": "Jatuh tempo", "status.pending": "Menunggu",
+    "status.success": "Berhasil",
+    "status.failed": "Gagal",
+    "status.expired": "Kedaluwarsa",
+    "status.refunded": "Dikembalikan",
+    "status.partially_refunded": "Dikembalikan sebagian",
 
     /* ============================ relative time ============================ */
     "relative.justNow": "baru saja",
@@ -108,45 +114,7 @@ export const id = {
     "admin.role.admin": "Admin",
     "admin.role.user": "Pengguna",
 
-    /* ============================ gateway ============================ */
-    "gateway.title": "Gerbang Pembayaran",
-    "gateway.desc": "Hubungkan proyek ke satu pembayaran terpusat dan pantau pengiriman webhook.",
-    "gateway.addTitle": "Hubungkan proyek",
-    "gateway.addProject": "Tambah proyek",
-    "gateway.slugPlaceholder": "Slug proyek, misalnya one-api",
-    "gateway.namePlaceholder": "Nama proyek",
-    "gateway.webhookPlaceholder": "https://proyek.contoh/webhooks/payment",
-    "gateway.gatewayPlaceholder": "Gateway default, misalnya midtrans",
-    "gateway.project": "Proyek",
-    "gateway.gateway": "Gateway",
-    "gateway.webhook": "URL webhook",
-    "gateway.status": "Status",
-    "gateway.actions": "Aksi",
-    "gateway.active": "Aktif",
-    "gateway.inactive": "Nonaktif",
-    "gateway.enable": "Aktifkan",
-    "gateway.disable": "Nonaktifkan",
-    "gateway.rotateKey": "Ganti API key",
-    "gateway.rotateSecret": "Ganti secret",
-    "gateway.credentialsTitle": "Simpan kredensial ini sekarang",
-    "gateway.credentialsDesc": "API key dan webhook secret hanya ditampilkan sekali. Simpan di environment project yang terhubung.",
-    "gateway.copy": "Salin kredensial",
-    "gateway.created": "Proyek terhubung",
-    "gateway.saveFailed": "Gagal menyimpan proyek gateway",
-    "gateway.loadFailed": "Gagal memuat data gateway",
-    "gateway.empty": "Belum ada proyek terhubung",
-    "gateway.emptyDesc": "Hubungkan proyek untuk mulai menerima pembayaran melalui relay terpusat.",
-    "gateway.transactions": "Transaksi terbaru",
-    "gateway.deliveries": "Pengiriman webhook",
-    "gateway.noTransactions": "Belum ada transaksi",
-    "gateway.noDeliveries": "Belum ada pengiriman webhook",
-    "gateway.attempt": "percobaan",
-    "gateway.retry": "Coba kirim ulang",
-    "gateway.availability": "Ketersediaan gateway",
-    "gateway.configured": "Terkonfigurasi",
-    "gateway.notConfigured": "Belum dikonfigurasi",
-    "gateway.sandbox": "Sandbox",
-    "gateway.live": "Live",
+    ...gatewayId,
 
     /* ============================ user webhooks ============================ */
     "notif.desc": "Kirim event faktur dan pembayaran ke otomasi Anda (n8n, bridge WhatsApp). Setiap pengiriman ditandatangani HMAC-SHA256 di X-Relay-Signature.",

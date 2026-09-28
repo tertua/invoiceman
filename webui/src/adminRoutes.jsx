@@ -7,6 +7,7 @@ import { useLang } from "@/context/LangContext";
 
 const AdminUsers = lazy(() => import("@/pages/AdminUsers"));
 const AdminGateway = lazy(() => import("@/pages/AdminGateway"));
+const AdminSettlement = lazy(() => import("@/pages/AdminSettlement"));
 
 // Leaving this entry is a full page load, so redirects use window.location — <Navigate> would be rewritten by the /admin basename.
 function AdminGuard({ children }) {
@@ -38,9 +39,10 @@ export const adminRouter = createBrowserRouter(
       ),
       errorElement: <RouteError />,
       children: [
-        { index: true, element: <Navigate to="users" replace /> },
+        { index: true, element: <Navigate to="gateway" replace /> },
         { path: "users", element: <AdminUsers /> },
         { path: "gateway", element: <AdminGateway /> },
+        { path: "settlement", element: <AdminSettlement /> },
       ],
     },
     { path: "*", element: <Navigate to="/" replace /> },

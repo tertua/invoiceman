@@ -1,6 +1,7 @@
 // English dictionary — source of truth for UI copy.
 // Missing `id` keys fall back to `en` at lookup time (see `i18n.js`).
 import { settingsEn } from "./i18n.en.settings.js";
+import { gatewayEn } from "./i18n.en.gateway.js";
 export const en = {
     ...settingsEn,
     /* ============================ common ============================ */
@@ -64,6 +65,11 @@ export const en = {
     "status.sent": "Sent",
     "status.paid": "Paid",
     "status.overdue": "Overdue", "status.pending": "Pending",
+    "status.success": "Success",
+    "status.failed": "Failed",
+    "status.expired": "Expired",
+    "status.refunded": "Refunded",
+    "status.partially_refunded": "Partially refunded",
 
     /* ============================ relative time ============================ */
     "relative.justNow": "just now",
@@ -108,45 +114,7 @@ export const en = {
     "admin.role.admin": "Admin",
     "admin.role.user": "User",
 
-    /* ============================ gateway ============================ */
-    "gateway.title": "Payment gateway",
-    "gateway.desc": "Connect projects to one central payment gateway and monitor delivery health.",
-    "gateway.addTitle": "Connect a project",
-    "gateway.addProject": "Add project",
-    "gateway.slugPlaceholder": "Project slug, e.g. one-api",
-    "gateway.namePlaceholder": "Project name",
-    "gateway.webhookPlaceholder": "https://project.example/webhooks/payment",
-    "gateway.gatewayPlaceholder": "Default gateway, e.g. midtrans",
-    "gateway.project": "Project",
-    "gateway.gateway": "Gateway",
-    "gateway.webhook": "Webhook URL",
-    "gateway.status": "Status",
-    "gateway.actions": "Actions",
-    "gateway.active": "Active",
-    "gateway.inactive": "Inactive",
-    "gateway.enable": "Enable",
-    "gateway.disable": "Disable",
-    "gateway.rotateKey": "Rotate key",
-    "gateway.rotateSecret": "Rotate secret",
-    "gateway.credentialsTitle": "Save these credentials now",
-    "gateway.credentialsDesc": "The API key and webhook secret are shown once. Store them in the connected project environment.",
-    "gateway.copy": "Copy credential",
-    "gateway.created": "Project connected",
-    "gateway.saveFailed": "Couldn't save gateway project",
-    "gateway.loadFailed": "Couldn't load gateway data",
-    "gateway.empty": "No projects connected",
-    "gateway.emptyDesc": "Connect a project to start accepting payments through the central relay.",
-    "gateway.transactions": "Recent transactions",
-    "gateway.deliveries": "Webhook deliveries",
-    "gateway.noTransactions": "No transactions yet",
-    "gateway.noDeliveries": "No webhook deliveries yet",
-    "gateway.attempt": "attempt",
-    "gateway.retry": "Retry delivery",
-    "gateway.availability": "Gateway availability",
-    "gateway.configured": "Configured",
-    "gateway.notConfigured": "Not configured",
-    "gateway.sandbox": "Sandbox",
-    "gateway.live": "Live",
+    ...gatewayEn,
 
     /* ============================ user webhooks ============================ */
     "notif.desc": "Send invoice and payment events to your automation (n8n, WhatsApp bridge). Each delivery is signed with HMAC-SHA256 in X-Relay-Signature.",

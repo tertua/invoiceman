@@ -30,7 +30,7 @@ type GatewayTransaction struct {
 	ExternalOrderID string     `gorm:"size:128;index" db:"external_order_id" json:"external_order_id"`
 	InvoiceID       *uuid.UUID `gorm:"type:uuid;index" db:"invoice_id" json:"invoice_id"`
 	UserID          *uuid.UUID `gorm:"type:uuid;index" db:"user_id" json:"user_id"`
-	AmountIDR       int64      `db:"amount_idr" json:"amount_idr"`
+	AmountIDR       int64      `db:"amount_idr" json:"amount_idr"` // physical column is amount_id_r (GORM default naming ignores db tags); SettlementSummary sums it by that name.
 	AmountDecimal   string     `gorm:"size:64" db:"amount_decimal" json:"amount_decimal"`
 	// Currency is the currency actually charged by the provider; differing from InvoiceCurrency means it was converted at UsdToIdr.
 	Currency string `gorm:"size:8;default:IDR" db:"currency" json:"currency"`

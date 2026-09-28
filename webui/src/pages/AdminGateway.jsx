@@ -6,26 +6,22 @@ import {
   Loader2,
   Network,
   Plus,
-  RefreshCw,
   RotateCw,
   ShieldCheck,
-  Webhook,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
+import { GatewayDeliveries } from "@/components/gateway/GatewayDeliveries";
 import { Input } from "@/components/ui/Input";
 import { useLang } from "@/context/LangContext";
 import { toast } from "sonner";
 import {
   useCreateGatewayProject,
-  useGatewayDeliveries,
   useGatewayProjects,
   useGatewayStatus,
-  useGatewayTransactions,
-  useRetryGatewayDelivery,
   useRotateGatewayKey,
   useRotateGatewaySecret,
   useUpdateGatewayProject,
@@ -219,33 +215,6 @@ function ProjectsTable({ projects, onCredentials }) {
   );
 }
 
-function OperationsTables() {
-  const { t } = useLang();
-  const { data: transactions = [], error: transactionsError } = useGatewayTransactions();
-  const { data: deliveries = [], error: deliveriesError } = useGatewayDeliveries();
-  const retry = useRetryGatewayDelivery();
-  const opsError = transactionsError || deliveriesError;
-  if (opsError?.status !== 401 && opsError) {
-    return <QueryError error={opsError} />;
-  }
-  return (
-    <div className="mt-6 grid gap-6 xl:grid-cols-2">
-      <Card padding="none" className="overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-[var(--border)] p-4"><Network size={16} className="text-[var(--accent-strong)]" /><h2 className="font-display font-semibold">{t("gateway.transactions")}</h2></div>
-        <div className="max-h-[360px] overflow-auto">
-          {transactions.length ? transactions.map((item) => <div key={item.order_id} className="border-b border-[var(--border)] px-4 py-3 last:border-0"><div className="flex items-center justify-between gap-3"><code className="truncate text-xs text-[var(--ink)]">{item.order_id}</code><span className="text-xs font-semibold text-[var(--accent-strong)]">{item.status}</span></div><div className="mt-1 text-xs text-[var(--ink-muted)]">{item.gateway} · {item.amount_idr ? `${item.amount_idr} IDR` : `${item.amount_decimal} ${item.currency}`}</div></div>) : <p className="p-6 text-sm text-[var(--ink-muted)]">{t("gateway.noTransactions")}</p>}
-        </div>
-      </Card>
-      <Card padding="none" className="overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-[var(--border)] p-4"><Webhook size={16} className="text-[var(--accent-strong)]" /><h2 className="font-display font-semibold">{t("gateway.deliveries")}</h2></div>
-        <div className="max-h-[360px] overflow-auto">
-          {deliveries.length ? deliveries.map((item) => <div key={item.id} className="border-b border-[var(--border)] px-4 py-3 last:border-0"><div className="flex items-center justify-between gap-3"><code className="truncate text-xs text-[var(--ink)]">{item.order_id}</code><span className="text-xs font-semibold text-[var(--accent-strong)]">{item.status}</span></div><div className="mt-1 flex items-center justify-between gap-2 text-xs text-[var(--ink-muted)]"><span>{item.gateway} · {t("gateway.attempt")} {item.attempt} · HTTP {item.resp_code || "-"}</span>{item.status !== "delivered" && <Button size="iconSm" variant="ghost" onClick={() => retry.mutate(item.id)} disabled={retry.isPending} aria-label={t("gateway.retry")}><RefreshCw size={13} /></Button>}</div></div>) : <p className="p-6 text-sm text-[var(--ink-muted)]">{t("gateway.noDeliveries")}</p>}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 export default function AdminGateway() {
   const { t } = useLang();
   const { data: projects = [], isLoading, error } = useGatewayProjects();
@@ -259,7 +228,7 @@ export default function AdminGateway() {
       <GatewayStatusBanner />
       <CreateProjectForm onCreated={setCredentials} />
       {projects.length ? <ProjectsTable projects={projects} onCredentials={setCredentials} /> : <EmptyState icon={ShieldCheck} title={t("gateway.empty")} description={t("gateway.emptyDesc")} />}
-      <OperationsTables />
+      <GatewayDeliveries />
     </div>
   );
 }

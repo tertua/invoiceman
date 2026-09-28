@@ -15,10 +15,6 @@ export function useGatewayProjects() {
   return useQuery({ queryKey: gatewayProjectsKey, queryFn: adminApi.listGatewayProjects });
 }
 
-export function useGatewayTransactions() {
-  return useQuery({ queryKey: gatewayTransactionsKey, queryFn: adminApi.listGatewayTransactions });
-}
-
 export function useGatewayDeliveries() {
   return useQuery({ queryKey: gatewayDeliveriesKey, queryFn: adminApi.listGatewayDeliveries });
 }

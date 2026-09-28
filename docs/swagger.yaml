@@ -715,6 +715,20 @@ paths:
       summary: rotate project secret
       tags:
       - Admin
+  /admin/gateway/settlement:
+    get:
+      description: Settlement summary grouped by transaction status.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: settlement summary
+      tags:
+      - Admin
   /admin/gateway/transactions:
     get:
       description: List relay transactions.

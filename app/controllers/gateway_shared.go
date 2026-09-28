@@ -77,6 +77,8 @@ func intentResponse(t models.GatewayTransaction) fiber.Map {
 		"redirect_url":      t.RedirectURL,
 		"payment_url":       t.PaymentURL,
 		"address":           t.Address,
+		"midtrans_txn_id":   t.MidtransTxnID,
+		"created_at":        t.CreatedAt,
 	}
 }
 
