@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
-	"github.com/tertua/invoiceman/pkg/logger"
+	"github.com/tertua/tupay/pkg/logger"
 )
 
 // RequestID returns the request's X-Request-ID (set by the requestid

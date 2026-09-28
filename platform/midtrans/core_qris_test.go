@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // The Core API charge body must request QRIS settled by the Gopay acquirer —

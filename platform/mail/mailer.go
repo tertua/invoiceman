@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 var ErrNotConfigured = errors.New("mail provider is not configured")

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/app/queries"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/app/queries"
 )
 
 // TestPostgresBackend validates the PostgreSQL path on a real server. It

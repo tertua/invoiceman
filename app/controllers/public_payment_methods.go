@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // publicChargeMethod is one selectable method on the public pay page. The

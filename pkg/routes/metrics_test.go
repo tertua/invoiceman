@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/pkg/middleware"
+	"github.com/tertua/tupay/pkg/middleware"
 )
 
 // TestMetricsEndpoint verifies the scrape endpoint renders counters
@@ -39,7 +39,7 @@ func TestMetricsEndpoint(t *testing.T) {
 		require.Equal(t, 200, resp.StatusCode)
 		assert.Contains(t, resp.Header.Get("Content-Type"), "text/plain")
 		out := string(body)
-		assert.Contains(t, out, "invoiceman_app_info")
+		assert.Contains(t, out, "tupay_app_info")
 		assert.Contains(t, out, `route="/api/config"`)
 		assert.NotContains(t, out, `route="/metrics"`, "scrape must not record itself")
 	}

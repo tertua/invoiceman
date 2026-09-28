@@ -3,11 +3,11 @@
 # separately); use this when one container is simpler (VPS, demo).
 #
 # Build (BuildKit; Dockerfile.dev.dockerignore keeps webui/ sources in context):
-#   docker build -f Dockerfile.dev -t invoiceman:dev .
+#   docker build -f Dockerfile.dev -t tupay:dev .
 # With captcha (see README "Turnstile"):
 #   docker build -f Dockerfile.dev \
-#     --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t invoiceman:dev .
-# Run:   docker run --rm -p 5000:5000 --env-file .env invoiceman:dev
+#     --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t tupay:dev .
+# Run:   docker run --rm -p 5000:5000 --env-file .env tupay:dev
 # Then open http://localhost:5000 (MPA) — /api/* is served same-origin,
 # so no CORS or vite proxy is needed.
 

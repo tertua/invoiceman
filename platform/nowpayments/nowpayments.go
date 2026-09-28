@@ -17,7 +17,7 @@ package nowpayments
 import (
 	"context"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // GatewayName is the registry name for NOWPayments.

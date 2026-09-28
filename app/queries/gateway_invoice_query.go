@@ -1,6 +1,6 @@
 package queries
 
-import "github.com/tertua/invoiceman/app/models"
+import "github.com/tertua/tupay/app/models"
 
 // GetGatewayInvoice returns a project-owned invoice by external identity.
 func (q *InvoiceQueries) GetGatewayInvoice(project, external string) (models.Invoice, error) {

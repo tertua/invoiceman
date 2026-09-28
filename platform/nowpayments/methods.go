@@ -1,6 +1,6 @@
 package nowpayments
 
-import "github.com/tertua/invoiceman/platform/gateway"
+import "github.com/tertua/tupay/platform/gateway"
 
 func (Gateway) Methods() []string { return []string{gateway.MethodCrypto} }
 

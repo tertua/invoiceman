@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/metrics"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/metrics"
 )
 
 // MetricsRoutes exposes the Prometheus-compatible scrape endpoint.

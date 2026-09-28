@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 // ErrSessionNotFound is returned when a session key does not exist.

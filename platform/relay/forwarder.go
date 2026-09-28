@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/tertua/invoiceman/pkg/constants"
+	"github.com/tertua/tupay/pkg/constants"
 )
 
 // ForwardResult is the outcome of one webhook forward attempt.

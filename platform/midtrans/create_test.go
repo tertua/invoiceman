@@ -3,7 +3,7 @@ package midtrans
 import (
 	"testing"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // SnapMethods maps neutral ids to Snap codes and never lets an unmappable id

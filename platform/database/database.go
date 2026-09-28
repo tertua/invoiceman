@@ -8,8 +8,8 @@ import (
 	"time"
 
 	sqliteDriver "github.com/glebarez/sqlite"
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/logger"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

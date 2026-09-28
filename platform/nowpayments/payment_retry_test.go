@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 func TestCreateDirectPaymentHonorsRetryAfter(t *testing.T) {

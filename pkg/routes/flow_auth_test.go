@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 func TestAuthFlow(t *testing.T) {

@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // GetPublicQrImage proxies the current QRIS intent's QR image same-origin so

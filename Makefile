@@ -3,7 +3,7 @@
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
 VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
-LDFLAGS := -w -s -X github.com/tertua/invoiceman/pkg/constants.Version=$(VERSION)
+LDFLAGS := -w -s -X github.com/tertua/tupay/pkg/constants.Version=$(VERSION)
 
 clean:
 	rm -rf ./build
@@ -33,7 +33,7 @@ run: swag build
 # Local dev processes (see AGENTS.md "Local dev run"). Binaries and logs
 # live under /tmp/opencode (pre-approved scratch dir, never the repo root).
 dev-be:
-	go build -ldflags="$(LDFLAGS)" -o /tmp/opencode/invoiceman . && /tmp/opencode/invoiceman
+	go build -ldflags="$(LDFLAGS)" -o /tmp/opencode/tupay . && /tmp/opencode/tupay
 
 dev-fe:
 	npm --prefix webui run dev -- --host 0.0.0.0

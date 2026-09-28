@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // ErrOrderNotFound is returned when Midtrans has no such transaction: either

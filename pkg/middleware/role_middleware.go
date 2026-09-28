@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // RequireRoles permits only authenticated users with one of the given roles.

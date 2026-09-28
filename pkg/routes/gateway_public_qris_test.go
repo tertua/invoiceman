@@ -12,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // newQRISCoreStub serves fake Midtrans Core API charge responses: every call

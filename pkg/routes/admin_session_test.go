@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // adminSession registers (or reuses) an account, promotes it to admin and returns a fresh session, so a test is independent of execution order (only the first-ever account is admin by default).

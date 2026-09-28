@@ -3,7 +3,7 @@ package models
 import "time"
 
 // GatewayProject is a downstream service allowed to create payment intents
-// through Invoiceman. Identity is derived server-side from the API key,
+// through Tupay. Identity is derived server-side from the API key,
 // never from client-supplied fields.
 type GatewayProject struct {
 	Slug string `gorm:"primaryKey;size:64" db:"slug" json:"slug" validate:"required,lte=64"`

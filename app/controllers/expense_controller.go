@@ -10,10 +10,10 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/storage"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/storage"
 )
 
 func expenseResponse(expense models.Expense) fiber.Map {

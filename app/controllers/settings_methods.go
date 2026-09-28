@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/gateway"
-	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/gateway"
+	"github.com/tertua/tupay/platform/midtrans"
 )
 
 // normalizeMidtransMethods keeps the settings PATCH write consistent with the

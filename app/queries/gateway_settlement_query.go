@@ -1,6 +1,6 @@
 package queries
 
-import "github.com/tertua/invoiceman/app/models"
+import "github.com/tertua/tupay/app/models"
 
 // SettlementStatusRow aggregates one transaction status for the admin settlement summary.
 type SettlementStatusRow struct {

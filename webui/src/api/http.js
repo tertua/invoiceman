@@ -5,7 +5,7 @@ import { broadcastCaptchaReset, shouldResetCaptcha } from "./captchaReset";
 // Broadcast when an authenticated call fails with 401 so the app can
 // drop the stale user and bounce to /login without a manual reload.
 // AuthContext listens for this; ProtectedShell then redirects.
-export const AUTH_EXPIRED_EVENT = "invoiceman:auth-expired";
+export const AUTH_EXPIRED_EVENT = "tupay:auth-expired";
 
 // 401s that are part of a normal unauthenticated flow — they must stay
 // inline (e.g. wrong password) and never trigger a global logout.

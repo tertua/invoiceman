@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/pkg/middleware"
+	"github.com/tertua/tupay/pkg/middleware"
 )
 
 func TestAIContractFlow(t *testing.T) {
@@ -83,7 +83,7 @@ func TestAppConfig(t *testing.T) {
 	resp := doRequest(t, app, "GET", "/api/config", "", nil)
 	require.Equal(t, 200, resp.StatusCode)
 	body := decodeBody(t, resp)
-	assert.Equal(t, "Invoiceman", body["appName"])
+	assert.Equal(t, "Tupay", body["appName"])
 	assert.Equal(t, true, body["allowRegistration"])
 
 	t.Setenv("APP_NAME", "  Acme Billing  ")

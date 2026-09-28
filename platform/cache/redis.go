@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 
 	"github.com/redis/go-redis/v9"
 )

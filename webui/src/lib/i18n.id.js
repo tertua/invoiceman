@@ -120,7 +120,7 @@ export const id = {
     "notif.desc": "Kirim event faktur dan pembayaran ke otomasi Anda (n8n, bridge WhatsApp). Setiap pengiriman ditandatangani HMAC-SHA256 di X-Relay-Signature.",
     "notif.addTitle": "Tambah target webhook",
     "notif.add": "Tambah target",
-    "notif.urlPlaceholder": "https://n8n.contoh/webhook/invoiceman",
+    "notif.urlPlaceholder": "https://n8n.contoh/webhook/tupay",
     "notif.subscribeHint": "Tidak ada event terpilih berarti semua event. Ubah di bawah untuk mempersempit langganan.",
     "notif.active": "Aktif",
     "notif.inactive": "Nonaktif",

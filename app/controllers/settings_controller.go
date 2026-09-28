@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/storage"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/storage"
 )
 
 // GetSettings returns settings for the current user.

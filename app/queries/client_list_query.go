@@ -2,7 +2,7 @@ package queries
 
 import (
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 )
 
 // ListClients returns one page of clients of a user with billing aggregates.

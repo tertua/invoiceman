@@ -18,14 +18,14 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/platform/cache"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
-	"github.com/tertua/invoiceman/platform/midtrans"
-	"github.com/tertua/invoiceman/platform/nowpayments"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/platform/cache"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
+	"github.com/tertua/tupay/platform/midtrans"
+	"github.com/tertua/tupay/platform/nowpayments"
 )
 
 // reconcileAge spaces provider polls per transaction: the UpdatedAt touch on

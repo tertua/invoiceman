@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/app/queries"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/app/queries"
 )
 
 // TestMigrateDownUpRoundTrip rolls v2 columns away and back on an isolated

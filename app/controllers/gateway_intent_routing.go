@@ -3,8 +3,8 @@ package controllers
 import (
 	"strings"
 
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // routeIntentGateway resolves the provider for an intent:

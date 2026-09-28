@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // chargeSpec is the provider-ready amount for one intent, plus the audit data

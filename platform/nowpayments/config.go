@@ -3,7 +3,7 @@ package nowpayments
 import (
 	"strings"
 
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 // Config holds NOWPayments credentials. All values come from env;

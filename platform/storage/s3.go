@@ -8,7 +8,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 // s3Storage stores files in an S3-compatible bucket via minio-go.

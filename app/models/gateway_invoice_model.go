@@ -2,7 +2,7 @@ package models
 
 // GatewayInvoiceInput is the public service-to-service invoice payload.
 // Customer and invoice identifiers belong to the calling project, not the
-// internal UUIDs used by Invoiceman.
+// internal UUIDs used by Tupay.
 type GatewayInvoiceInput struct {
 	ExternalID string               `json:"external_id" validate:"required,lte=128"`
 	Status     string               `json:"status" validate:"required,oneof=draft sent"`

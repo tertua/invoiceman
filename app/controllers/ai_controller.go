@@ -8,11 +8,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/ai"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/ai"
+	"github.com/tertua/tupay/platform/database"
 )
 
 const maxReceiptSize = 10 << 20

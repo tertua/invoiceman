@@ -3,7 +3,7 @@ package midtrans
 import (
 	"strings"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 var paymentTypes = map[string]string{

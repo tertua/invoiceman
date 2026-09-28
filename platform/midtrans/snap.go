@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // Config holds Midtrans credentials. All values come from env;

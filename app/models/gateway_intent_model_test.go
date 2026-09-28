@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // The validator enum on IntentInput.PaymentMethod must stay in lockstep with

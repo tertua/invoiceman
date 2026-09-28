@@ -4,13 +4,13 @@ package metrics
 // with zero new dependencies (stdlib only: sync/atomic).
 //
 // Recorded per request (see Recorder middleware):
-//   - invoiceman_http_requests_total{method,route,status}
-//   - invoiceman_http_request_duration_seconds (global histogram)
+//   - tupay_http_requests_total{method,route,status}
+//   - tupay_http_request_duration_seconds (global histogram)
 //
 // Rendered on scrape:
-//   - invoiceman_app_info{version}
-//   - invoiceman_uptime_seconds
-//   - invoiceman_db_open_conns{backend}, _idle, _in_use
+//   - tupay_app_info{version}
+//   - tupay_uptime_seconds
+//   - tupay_db_open_conns{backend}, _idle, _in_use
 //
 // Route labels use the matched Fiber route template (e.g. /api/clients/:id),
 // never raw paths, to bound cardinality. /metrics itself is not recorded.
@@ -150,16 +150,16 @@ func SkipMetrics(path string) bool { return path == "/metrics" }
 func (r *Registry) Render() string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# HELP invoiceman_app_info Application build info.\n")
-	fmt.Fprintf(&b, "# TYPE invoiceman_app_info gauge\n")
-	fmt.Fprintf(&b, "invoiceman_app_info{version=%s} 1\n", quote(r.version))
+	fmt.Fprintf(&b, "# HELP tupay_app_info Application build info.\n")
+	fmt.Fprintf(&b, "# TYPE tupay_app_info gauge\n")
+	fmt.Fprintf(&b, "tupay_app_info{version=%s} 1\n", quote(r.version))
 
-	fmt.Fprintf(&b, "# HELP invoiceman_uptime_seconds Seconds since process start.\n")
-	fmt.Fprintf(&b, "# TYPE invoiceman_uptime_seconds counter\n")
-	fmt.Fprintf(&b, "invoiceman_uptime_seconds %s\n", formatFloat(time.Since(r.startTime).Seconds()))
+	fmt.Fprintf(&b, "# HELP tupay_uptime_seconds Seconds since process start.\n")
+	fmt.Fprintf(&b, "# TYPE tupay_uptime_seconds counter\n")
+	fmt.Fprintf(&b, "tupay_uptime_seconds %s\n", formatFloat(time.Since(r.startTime).Seconds()))
 
-	fmt.Fprintf(&b, "# HELP invoiceman_http_requests_total Total HTTP requests.\n")
-	fmt.Fprintf(&b, "# TYPE invoiceman_http_requests_total counter\n")
+	fmt.Fprintf(&b, "# HELP tupay_http_requests_total Total HTTP requests.\n")
+	fmt.Fprintf(&b, "# TYPE tupay_http_requests_total counter\n")
 	keys := make([]counterKey, 0)
 	r.mu.Lock()
 	for k := range r.counters {
@@ -179,35 +179,35 @@ func (r *Registry) Render() string {
 		r.mu.Lock()
 		v := r.counters[k].Load()
 		r.mu.Unlock()
-		fmt.Fprintf(&b, "invoiceman_http_requests_total{method=%s,route=%s,status=%s} %d\n",
+		fmt.Fprintf(&b, "tupay_http_requests_total{method=%s,route=%s,status=%s} %d\n",
 			quote(k.method), quote(k.route), quote(strconv.Itoa(k.status)), v)
 	}
 
-	fmt.Fprintf(&b, "# HELP invoiceman_http_request_duration_seconds Request latency.\n")
-	fmt.Fprintf(&b, "# TYPE invoiceman_http_request_duration_seconds histogram\n")
+	fmt.Fprintf(&b, "# HELP tupay_http_request_duration_seconds Request latency.\n")
+	fmt.Fprintf(&b, "# TYPE tupay_http_request_duration_seconds histogram\n")
 	var cumulative uint64
 	for i, bound := range latencyBounds {
 		cumulative += r.buckets[i].Load()
-		fmt.Fprintf(&b, "invoiceman_http_request_duration_seconds_bucket{le=%s} %d\n",
+		fmt.Fprintf(&b, "tupay_http_request_duration_seconds_bucket{le=%s} %d\n",
 			formatFloat(bound), cumulative)
 	}
 	total := r.count.Load()
-	fmt.Fprintf(&b, "invoiceman_http_request_duration_seconds_bucket{le=%s} %d\n", quote("+Inf"), total)
-	fmt.Fprintf(&b, "invoiceman_http_request_duration_seconds_sum %s\n",
+	fmt.Fprintf(&b, "tupay_http_request_duration_seconds_bucket{le=%s} %d\n", quote("+Inf"), total)
+	fmt.Fprintf(&b, "tupay_http_request_duration_seconds_sum %s\n",
 		formatFloat(float64(r.sumNanos.Load())/1e9))
-	fmt.Fprintf(&b, "invoiceman_http_request_duration_seconds_count %d\n", total)
+	fmt.Fprintf(&b, "tupay_http_request_duration_seconds_count %d\n", total)
 
 	if r.dbStats != nil {
 		if open, idle, inUse, backend, ok := r.dbStats(); ok {
-			fmt.Fprintf(&b, "# HELP invoiceman_db_open_conns Database pool connections.\n")
-			fmt.Fprintf(&b, "# TYPE invoiceman_db_open_conns gauge\n")
-			fmt.Fprintf(&b, "invoiceman_db_open_conns{backend=%s} %d\n", quote(backend), open)
-			fmt.Fprintf(&b, "# HELP invoiceman_db_idle_conns Database idle connections.\n")
-			fmt.Fprintf(&b, "# TYPE invoiceman_db_idle_conns gauge\n")
-			fmt.Fprintf(&b, "invoiceman_db_idle_conns{backend=%s} %d\n", quote(backend), idle)
-			fmt.Fprintf(&b, "# HELP invoiceman_db_in_use_conns Database connections in use.\n")
-			fmt.Fprintf(&b, "# TYPE invoiceman_db_in_use_conns gauge\n")
-			fmt.Fprintf(&b, "invoiceman_db_in_use_conns{backend=%s} %d\n", quote(backend), inUse)
+			fmt.Fprintf(&b, "# HELP tupay_db_open_conns Database pool connections.\n")
+			fmt.Fprintf(&b, "# TYPE tupay_db_open_conns gauge\n")
+			fmt.Fprintf(&b, "tupay_db_open_conns{backend=%s} %d\n", quote(backend), open)
+			fmt.Fprintf(&b, "# HELP tupay_db_idle_conns Database idle connections.\n")
+			fmt.Fprintf(&b, "# TYPE tupay_db_idle_conns gauge\n")
+			fmt.Fprintf(&b, "tupay_db_idle_conns{backend=%s} %d\n", quote(backend), idle)
+			fmt.Fprintf(&b, "# HELP tupay_db_in_use_conns Database connections in use.\n")
+			fmt.Fprintf(&b, "# TYPE tupay_db_in_use_conns gauge\n")
+			fmt.Fprintf(&b, "tupay_db_in_use_conns{backend=%s} %d\n", quote(backend), inUse)
 		}
 	}
 

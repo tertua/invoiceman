@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)

@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // newQRImageStub serves a tiny png so the proxy test can verify the backend

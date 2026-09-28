@@ -14,8 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // TestMain runs the worker tests against in-memory SQLite.

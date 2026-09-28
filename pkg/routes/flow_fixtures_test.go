@@ -7,7 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 )
 
 // invoiceLine is one line item in an invoice spec.

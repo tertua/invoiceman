@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 type checkableGateway struct {

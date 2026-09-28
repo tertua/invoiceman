@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 )
 
 // GatewayProjectKey is the context locals key holding the authenticated

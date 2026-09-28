@@ -4,10 +4,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/cache"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/cache"
+	"github.com/tertua/tupay/platform/database"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"

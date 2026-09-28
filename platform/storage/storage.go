@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 // Visibility selects how a stored object is served.

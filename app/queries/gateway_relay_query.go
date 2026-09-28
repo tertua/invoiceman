@@ -1,6 +1,6 @@
 package queries
 
-import "github.com/tertua/invoiceman/app/models"
+import "github.com/tertua/tupay/app/models"
 
 // RelayClaimPrefix namespaces claim rows in gateway_transactions. A claim is
 // an in-flight slot for a relayed intent charge, never a payable intent and

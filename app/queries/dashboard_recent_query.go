@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/utils"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
 )
 
 // recentInvoiceRow is the raw row for recent invoices.

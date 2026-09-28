@@ -9,14 +9,14 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/cache"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/cache"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 // HandleGatewayWebhook handles notifications for any registered gateway.

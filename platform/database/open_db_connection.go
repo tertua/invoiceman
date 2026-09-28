@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/app/queries"
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/app/queries"
+	"github.com/tertua/tupay/pkg/configs"
 	"gorm.io/gorm"
 )
 

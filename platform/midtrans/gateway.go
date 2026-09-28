@@ -1,6 +1,6 @@
 package midtrans
 
-import "github.com/tertua/invoiceman/platform/gateway"
+import "github.com/tertua/tupay/platform/gateway"
 
 // GatewayName is the registry name for Midtrans.
 const GatewayName = "midtrans"

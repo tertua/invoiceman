@@ -1,4 +1,4 @@
-# Invoiceman
+# Tupay
 
 Invoice management API + multi-page app (MPA): invoices, clients, payments with shareable public pay links (QRIS via Midtrans, crypto via NOWPayments), a gateway relay for third-party integrations, expenses, dashboards, reports, and AI-assisted text (Gemini, English/Indonesian).
 
@@ -16,7 +16,7 @@ Docker (Postgres + Redis + API):
 
 Local dev (no external services):
 
-1. `make dev-be` — builds to `/tmp/opencode/invoiceman`, serves `:5000`. Rebuild + restart after BE changes.
+1. `make dev-be` — builds to `/tmp/opencode/tupay`, serves `:5000`. Rebuild + restart after BE changes.
 2. `make dev-fe` — Vite dev on `:5173`, proxies `/api` and `/uploads` to the BE. Hot-reloads; no restart needed.
 3. Health: `curl localhost:5000/healthz`
 
@@ -49,8 +49,8 @@ There are two deploy modes:
 - **Single container (`Dockerfile.dev`)**: FE embedded into the image, `/api/*` same-origin — no CORS, proxy, or second domain.
 
   ```bash
-  docker build -f Dockerfile.dev -t invoiceman:dev .
-  docker run --rm -p 5000:5000 --env-file .env invoiceman:dev
+  docker build -f Dockerfile.dev -t tupay:dev .
+  docker run --rm -p 5000:5000 --env-file .env tupay:dev
   ```
 
 Compose can use `image:` + `env_file: .env`; no env is needed at build time.
@@ -68,7 +68,7 @@ Optional, active only when the secret is set. There are **two different** keys:
 
 ```bash
 docker build -f Dockerfile.dev \
-  --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t invoiceman:dev .
+  --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t tupay:dev .
 ```
 
 Both keys must come from the same Cloudflare pair. When unused, leave them empty: the widget is not rendered and the server skips verification.

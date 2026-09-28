@@ -65,7 +65,7 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const slug = appName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "invoiceman";
+    const slug = appName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tupay";
     a.download = `${slug}-report-${todayDateInput()}.csv`;
     a.click();
     URL.revokeObjectURL(url);

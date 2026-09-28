@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // Notification is the subset of the Midtrans payment notification used here.

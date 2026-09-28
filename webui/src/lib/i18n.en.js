@@ -120,7 +120,7 @@ export const en = {
     "notif.desc": "Send invoice and payment events to your automation (n8n, WhatsApp bridge). Each delivery is signed with HMAC-SHA256 in X-Relay-Signature.",
     "notif.addTitle": "Add webhook target",
     "notif.add": "Add target",
-    "notif.urlPlaceholder": "https://n8n.example/webhook/invoiceman",
+    "notif.urlPlaceholder": "https://n8n.example/webhook/tupay",
     "notif.subscribeHint": "No events selected means all events. Toggle below to narrow the subscription.",
     "notif.active": "Active",
     "notif.inactive": "Inactive",

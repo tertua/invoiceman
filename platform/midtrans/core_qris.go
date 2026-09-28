@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // coreChargeAction is one entry in the Core API charge response's actions

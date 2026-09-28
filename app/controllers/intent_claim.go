@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
 	"gorm.io/gorm"
 )
 

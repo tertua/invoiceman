@@ -1,6 +1,6 @@
 package controllers
 
-import "github.com/tertua/invoiceman/app/models"
+import "github.com/tertua/tupay/app/models"
 
 // applySettingsInput copies the editable fields onto settings. Language is only
 // overwritten with a known locale so an empty payload never resets it. The

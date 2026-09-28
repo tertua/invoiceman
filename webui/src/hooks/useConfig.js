@@ -13,7 +13,7 @@ export function useAppConfig() {
 
 export function useAppName() {
   const { data } = useAppConfig();
-  return data?.appName || "Invoiceman";
+  return data?.appName || "Tupay";
 }
 
 export function useAllowRegistration() {

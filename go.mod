@@ -1,4 +1,4 @@
-module github.com/tertua/invoiceman
+module github.com/tertua/tupay
 
 go 1.27
 

@@ -3,7 +3,7 @@ package database
 import (
 	"testing"
 
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 )
 
 // TestSchemaVersionGuard stamps fresh databases and refuses newer ones.

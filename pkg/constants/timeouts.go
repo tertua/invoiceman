@@ -11,15 +11,15 @@ import (
 var Version = "dev"
 
 // UserAgent returns the HTTP User-Agent header value for external API calls.
-// Format: "InvoiceMan/VERSION (+https://github.com/tertua/invoiceman)"
+// Format: "Tupay/VERSION (+https://github.com/tertua/tupay)"
 func UserAgent() string {
-	return fmt.Sprintf("InvoiceMan/%s (+https://github.com/tertua/invoiceman)", Version)
+	return fmt.Sprintf("Tupay/%s (+https://github.com/tertua/tupay)", Version)
 }
 
 // RelayUserAgent returns the User-Agent for webhook forwarding to downstream projects.
-// Format: "InvoiceMan-Relay/VERSION"
+// Format: "Tupay-Relay/VERSION"
 func RelayUserAgent() string {
-	return fmt.Sprintf("InvoiceMan-Relay/%s", Version)
+	return fmt.Sprintf("Tupay-Relay/%s", Version)
 }
 
 // HTTP client timeouts for external API calls.

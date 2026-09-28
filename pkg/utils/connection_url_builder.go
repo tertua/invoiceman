@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 
-	"github.com/tertua/invoiceman/pkg/configs"
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 // ConnectionURLBuilder func for building URL connection.

@@ -18,10 +18,10 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/outbox"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/outbox"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 type receivedRelay struct {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/outbox"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/platform/outbox"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 // TestSendRequiresClient covers the cross-field invariant: an invoice may be
@@ -65,7 +65,7 @@ func TestUpdateToSentFansOutStatusUpdated(t *testing.T) {
 	cookies := resp.Cookies()
 
 	resp = doRequest(t, app, "POST", "/api/notifications/endpoints",
-		`{"target_url":"https://n8n.example/webhook/invoiceman"}`, cookies)
+		`{"target_url":"https://n8n.example/webhook/tupay"}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	decodeBody(t, resp)
 

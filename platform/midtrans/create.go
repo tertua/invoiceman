@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxRequest) (*gateway.CreateTxResponse, error) {

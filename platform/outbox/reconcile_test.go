@@ -11,10 +11,10 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
-	"github.com/tertua/invoiceman/platform/midtrans"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
+	"github.com/tertua/tupay/platform/midtrans"
 )
 
 // seedReconcileInvoice creates a user with one sent invoice for reconcile tests.

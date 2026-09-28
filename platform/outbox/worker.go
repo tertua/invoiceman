@@ -20,13 +20,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/mail"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/mail"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 // Retry policy: 1m, 2m, 4m, ... capped at 2h, dead after maxAttempts.

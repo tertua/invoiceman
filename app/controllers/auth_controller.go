@@ -10,16 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/middleware"
-	"github.com/tertua/invoiceman/pkg/repository"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/cache"
-	"github.com/tertua/invoiceman/platform/captcha"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/mail"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/middleware"
+	"github.com/tertua/tupay/pkg/repository"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/cache"
+	"github.com/tertua/tupay/platform/captcha"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/mail"
+	"github.com/tertua/tupay/platform/relay"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -485,7 +485,7 @@ func ForgotPassword(c fiber.Ctx) error {
 			}
 			if err := db.EnqueueMail(&models.MailOutbox{
 				To:       user.Email,
-				Subject:  "Reset your Invoiceman password",
+				Subject:  "Reset your " + configs.Get().AppName + " password",
 				Body:     body,
 				HtmlBody: htmlBody,
 			}); err != nil {

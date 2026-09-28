@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
-	"github.com/tertua/invoiceman/platform/midtrans"
-	"github.com/tertua/invoiceman/platform/nowpayments"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
+	"github.com/tertua/tupay/platform/midtrans"
+	"github.com/tertua/tupay/platform/nowpayments"
 )
 
 // TestMain runs route tests against in-memory SQLite with an in-memory

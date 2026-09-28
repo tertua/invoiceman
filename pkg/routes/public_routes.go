@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/controllers"
-	"github.com/tertua/invoiceman/pkg/middleware"
+	"github.com/tertua/tupay/app/controllers"
+	"github.com/tertua/tupay/pkg/middleware"
 )
 
 // PublicRoutes func for describe group of public routes.

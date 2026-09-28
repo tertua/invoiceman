@@ -1,7 +1,7 @@
 package outbox
 
 import (
-	"github.com/tertua/invoiceman/pkg/logger"
+	"github.com/tertua/tupay/pkg/logger"
 )
 
 // recordErr logs best-effort bookkeeping write failures. Callers already

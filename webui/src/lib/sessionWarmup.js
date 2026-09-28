@@ -41,8 +41,8 @@ function pruneAnonAiCaches() {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (
-        k?.startsWith("invoiceman:ai-summary:anon") ||
-        k?.startsWith("invoiceman:ai-reminder:anon")
+        k?.startsWith("tupay:ai-summary:anon") ||
+        k?.startsWith("tupay:ai-reminder:anon")
       ) {
         doomed.push(k);
       }

@@ -9,8 +9,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/middleware"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/middleware"
 )
 
 // newHardenedApp builds the app the same way main.go does:

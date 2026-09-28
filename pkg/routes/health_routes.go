@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/app/controllers"
+	"github.com/tertua/tupay/app/controllers"
 )
 
 // HealthRoutes registers liveness/readiness probes at the root.

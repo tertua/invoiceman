@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 	"gorm.io/gorm"
 )
 

@@ -8,30 +8,30 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tertua/invoiceman/pkg/configs"
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/pkg/metrics"
-	"github.com/tertua/invoiceman/pkg/middleware"
-	"github.com/tertua/invoiceman/pkg/routes"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/gateway"
-	"github.com/tertua/invoiceman/platform/midtrans"
-	"github.com/tertua/invoiceman/platform/nowpayments"
-	"github.com/tertua/invoiceman/platform/outbox"
+	"github.com/tertua/tupay/pkg/configs"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/pkg/metrics"
+	"github.com/tertua/tupay/pkg/middleware"
+	"github.com/tertua/tupay/pkg/routes"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
+	"github.com/tertua/tupay/platform/midtrans"
+	"github.com/tertua/tupay/platform/nowpayments"
+	"github.com/tertua/tupay/platform/outbox"
 
 	"github.com/gofiber/fiber/v3"
 
-	_ "github.com/tertua/invoiceman/docs" // load API Docs files (Swagger)
+	_ "github.com/tertua/tupay/docs" // load API Docs files (Swagger)
 
 	_ "github.com/joho/godotenv/autoload" // load .env file automatically
 
 	_ "net/http/pprof" // #nosec G108 -- localhost-only diagnostics (see startDebugListener)
 )
 
-// @title Invoiceman API
+// @title Tupay API
 // @version 1.0
-// @description Invoiceman API. Two prefixes serve the same routes: /api/v1
+// @description Tupay API. Two prefixes serve the same routes: /api/v1
 // @description (current, used by the MPA) and /api (legacy, deprecated —
 // @description responses carry a Sunset header). Unless tagged otherwise,
 // @description endpoints speak JSON with this envelope. Success: the data

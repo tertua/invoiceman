@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/app/models"
+	"github.com/tertua/tupay/app/models"
 	"gorm.io/gorm"
 )
 

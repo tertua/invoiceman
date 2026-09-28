@@ -16,7 +16,7 @@ const TONES = [
 // The last generated draft survives menu switches and reloads via
 // localStorage, scoped per user, invoice, tone and language; regenerating
 // overwrites it.
-const REMINDER_KEY_PREFIX = "invoiceman:ai-reminder:";
+const REMINDER_KEY_PREFIX = "tupay:ai-reminder:";
 
 function reminderKey(userId, invoiceId, tone, lang) {
   return `${REMINDER_KEY_PREFIX}${userId || "anon"}:${invoiceId}:${tone}:${lang === "id" ? "id" : "en"}`;

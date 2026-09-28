@@ -8,10 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/outbox"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/outbox"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 // TestNotificationFlow covers endpoint CRUD, event fan-out on invoice
@@ -33,7 +33,7 @@ func TestNotificationFlow(t *testing.T) {
 
 	// Create an endpoint; secret is shown once.
 	resp = doRequest(t, app, "POST", "/api/notifications/endpoints",
-		`{"target_url":"https://n8n.example/webhook/invoiceman"}`, cookies)
+		`{"target_url":"https://n8n.example/webhook/tupay"}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	endpoint := decodeBody(t, resp)["endpoint"].(map[string]interface{})
 	endpointID := endpoint["id"].(string)
@@ -125,7 +125,7 @@ func TestNotificationFlow(t *testing.T) {
 	createInvoice(t, app, cookies, extra)
 	w.ProcessOnce(context.Background())
 	assert.Equal(t, 1, calls, "only the all-events endpoint should receive invoice.created")
-	assert.True(t, targets["https://n8n.example/webhook/invoiceman"])
+	assert.True(t, targets["https://n8n.example/webhook/tupay"])
 	assert.False(t, targets["https://n8n.example/webhook/payments-only"])
 
 	// payment.created fans out to both endpoints.
@@ -142,7 +142,7 @@ func TestNotificationFlow(t *testing.T) {
 	targets = map[string]bool{}
 	w.ProcessOnce(context.Background())
 	assert.Equal(t, 2, calls, "both endpoints should receive payment.created")
-	assert.True(t, targets["https://n8n.example/webhook/invoiceman"])
+	assert.True(t, targets["https://n8n.example/webhook/tupay"])
 	assert.True(t, targets["https://n8n.example/webhook/payments-only"])
 
 	// Test fires only at the selected endpoint, even when it is not
@@ -155,7 +155,7 @@ func TestNotificationFlow(t *testing.T) {
 	w.ProcessOnce(context.Background())
 	assert.Equal(t, 1, calls, "test must target only the selected endpoint")
 	assert.True(t, targets["https://n8n.example/webhook/payments-only"])
-	assert.False(t, targets["https://n8n.example/webhook/invoiceman"])
+	assert.False(t, targets["https://n8n.example/webhook/tupay"])
 
 	// Rotate secret returns a new one-time secret.
 	resp = doRequest(t, app, "POST", "/api/notifications/endpoints/"+endpointID+"/rotate-secret", "", cookies)
@@ -197,7 +197,7 @@ func TestNotificationFlow(t *testing.T) {
 		EndpointID: uuid.MustParse(endpointID),
 		EventID:    "evt_dead_" + uuid.NewString()[:8],
 		EventType:  models.NotifEventTest,
-		TargetURL:  "https://n8n.example/webhook/invoiceman",
+		TargetURL:  "https://n8n.example/webhook/tupay",
 		Payload:    `{"type":"notification.test"}`,
 	}
 	require.NoError(t, db.EnqueueDelivery(deadRow))

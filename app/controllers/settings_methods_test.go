@@ -3,7 +3,7 @@ package controllers
 import (
 	"testing"
 
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 // Midtrans is locked to QRIS (code-first source of truth): any input

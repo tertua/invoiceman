@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"github.com/tertua/invoiceman/pkg/constants"
-	"github.com/tertua/invoiceman/platform/gateway"
+	"github.com/tertua/tupay/pkg/constants"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 type DirectPayment struct {

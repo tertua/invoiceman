@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/google/uuid"
-	"github.com/tertua/invoiceman/pkg/logger"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/pkg/logger"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // deleteIdempotencyKey removes a key best-effort. Row expiry bounds the

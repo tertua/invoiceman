@@ -5,9 +5,9 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/tertua/invoiceman/pkg/utils"
-	"github.com/tertua/invoiceman/platform/database"
-	"github.com/tertua/invoiceman/platform/relay"
+	"github.com/tertua/tupay/pkg/utils"
+	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/relay"
 )
 
 // GatewayAuth authenticates downstream projects by service API key.

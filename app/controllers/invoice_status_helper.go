@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"github.com/tertua/invoiceman/app/models"
-	"github.com/tertua/invoiceman/platform/database"
+	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/database"
 )
 
 // effectiveInvoiceStatus resolves an invoice's display status, letting a live

@@ -106,7 +106,7 @@ export default function Dashboard() {
 /* ─────────────────── AI summary ─────────────────── */
 // The last generated summary survives menu switches and reloads via
 // localStorage, scoped per user and language; regenerating overwrites it.
-const SUMMARY_KEY_PREFIX = "invoiceman:ai-summary:";
+const SUMMARY_KEY_PREFIX = "tupay:ai-summary:";
 
 function summaryKey(userId, lang) {
   return `${SUMMARY_KEY_PREFIX}${userId || "anon"}:${lang === "id" ? "id" : "en"}`;
