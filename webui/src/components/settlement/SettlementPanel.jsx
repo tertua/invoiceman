@@ -99,17 +99,8 @@ export function SettlementPanel() {
               {transactions.map((tx) => (
                 <tr key={tx.order_id} className="border-t border-[var(--border)]">
                   <td className="px-4 py-3 text-sm text-[var(--ink-muted)] tabular">{formatDate(tx.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <code className="text-xs text-[var(--ink)]" title={tx.order_id}>{tx.order_id}</code>
-                    {(() => {
-                      const refs = [tx.external_order_id, tx.midtrans_txn_id].filter((value) => value && value !== tx.order_id);
-                      if (!refs.length) return null;
-                      return (
-                        <div className="mt-0.5 max-w-[240px] truncate text-[11px] text-[var(--ink-muted)]" title={refs.join(" · ")}>
-                          {refs.join(" · ")}
-                        </div>
-                      );
-                    })()}
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <code className="block truncate text-xs text-[var(--ink)]" title={[tx.order_id, tx.external_order_id, tx.midtrans_txn_id].filter(Boolean).join("\n")}>{tx.order_id}</code>
                   </td>
                   <td className="px-4 py-3 text-sm">{tx.gateway}</td>
                   <td className="px-4 py-3 text-sm text-[var(--ink-muted)]">{tx.payment_method || "—"}</td>
