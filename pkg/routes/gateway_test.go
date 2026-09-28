@@ -79,28 +79,10 @@ func TestGatewayRelayFlow(t *testing.T) {
 
 	app := newTestApp()
 
-	// Admin session (promote directly so the test is independent of execution order).
-	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"Relay Admin","email":"relay-admin@example.com","password":"secret123"}`, nil)
-	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409)
-	resp.Body.Close()
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"relay-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
-	resp.Body.Close()
-	db, err := database.OpenDBConnection()
-	require.NoError(t, err)
-	require.NoError(t, db.UpdateUserRole(uuid.MustParse(adminID), "admin"))
-	// Refresh session so the role change takes effect on subsequent requests.
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"relay-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminCookies := resp.Cookies()
-	resp.Body.Close()
+	adminCookies := adminSession(t, app, "Relay Admin", "relay-admin@example.com")
 
 	// Register downstream project.
-	resp = doRequest(t, app, "POST", "/api/admin/gateway/projects",
+	resp := doRequest(t, app, "POST", "/api/admin/gateway/projects",
 		`{"slug":"one-api","name":"One API","webhook_url":"`+downstream.URL+`"}`, adminCookies)
 	require.Equal(t, 201, resp.StatusCode)
 	created := decodeBody(t, resp)
@@ -253,25 +235,9 @@ func TestNowpaymentsIntentValidation(t *testing.T) {
 
 	app := newTestApp()
 
-	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"NP Admin","email":"np-admin@example.com","password":"secret123"}`, nil)
-	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409)
-	resp.Body.Close()
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"np-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
-	resp.Body.Close()
-	db, err := database.OpenDBConnection()
-	require.NoError(t, err)
-	require.NoError(t, db.UpdateUserRole(uuid.MustParse(adminID), "admin"))
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"np-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminCookies := resp.Cookies()
-	resp.Body.Close()
+	adminCookies := adminSession(t, app, "NP Admin", "np-admin@example.com")
 
-	resp = doRequest(t, app, "POST", "/api/admin/gateway/projects",
+	resp := doRequest(t, app, "POST", "/api/admin/gateway/projects",
 		`{"slug":"np-shop","name":"NP Shop","webhook_url":"https://np-shop.example/hook","default_gateway":"nowpayments"}`, adminCookies)
 	require.Equal(t, 201, resp.StatusCode)
 	apiKey := decodeBody(t, resp)["project"].(map[string]interface{})["api_key"].(string)

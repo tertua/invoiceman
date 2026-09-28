@@ -10,10 +10,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/database"
 )
 
 // relayRaceFixture boots an app with a stubbed Snap endpoint and a service
@@ -33,25 +31,9 @@ func relayRaceFixture(t *testing.T, app *fiber.App, slug, email string, delay ti
 	t.Setenv("MIDTRANS_SERVER_KEY", "relay-race-key-"+slug)
 	t.Setenv("MIDTRANS_SNAP_BASE_URL", snap.URL)
 
-	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"Race Admin","email":"`+email+`","password":"secret123"}`, nil)
-	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409)
-	resp.Body.Close()
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"`+email+`","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminID := uuid.MustParse(decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string))
-	resp.Body.Close()
-	db, err := database.OpenDBConnection()
-	require.NoError(t, err)
-	require.NoError(t, db.UpdateUserRole(adminID, "admin"))
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"`+email+`","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminCookies := resp.Cookies()
-	resp.Body.Close()
+	adminCookies := adminSession(t, app, "Race Admin", email)
 
-	resp = doRequest(t, app, "POST", "/api/admin/gateway/projects",
+	resp := doRequest(t, app, "POST", "/api/admin/gateway/projects",
 		`{"slug":"`+slug+`","name":"Race Shop","webhook_url":"https://race.example/hook"}`, adminCookies)
 	require.Equal(t, 201, resp.StatusCode)
 	apiKey := decodeBody(t, resp)["project"].(map[string]interface{})["api_key"].(string)

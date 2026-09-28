@@ -7,10 +7,8 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/database"
 )
 
 // sessionCookies returns cookies without the CSRF token (attacker's view:
@@ -179,14 +177,7 @@ func TestAuthAuditTrail(t *testing.T) {
 	resp.Body.Close()
 
 	// Promote to read the trail (register may not have won first-admin).
-	db, err := database.OpenDBConnection()
-	require.NoError(t, err)
-	require.NoError(t, db.UpdateUserRole(uuid.MustParse(trailID), "admin"))
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"trail@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminCookies := resp.Cookies()
-	resp.Body.Close()
+	adminCookies := adminSession(t, app, "Trail User", "trail@example.com")
 
 	resp = doRequest(t, app, "GET", "/api/admin/audit-logs?per_page=100", "", adminCookies)
 	require.Equal(t, 200, resp.StatusCode)
@@ -222,19 +213,9 @@ func TestAuthAuditTrail(t *testing.T) {
 func TestAuditTrail(t *testing.T) {
 	app := newTestApp()
 
+	adminCookies := adminSession(t, app, "Audit Admin", "audit-admin@example.com")
+
 	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"Audit Admin","email":"audit-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 201, resp.StatusCode)
-	adminID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)
-	adminCookies := resp.Cookies()
-	resp.Body.Close()
-
-	// Promote explicitly: other tests may have registered first users.
-	db, err := database.OpenDBConnection()
-	require.NoError(t, err)
-	require.NoError(t, db.UpdateUserRole(uuid.MustParse(adminID), "admin"))
-
-	resp = doRequest(t, app, "POST", "/api/auth/register",
 		`{"name":"Audit User","email":"audit-user@example.com","password":"secret123"}`, nil)
 	require.Equal(t, 201, resp.StatusCode)
 	targetID := decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string)

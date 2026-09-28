@@ -6,34 +6,15 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tertua/invoiceman/platform/database"
 )
 
 // multiProviderAdmin boots an app with a configured Midtrans and returns the
 // admin session plus a helper to register projects.
 func multiProviderAdmin(t *testing.T, app *fiber.App) (cookies []*http.Cookie, create func(body string) map[string]interface{}) {
 	t.Helper()
-	resp := doRequest(t, app, "POST", "/api/auth/register",
-		`{"name":"MP Admin","email":"mp-admin@example.com","password":"secret123"}`, nil)
-	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409)
-	resp.Body.Close()
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"mp-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	adminID := uuid.MustParse(decodeBody(t, resp)["user"].(map[string]interface{})["id"].(string))
-	resp.Body.Close()
-	db, err := database.OpenDBConnection()
-	require.NoError(t, err)
-	require.NoError(t, db.UpdateUserRole(adminID, "admin"))
-	// Refresh session so the new role is active.
-	resp = doRequest(t, app, "POST", "/api/auth/login",
-		`{"email":"mp-admin@example.com","password":"secret123"}`, nil)
-	require.Equal(t, 200, resp.StatusCode)
-	cookies = resp.Cookies()
-	resp.Body.Close()
+	cookies = adminSession(t, app, "MP Admin", "mp-admin@example.com")
 
 	create = func(body string) map[string]interface{} {
 		resp := doRequest(t, app, "POST", "/api/admin/gateway/projects", body, cookies)
