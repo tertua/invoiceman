@@ -66,7 +66,7 @@ func qrisCorePayload(orderID string, amountIDR int64) ([]byte, error) {
 // on-page charge must never be mistaken for a Snap token by the client.
 func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR int64) (*gateway.CreateTxResponse, error) {
 	if cfg.ServerKey == "" {
-		return nil, ErrNotConfigured
+		return nil, gateway.ErrNotConfigured
 	}
 	if orderID == "" || amountIDR <= 0 {
 		return nil, errors.New("invalid order or amount")

@@ -1,16 +1,11 @@
 package controllers
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/shopspring/decimal"
 	"github.com/tertua/invoiceman/platform/gateway"
 )
-
-// ErrConversionUnsupported is returned when a charge cannot be expressed in
-// the provider's currency with the configured manual rate.
-var ErrConversionUnsupported = errors.New("currency conversion is not configured")
 
 // chargeSpec is the provider-ready amount for one intent, plus the audit data
 // needed to settle the source invoice later.
@@ -30,13 +25,7 @@ type chargeSpec struct {
 // is IDR-only; NOWPayments invoices reject non-USD fiat (e.g. IDR) at the
 // hosted checkout, so they are always charged in USD. No realtime rates are
 // ever fetched.
-//
-// Dev path — charge currency policy:
-//
-//	[done]  Midtrans -> IDR, NOWPayments -> USD via the manual usd_to_idr rate
-//	[later] per-invoice currency choice once the pay page grows a toggle
-//
-// End dev path
+// A per-invoice currency choice stays open for later, once the pay page grows a toggle.
 func buildCharge(gw gateway.Gateway, invoiceCurrency string, balance, usdToIdr decimal.Decimal) (chargeSpec, error) {
 	invoiceCurrency = strings.ToUpper(strings.TrimSpace(invoiceCurrency))
 	target := invoiceCurrency
@@ -48,7 +37,7 @@ func buildCharge(gw gateway.Gateway, invoiceCurrency string, balance, usdToIdr d
 	}
 	converted, err := gateway.Convert(balance, invoiceCurrency, target, usdToIdr)
 	if err != nil {
-		return chargeSpec{}, ErrConversionUnsupported
+		return chargeSpec{}, err
 	}
 	spec := chargeSpec{Currency: target, InvoiceAmount: balance}
 	if gateway.NeedsConversion(invoiceCurrency, target) {

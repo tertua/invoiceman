@@ -14,8 +14,8 @@ func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxReque
 		if err == nil {
 			return resp, nil
 		}
-		if errors.Is(err, ErrNotConfigured) {
-			return nil, gateway.ErrNotConfigured
+		if errors.Is(err, gateway.ErrNotConfigured) {
+			return nil, err
 		}
 		// The on-page QRIS path is best-effort: a Core API failure falls back
 		// to the Snap checkout so the payer can still complete the payment.
@@ -27,9 +27,6 @@ func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxReque
 	}
 	snap, err := CreateSnapTransaction(ctx, FromEnv(), req.OrderID, req.AmountMinor, req.Email, req.Phone, methods)
 	if err != nil {
-		if errors.Is(err, ErrNotConfigured) {
-			return nil, gateway.ErrNotConfigured
-		}
 		return nil, err
 	}
 	return &gateway.CreateTxResponse{Token: snap.Token, RedirectURL: snap.RedirectURL, PaymentMethod: req.PaymentMethod}, nil

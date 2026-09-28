@@ -16,16 +16,12 @@ package nowpayments
 
 import (
 	"context"
-	"errors"
 
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 // GatewayName is the registry name for NOWPayments.
 const GatewayName = "nowpayments"
-
-// ErrNotConfigured is returned when the NOWPayments API key is missing.
-var ErrNotConfigured = errors.New("payment gateway is not configured")
 
 // Gateway implements gateway.Gateway for NOWPayments invoices + IPN.
 type Gateway struct{}

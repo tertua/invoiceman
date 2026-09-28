@@ -41,7 +41,7 @@ func (Gateway) MinAmount(ctx context.Context, currencyFrom, payCurrency string) 
 
 func minAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo string) (decimal.Decimal, error) {
 	if cfg.APIKey == "" {
-		return decimal.Zero, ErrNotConfigured
+		return decimal.Zero, gateway.ErrNotConfigured
 	}
 	from := strings.ToLower(strings.TrimSpace(currencyFrom))
 	to := strings.ToLower(strings.TrimSpace(currencyTo))

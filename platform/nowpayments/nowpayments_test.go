@@ -70,7 +70,7 @@ func TestCreateInvoice(t *testing.T) {
 func TestCreateInvoiceNotConfigured(t *testing.T) {
 	t.Setenv("NOWPAYMENTS_API_KEY", "")
 	_, err := CreateInvoice(context.Background(), FromEnv(), &gateway.CreateTxRequest{OrderID: "x", AmountMinor: 1000})
-	if !errors.Is(err, ErrNotConfigured) {
+	if !errors.Is(err, gateway.ErrNotConfigured) {
 		t.Fatalf("expected ErrNotConfigured, got %v", err)
 	}
 }

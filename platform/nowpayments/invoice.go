@@ -26,7 +26,7 @@ type Invoice struct {
 // with Currency is preferred; AmountMinor follows the relay minor-unit convention.
 func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest) (*Invoice, error) {
 	if cfg.APIKey == "" {
-		return nil, ErrNotConfigured
+		return nil, gateway.ErrNotConfigured
 	}
 	if req == nil || strings.TrimSpace(req.OrderID) == "" {
 		return nil, errors.New("nowpayments: order id is required")

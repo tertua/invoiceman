@@ -60,7 +60,7 @@ func (c Config) StatusURL() string {
 // the stored status and retries on a later tick.
 func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, error) {
 	if cfg.ServerKey == "" {
-		return nil, ErrNotConfigured
+		return nil, gateway.ErrNotConfigured
 	}
 	if strings.TrimSpace(orderID) == "" {
 		return nil, errors.New("midtrans status: empty order id")

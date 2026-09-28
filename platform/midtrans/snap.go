@@ -15,9 +15,6 @@ import (
 	"github.com/tertua/invoiceman/platform/gateway"
 )
 
-// ErrNotConfigured is returned when the Midtrans server key is missing.
-var ErrNotConfigured = errors.New("payment gateway is not configured")
-
 // Config holds Midtrans credentials. All values come from env;
 // no domain or key is hardcoded.
 type Config struct {
@@ -63,7 +60,7 @@ type SnapResponse struct {
 // Customer details are best-effort; empty email/phone are omitted.
 func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amountIDR int64, email, phone string, methods []string) (*SnapResponse, error) {
 	if cfg.ServerKey == "" {
-		return nil, ErrNotConfigured
+		return nil, gateway.ErrNotConfigured
 	}
 	if orderID == "" || amountIDR <= 0 {
 		return nil, errors.New("invalid order or amount")

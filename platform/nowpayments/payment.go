@@ -29,7 +29,7 @@ type DirectPayment struct {
 
 func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequest) (*DirectPayment, error) {
 	if cfg.APIKey == "" {
-		return nil, ErrNotConfigured
+		return nil, gateway.ErrNotConfigured
 	}
 	payCcy := NormalizePayCurrency(req.PayCurrency)
 	if !IsSupportedPayCurrency(payCcy) {
@@ -165,18 +165,12 @@ func (Gateway) CreateTransaction(ctx context.Context, req *gateway.CreateTxReque
 			PayCurrency:   payCcy,
 		})
 		if err != nil {
-			if errors.Is(err, ErrNotConfigured) {
-				return nil, gateway.ErrNotConfigured
-			}
 			return nil, err
 		}
 		return &gateway.CreateTxResponse{Token: dp.PaymentID, Address: dp.PayAddress, PaymentMethod: gateway.MethodCrypto, RawPayload: dp.PayAmount, PayCurrency: dp.PayCurrency, ExpiresAt: dp.ExpiresAt}, nil
 	}
 	inv, err := CreateInvoice(ctx, cfg, req)
 	if err != nil {
-		if errors.Is(err, ErrNotConfigured) {
-			return nil, gateway.ErrNotConfigured
-		}
 		return nil, err
 	}
 	return nowPaymentsResponse(inv), nil

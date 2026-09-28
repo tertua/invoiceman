@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/invoiceman/platform/gateway"
 )
 
 func TestMinAmountFetchesAndCaches(t *testing.T) {
@@ -88,7 +89,7 @@ func TestMinAmountNotConfigured(t *testing.T) {
 	t.Setenv("NOWPAYMENTS_API_KEY", "")
 	resetMinAmountCache()
 	gw := Gateway{}
-	if _, err := gw.MinAmount(context.Background(), "USD", ""); err != ErrNotConfigured {
+	if _, err := gw.MinAmount(context.Background(), "USD", ""); err != gateway.ErrNotConfigured {
 		t.Fatalf("expected ErrNotConfigured, got %v", err)
 	}
 }
