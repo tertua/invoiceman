@@ -15,6 +15,7 @@ import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useLang } from "@/context/LangContext";
 import { formatMoney, formatDate } from "@/lib/utils";
+import { paymentMethodLabel } from "@/lib/paymentLabels";
 import { usePaymentMutations } from "@/hooks/usePayments";
 import { invoiceKey } from "@/hooks/useInvoices";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
@@ -197,7 +198,7 @@ export function InvoicePaymentCard({ invoice }) {
             <li key={p.id} className="flex items-center gap-2 py-2.5 group">
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-[var(--ink)]">{formatDate(p.paid_on)}</div>
-                <div className="text-[11px] text-[var(--ink-muted)]">{p.method || "—"}{p.txn_id ? ` · ${p.txn_id}` : ""}</div>
+                <div className="text-[11px] text-[var(--ink-muted)]">{paymentMethodLabel(p.method) || "—"}{p.txn_id ? ` · ${p.txn_id}` : ""}</div>
               </div>
               <div className="text-sm font-semibold text-[var(--success)] tabular">{formatMoney(p.amount, currency)}</div>
               {p.can_void !== false ? (

@@ -538,7 +538,7 @@ export const en = {
 
     /* ============================ online payment link ============================ */
     "payments.onlineTitle": "Online payment link",
-    "payments.onlineDesc": "Share this link with your client. They pay securely via Midtrans and the invoice updates automatically.",
+    "payments.onlineDesc": "Share this link with your client. They pay securely via the payment page and the invoice updates automatically.",
     "payments.onlineCopy": "Copy link",
     "payments.onlineCopied": "Copied",
     "payments.onlineOpen": "Open link",
