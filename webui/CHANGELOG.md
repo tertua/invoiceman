@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.0.0] - 2026-09-28
+
+### Added
+- The admin console is now a dedicated single-page entry: `/admin/*` serves
+  its own `admin.html` bundle with a separate `admin-*.js` chunk, so the
+  console and the product app load, cache and deploy independently. Admin
+  links in the sidebar switch entries via a full page load, and a build
+  without `admin.html` falls back to the main entry.
+
+### Changed
+- The embedded frontend is renamed from SPA to WebUI: deployments set
+  `SERVE_WEBUI` (the old `SERVE_SPA_DIR` keeps working as a fallback) and
+  the Go plumbing follows suit (`MountWebUI`, `WebUIConfig`).
+- The frontend folder moves from `web/` to `webui/`: `make web.check` is now
+  `make webui.check`, `npm --prefix web` is `npm --prefix webui`, and CI,
+  Docker and docs paths were updated to match.
+- Gateway, invoice and outbox internals were consolidated (single route
+  type, shared intent-claim and totals helpers, unified not-configured
+  sentinel, registry-backed method offering) to prepare for adding more
+  payment providers; no behavior change is intended.
+- The README was rewritten in English and stale setup content refreshed.
+
 ## [v0.7.0] - 2026-09-27
 
 ### Added
