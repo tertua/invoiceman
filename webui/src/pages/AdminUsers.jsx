@@ -1,8 +1,8 @@
-import { Loader2, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { QueryError } from "@/components/ui/QueryError";
+import { EmptyState } from "@/components/ui/EmptyState";import { QueryError } from "@/components/ui/QueryError";
+import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 import { useLang } from "@/context/LangContext";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { formatDate } from "@/lib/utils";
@@ -48,7 +48,7 @@ export default function AdminUsers() {
   const { data: users, isLoading, error } = useAdminUsers();
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-24 text-[var(--ink-muted)]"><Loader2 size={20} className="animate-spin" /></div>;
+    return <AdminTableSkeleton rows={4} />;
   }
 
   if (error) {

@@ -27,17 +27,8 @@ import {
   useUpdateGatewayProject,
 } from "@/hooks/useGatewayAdmin";
 import { cn } from "@/lib/utils";
-
-function StatusPill({ active, t }) {
-  return (
-    <span className={cn(
-      "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold",
-      active ? "bg-[var(--success)]/12 text-[var(--success)]" : "bg-[var(--surface-2)] text-[var(--ink-muted)]",
-    )}>
-      {active ? t("gateway.active") : t("gateway.inactive")}
-    </span>
-  );
-}
+import { StatusPill } from "@/components/gateway/StatusPill";
+import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
 
 function SecretNotice({ project, onClose }) {
   const { t } = useLang();
@@ -219,7 +210,7 @@ export default function AdminGateway() {
   const { t } = useLang();
   const { data: projects = [], isLoading, error } = useGatewayProjects();
   const [credentials, setCredentials] = useState(null);
-  if (isLoading) return <div className="flex items-center justify-center py-24 text-[var(--ink-muted)]"><Loader2 size={20} className="animate-spin" /></div>;
+  if (isLoading) return <AdminTableSkeleton />;
   if (error) return <QueryError error={error} />;
   return (
     <div>

@@ -246,7 +246,7 @@
  "webui/src/lib/midtrans.js": 15,
  "webui/src/lib/utils.js": 161,
  "webui/src/main.jsx": 10,
- "webui/src/pages/AdminGateway.jsx": 234,
+  "webui/src/pages/AdminGateway.jsx": 225,
  "webui/src/pages/AdminUsers.jsx": 129,
  "webui/src/pages/ClientDetail.jsx": 263,
  "webui/src/pages/Clients.jsx": 143,
