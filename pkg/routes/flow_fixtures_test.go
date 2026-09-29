@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
@@ -79,4 +80,47 @@ func createClient(t *testing.T, app *fiber.App, cookies []*http.Cookie, name str
 	resp := doRequest(t, app, "POST", "/api/clients", `{"name":"`+name+`"}`, cookies)
 	require.Equal(t, 201, resp.StatusCode)
 	return decodeBody(t, resp)["client"].(map[string]interface{})["id"].(string)
+}
+
+// registerUser registers an account (201, or 409 when the email is taken) and logs in, returning the session cookies; doRequest echoes the CSRF cookie as its header.
+func registerUser(t *testing.T, app *fiber.App, email, password string) []*http.Cookie {
+	t.Helper()
+	name := strings.SplitN(email, "@", 2)[0]
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"`+name+`","email":"`+email+`","password":"`+password+`"}`, nil)
+	require.True(t, resp.StatusCode == 201 || resp.StatusCode == 409, "register %s: %d", email, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"`+email+`","password":"`+password+`"}`, nil)
+	require.Equal(t, 200, resp.StatusCode, "login %s", email)
+	cookies := resp.Cookies()
+	resp.Body.Close()
+	return cookies
+}
+
+// inviteAndAccept has the owner mint an invite link and the invitee redeem it, putting invitee in the owner's org (the routes carry CSRF via the cookies).
+func inviteAndAccept(t *testing.T, app *fiber.App, owner, invitee []*http.Cookie) {
+	t.Helper()
+	resp := doRequest(t, app, "POST", "/api/orgs/invites", `{}`, owner)
+	require.Equal(t, 201, resp.StatusCode, "create invite")
+	token := decodeBody(t, resp)["invite"].(map[string]interface{})["token"].(string)
+	resp = doRequest(t, app, "POST", "/api/orgs/invites/accept", `{"token":"`+token+`"}`, invitee)
+	require.Equal(t, 200, resp.StatusCode, "accept invite")
+	resp.Body.Close()
+}
+
+// inviteToken mints an invite as the owner and hands back the raw token without redeeming it, so expiry/revoke tests can drive the accept call themselves.
+func inviteToken(t *testing.T, app *fiber.App, owner []*http.Cookie) string {
+	t.Helper()
+	resp := doRequest(t, app, "POST", "/api/orgs/invites", `{}`, owner)
+	require.Equal(t, 201, resp.StatusCode, "create invite")
+	return decodeBody(t, resp)["invite"].(map[string]interface{})["token"].(string)
+}
+
+// myOrgID reads GET /api/orgs/me and returns the session's active organization id.
+func myOrgID(t *testing.T, app *fiber.App, cookies []*http.Cookie) string {
+	t.Helper()
+	resp := doRequest(t, app, "GET", "/api/orgs/me", "", cookies)
+	require.Equal(t, 200, resp.StatusCode, "orgs/me")
+	return decodeBody(t, resp)["org"].(map[string]interface{})["id"].(string)
 }
