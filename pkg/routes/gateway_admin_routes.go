@@ -9,7 +9,7 @@ import (
 // registerGatewayAdminRoutes mounts the session-cookie admin group for the
 // central payment relay (called per prefix, see versioning.go).
 func registerGatewayAdminRoutes(a *fiber.App, prefix string) {
-	admin := a.Group(prefix+"/admin/gateway", middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
+	admin := a.Group(prefix+"/admin/gateway", middleware.AuthRequired(), middleware.OrgContext(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
 	admin.Post("/projects", controllers.CreateProject)
 	admin.Get("/projects", controllers.ListProjects)
 	admin.Patch("/projects/:slug", controllers.UpdateProject)

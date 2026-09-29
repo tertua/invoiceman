@@ -371,6 +371,8 @@ definitions:
       email:
         maxLength: 255
         type: string
+      invite_token:
+        type: string
       name:
         maxLength: 255
         type: string
@@ -1791,6 +1793,30 @@ paths:
       summary: update an invoice
       tags:
       - Invoices
+  /invoices/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approve a pending invoice.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: approve invoice
+      tags:
+      - Invoices
   /invoices/{id}/intents:
     post:
       description: Create a Snap transaction for a local invoice.
@@ -1813,6 +1839,30 @@ paths:
             additionalProperties: true
             type: object
       summary: create invoice intent
+      tags:
+      - Invoices
+  /invoices/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Reject a pending invoice.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: reject invoice
       tags:
       - Invoices
   /invoices/{id}/status:
@@ -1843,6 +1893,30 @@ paths:
       security:
       - SessionCookie: []
       summary: update invoice status
+      tags:
+      - Invoices
+  /invoices/{id}/submit:
+    post:
+      consumes:
+      - application/json
+      description: Submit a draft invoice for approval.
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: submit invoice for approval
       tags:
       - Invoices
   /items:
@@ -2133,6 +2207,180 @@ paths:
       summary: test notification endpoint
       tags:
       - Notifications
+  /orgs/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Rename the active organization of the current session.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Rename payload with name
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: rename organization
+      tags:
+      - Org
+  /orgs/{id}/activate:
+    post:
+      description: Activate an organization for the current session; the caller must
+        be a member.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: activate organization
+      tags:
+      - Org
+  /orgs/invites:
+    get:
+      description: List invite links of the active organization (owner only).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: list organization invites
+      tags:
+      - Org
+    post:
+      consumes:
+      - application/json
+      description: Create an invite link for the active organization (owner only).
+      parameters:
+      - description: 'Optional invite payload: email (string) and ttl_hours (int,
+          0 means 7 days)'
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: create organization invite
+      tags:
+      - Org
+  /orgs/invites/{id}:
+    delete:
+      description: Revoke an invite link of the active organization (owner only).
+      parameters:
+      - description: Invite ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: revoke organization invite
+      tags:
+      - Org
+  /orgs/invites/accept:
+    post:
+      consumes:
+      - application/json
+      description: Accept an organization invite link; any signed-in user may redeem
+        it.
+      parameters:
+      - description: Invite payload with token
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: accept organization invite
+      tags:
+      - Org
+  /orgs/me:
+    get:
+      description: Get the active organization of the current session with the caller's
+        role.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: get active organization
+      tags:
+      - Org
+  /orgs/members:
+    get:
+      description: List the members of the active organization.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: list organization members
+      tags:
+      - Org
   /payments:
     get:
       description: Get payments of current user.

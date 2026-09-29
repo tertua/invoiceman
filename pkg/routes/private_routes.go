@@ -13,10 +13,11 @@ func PrivateRoutes(a *fiber.App) {
 
 // PrivateRoutesAt registers private routes under prefix (see versioning.go).
 func PrivateRoutesAt(a *fiber.App, prefix string) {
-	// Create routes group matching the frontend apiClient baseURL.
-	// RequireCSRF runs after AuthRequired: only session-cookie mutations
-	// need the double-submit header; API-key relay has its own group.
-	route := a.Group(prefix, middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireCSRF())
+	// Admin mounts first: group middleware becomes a prefix Use, so registering it after would run OrgContext on the global admin console (a schema rollback drops memberships and turned admin calls into 403 org.notMember).
+	registerAdminRoutes(a, prefix)
+
+	// Group matches the frontend apiClient baseURL; order is AuthRequired, OrgContext, RequireCSRF — only session-cookie mutations need the double-submit header (API-key relay has its own group).
+	route := a.Group(prefix, middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.OrgContext(), middleware.RequireCSRF())
 
 	// Auth session routes:
 	route.Get("/auth/me", controllers.Me)                     // get current session user
@@ -38,8 +39,7 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Patch("/invoices/:id", controllers.UpdateInvoice)                                                        // update an invoice
 	route.Patch("/invoices/:id/status", controllers.UpdateInvoiceStatus)                                           // update invoice status
 	route.Delete("/invoices/:id", controllers.DeleteInvoice)                                                       // delete an invoice
-	// Local Snap intent for one invoice (session user, no service key).
-	// Kept under /invoices so the /gateway API-key group cannot shadow it.
+	// Local Snap intent for one invoice (session user, no service key); kept under /invoices so the /gateway API-key group cannot shadow it.
 	route.Post("/invoices/:id/intents",
 		middleware.Idempotency(middleware.SessionIdempotencyScope),
 		middleware.WithAITimeout(controllers.CreateInvoiceIntent))
@@ -67,32 +67,24 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 
 	// Payment routes (mutating payment routes replay on Idempotency-Key).
 	route.Get("/payments", controllers.ListPayments)
-	route.Post("/payments", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreatePayment)
-	route.Delete("/payments/:id", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.VoidPayment)
-	route.Post("/payments/online", middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateOnlineLink)
+	route.Post("/payments", middleware.RequireOrgRole("owner"), middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreatePayment)
+	route.Delete("/payments/:id", middleware.RequireOrgRole("owner"), middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.VoidPayment)
+	route.Post("/payments/online", middleware.RequireOrgRole("owner"), middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateOnlineLink)
 	route.Post("/payments/online/send", controllers.SendOnlineLink)
 
 	// Reports routes:
 	route.Get("/reports", controllers.GetReports)
 
-	// Settings routes (GET for any session user; PATCH restricted to admin/user):
+	// Settings (GET any member, PATCH owner-only), invoice approval (D11) and organization (D10) routes.
 	registerSettingsRoutes(route)
+	registerInvoiceApprovalRoutes(route)
+	registerOrgRoutes(route)
 
-	// Notification webhook routes (user-owned targets, e.g. n8n):
-	route.Get("/notifications/endpoints", controllers.ListEndpoints)
-	route.Post("/notifications/endpoints", controllers.CreateEndpoint)
-	route.Patch("/notifications/endpoints/:id", controllers.UpdateEndpoint)
-	route.Delete("/notifications/endpoints/:id", controllers.DeleteEndpoint)
-	route.Post("/notifications/endpoints/:id/rotate-secret", controllers.RotateEndpointSecret)
-	route.Post("/notifications/endpoints/:id/test", controllers.TestEndpoint)
-	route.Get("/notifications/deliveries", controllers.ListNotificationDeliveries)
-	route.Post("/notifications/deliveries/:id/retry", controllers.RetryNotificationDelivery)
+	registerNotificationRoutes(route)
 
 	// AI routes (slower upstream calls get a per-request timeout).
 	route.Post("/ai/receipt-parse", middleware.WithAITimeout(controllers.ReceiptParse))
 	route.Post("/ai/business-summary", middleware.WithAITimeout(controllers.BusinessSummary))
 	route.Post("/ai/payment-reminder", middleware.WithAITimeout(controllers.PaymentReminder))
 	route.Post("/ai/write-note", middleware.WithAITimeout(controllers.WriteNote))
-
-	registerAdminRoutes(a, prefix)
 }
