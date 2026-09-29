@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run webui.check dev-be dev-fe promote promote-prod check-flow
+.PHONY: clean critic security lint test build run webui.check dev-be dev-fe db.backup db.restore promote promote-prod check-flow
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -45,6 +45,15 @@ webui.check:
 	npm --prefix webui run check:fixtures
 	npm --prefix webui run build
 	npm --prefix webui run check:bundles:strict
+
+# Snapshots land in data/backups/ — SQLite (SQL_DSN empty) or PostgreSQL via
+# pg_dump/pg_restore (needs postgresql-client). Restore needs the backend
+# stopped and CONFIRM=yes when run non-interactively (see README).
+db.backup:
+	node scripts/db-snapshot.mjs backup
+
+db.restore:
+	node scripts/db-snapshot.mjs restore $(FILE)
 
 docker.run: docker.network docker.postgres swag docker.fiber docker.redis
 

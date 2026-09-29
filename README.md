@@ -80,6 +80,8 @@ Both keys must come from the same Cloudflare pair. When unused, leave them empty
 - `make test` — clean, gocritic, gosec, golangci-lint, then coverage tests. `make build` depends on it, so it is not a quick binary.
 - `go test ./...` — default suite, no external services; focus a route flow with `go test ./pkg/routes -run TestName -v`.
 - `make webui.check` — FE lint, tests, chart/bundle checks, and build.
+- `make db.backup` — snapshot the database to `data/backups/`: SQLite via `VACUUM INTO` (safe while running), PostgreSQL via `pg_dump` when `SQL_DSN` is set (needs `postgresql-client`).
+- `make db.restore FILE=<path|latest>` — replace the database from a snapshot; stop the backend first, confirms interactively (`CONFIRM=yes` to skip, `FORCE=yes` overrides the PostgreSQL connection guard).
 - `make docker.run` / `make docker.stop` — Docker Postgres + Redis + API.
 
 `VERSION` is canonical (see `VERSION`); changes are noted in `webui/CHANGELOG.md`.
