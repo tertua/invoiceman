@@ -13,9 +13,10 @@ func FormatInvoiceSeq(prefix string, seq int) string {
 
 // Invoice statuses used by the frontend.
 const (
-	InvoiceStatusDraft = "draft"
-	InvoiceStatusSent  = "sent"
-	InvoiceStatusPaid  = "paid"
+	InvoiceStatusDraft   = "draft"
+	InvoiceStatusSent    = "sent"
+	InvoiceStatusPaid    = "paid"
+	InvoiceStatusPending = "pending"
 )
 
 // EffectiveInvoiceStatus values displayed by the frontend.
@@ -30,6 +31,7 @@ type Invoice struct {
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt *time.Time `db:"updated_at" json:"updated_at"`
 	UserID    uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
+	OrgID     uuid.UUID  `gorm:"type:uuid;index" db:"org_id" json:"org_id"`
 	InvoiceGatewayIdentity
 	ClientID      *uuid.UUID `gorm:"type:uuid" db:"client_id" json:"client_id"`
 	InvoiceNumber string     `db:"invoice_number" json:"invoice_number" validate:"required,lte=50"`
