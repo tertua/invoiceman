@@ -4,7 +4,7 @@ Read first: this file, then `docs/MODULE_MAP.md` (domain owners + request path),
 
 ## Chat output (assistant)
 
-- Always respond in Bahasa Indonesia, regardless of the language used in code, commits, or docs.
+- Always respond chat in Bahasa Indonesia, regardless of the language used in code, commits, spawn_agent, comments or docs.
 - Keep answers short and direct (CLI-friendly); no unnecessary preamble or postamble.
 - When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `question` tool instead of assuming — offer concrete options and a recommended first choice.
 - Non-API-docs comments must stay on one line; only Swagger doc annotations may span multiple lines.
