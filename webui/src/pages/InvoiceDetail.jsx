@@ -16,6 +16,7 @@ import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import { InvoicePreview } from "@/components/invoice/InvoicePreview";
 import { InvoicePaymentCard } from "@/components/invoice/InvoicePaymentCard";
 import { InvoiceReminderCard } from "@/components/invoice/InvoiceReminderCard";
+import { InvoiceStatusActions } from "@/components/invoice/InvoiceStatusActions";
 import {
   useInvoice,
   useSetInvoiceStatus,
@@ -118,6 +119,8 @@ export default function InvoiceDetail() {
           </p>
         </div>
       ) : null}
+
+      <InvoiceStatusActions invoice={invoice} />
 
       {/* status controls (hidden while paid-locked or money in flight) */}
       {lockStatus || st === "pending" ? null : (

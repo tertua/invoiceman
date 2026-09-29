@@ -16,8 +16,7 @@ function RegisterRoute() {
   return allowRegistration ? <Register /> : <Navigate to="/login" replace />;
 }
 
-// Standalone public routes (no session shell). Split out of routes.jsx so
-// that file stays within its size ratchet.
+// Standalone public routes (no session shell), split out of routes.jsx so that file stays within its ratchet.
 export const publicRoutes = [
   { path: "/", element: <Landing />, errorElement: <RouteError /> },
   { path: "/login", element: <Login />, errorElement: <RouteError /> },
@@ -27,3 +26,6 @@ export const publicRoutes = [
   { path: "/pay/:token", element: <PublicPay />, errorElement: <RouteError /> },
   { path: "/payment/finish", element: <PaymentFinish />, errorElement: <RouteError /> },
 ];
+
+// Exported separately so routes.jsx can keep it as the very last entry (route order unchanged).
+export const fallbackRoute = { path: "*", element: <Navigate to="/" replace /> };
