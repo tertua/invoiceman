@@ -146,4 +146,40 @@ var migrations = []Migration{
 			return db.Migrator().DropColumn(&models.GatewayTransaction{}, "qr_string")
 		},
 	},
+	{
+		Version:     16,
+		Description: "organizations + memberships + org_id tenancy (backfill)",
+		Down: func(db *gorm.DB) error {
+			// settings.org_id is rebuilt instead of dropped in place because the SQLite migrator keeps PRIMARY KEY (org_id) after the column goes away.
+			if err := dropSettingsOrgID(db); err != nil {
+				return err
+			}
+			// HasColumn guards skip columns this binary never added.
+			for _, target := range []struct {
+				model any
+				col   string
+			}{
+				{&models.Invoice{}, "org_id"},
+				{&models.Client{}, "org_id"},
+				{&models.Item{}, "org_id"},
+				{&models.Expense{}, "org_id"},
+				{&models.Payment{}, "org_id"},
+				{&models.GatewayProject{}, "org_id"},
+				{&models.AuditLog{}, "org_id"},
+			} {
+				if !db.Migrator().HasColumn(target.model, target.col) {
+					continue
+				}
+				if err := db.Migrator().DropColumn(target.model, target.col); err != nil {
+					return err
+				}
+			}
+			for _, model := range []any{&models.OrgInvite{}, &models.Membership{}, &models.Organization{}} {
+				if err := db.Migrator().DropTable(model); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
 }

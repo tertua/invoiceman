@@ -98,7 +98,7 @@ func csrfBound(c fiber.Ctx, userID uuid.UUID, token string) bool {
 	if err != nil {
 		return false
 	}
-	_, _, bound, ok := cache.DecodeSessionValue(stored)
+	_, _, bound, _, ok := cache.DecodeSessionValue(stored)
 	if !ok || bound == "" {
 		return true
 	}

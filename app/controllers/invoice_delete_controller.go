@@ -11,10 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// DeleteInvoice deletes an invoice.
-// Paid invoices are voided/reopened, never hard-deleted. Invoices with a
-// live gateway transaction (effective status pending) are also locked:
-// deleting while money is in flight would orphan the payment.
+// DeleteInvoice deletes an invoice; paid or in-flight ones stay locked (hard-deleting money in flight orphans the payment) and a non-draft delete needs the owner role.
 // @Description Delete an invoice.
 // @Summary delete an invoice
 // @Tags Invoices
@@ -25,7 +22,7 @@ import (
 // @Security SessionCookie
 // @Router /invoices/{id} [delete]
 func DeleteInvoice(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, userID, err := currentUserOrg(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -40,7 +37,7 @@ func DeleteInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	existing, err := db.GetInvoice(userID, id)
+	existing, err := db.GetInvoice(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
@@ -48,8 +45,11 @@ func DeleteInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
+	if err := guardInvoiceDelete(c, existing.Status); err != nil {
+		return failInvoiceRule(c, err)
+	}
 	if paid, err := db.PaidAmount(id); err == nil {
-		pending := db.PendingInvoiceIDs(userID)[id]
+		pending := db.PendingInvoiceIDs(orgID)[id]
 		if pending {
 			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
 		}
@@ -60,11 +60,11 @@ func DeleteInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
 
-	if err := db.DeleteInvoice(userID, id); err != nil {
+	if err := db.DeleteInvoice(orgID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete invoice", nil)
 	}
 	recordAudit(c, db, userID, "invoice.delete", "invoice", id.String(), "")
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

@@ -63,7 +63,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 	}
 
 	now := time.Now()
-	invoice := &models.Invoice{ID: uuid.New(), CreatedAt: now, UpdatedAt: &now, UserID: *project.OwnerUserID,
+	invoice := &models.Invoice{ID: uuid.New(), CreatedAt: now, UpdatedAt: &now, UserID: *project.OwnerUserID, OrgID: project.OrgID,
 		Status: input.Status, IssueDate: issueDate, DueDate: dueDate, Currency: input.Currency,
 		TaxRate: input.TaxRate, Discount: input.Discount, Notes: input.Notes, Terms: input.Terms}
 	projectSlug, externalID := project.Slug, input.ExternalID
@@ -77,7 +77,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 		client := models.Client{}
 		if lookupErr := tx.Where("gateway_project_slug = ? AND external_id = ?", project.Slug, input.Customer.ExternalID).First(&client).Error; errors.Is(lookupErr, gorm.ErrRecordNotFound) {
 			customerID := input.Customer.ExternalID
-			client = models.Client{ID: uuid.New(), CreatedAt: now, UserID: *project.OwnerUserID, GatewayProjectSlug: &projectSlug, ExternalID: &customerID,
+			client = models.Client{ID: uuid.New(), CreatedAt: now, UserID: *project.OwnerUserID, OrgID: project.OrgID, GatewayProjectSlug: &projectSlug, ExternalID: &customerID,
 				Name: input.Customer.Name, Email: input.Customer.Email, Company: input.Customer.Company, Phone: input.Customer.Phone, Address: input.Customer.Address}
 			if err := tx.Create(&client).Error; err != nil {
 				return err
@@ -86,7 +86,7 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 			return lookupErr
 		}
 		invoice.ClientID = &client.ID
-		number, nerr := db.ReserveInvoiceNumber(tx, *project.OwnerUserID)
+		number, nerr := db.ReserveInvoiceNumber(tx, project.OrgID)
 		if nerr != nil {
 			return nerr
 		}
@@ -102,11 +102,11 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create invoice", nil)
 	}
-	return gatewayInvoiceResponse(c, *db, *project.OwnerUserID, *invoice, fiber.StatusCreated)
+	return gatewayInvoiceResponse(c, *db, project.OrgID, *invoice, fiber.StatusCreated)
 }
 
-func gatewayInvoiceResponse(c fiber.Ctx, db database.Queries, userID uuid.UUID, invoice models.Invoice, status int) error {
-	detail, err := invoiceDetail(db, userID, invoice.ID)
+func gatewayInvoiceResponse(c fiber.Ctx, db database.Queries, orgID uuid.UUID, invoice models.Invoice, status int) error {
+	detail, err := invoiceDetail(db, orgID, invoice.ID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}

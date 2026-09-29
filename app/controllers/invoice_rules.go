@@ -10,20 +10,23 @@ import (
 	"github.com/tertua/tupay/platform/database"
 )
 
-// Invoice business-rule violations. These describe an invoice whose fields are
-// well-formed but whose state is not allowed, so they map to 422 rather than
-// 400. Add new rules here, not inline at each call site.
+// Invoice business-rule violations; state violations map to 422, ownership to 403, transitions to 400.
 var (
 	ErrClientRequiredToSend = errors.New("client is required to send an invoice")
 	ErrPendingPayment       = errors.New("invoice has a pending payment")
 	ErrInvoicePaid          = errors.New("invoice is already paid")
+	ErrInvalidTransition    = errors.New("invalid status transition")
+	ErrOwnerRequired        = errors.New("org.ownerRequired")
+	ErrOrgNotMember         = errors.New("org.notMember")
 )
 
-// invoiceRuleStatus maps a business-rule violation to its HTTP status; anything
-// unrecognized is treated as a malformed request.
+// invoiceRuleStatus maps a business-rule violation to its HTTP status; anything unrecognized is a malformed request.
 func invoiceRuleStatus(err error) int {
 	if errors.Is(err, ErrClientRequiredToSend) || errors.Is(err, ErrPendingPayment) || errors.Is(err, ErrInvoicePaid) {
 		return fiber.StatusUnprocessableEntity
+	}
+	if errors.Is(err, ErrOwnerRequired) || errors.Is(err, ErrOrgNotMember) {
+		return fiber.StatusForbidden
 	}
 	return fiber.StatusBadRequest
 }
@@ -62,29 +65,71 @@ func resolveClient(input *models.InvoiceInput) (*uuid.UUID, error) {
 	return clientID, nil
 }
 
-// guardInvoiceStatus rejects a status change that breaks an invoice rule: a
-// live payment in flight, or sending without a client. It returns a real error
-// so callers can `return failInvoiceRule(c, err)`; never a nil-after-write.
-func guardInvoiceStatus(db database.Queries, userID, id uuid.UUID, status string, clientID *uuid.UUID) error {
-	if db.PendingInvoiceIDs(userID)[id] {
+// statusTransitions is the invoice state machine keyed "from>to"; true means only the org owner may make that move.
+var statusTransitions = map[string]bool{
+	"draft>pending": false, // staff submit a draft for approval
+	"draft>sent":    false, // sending bills the client
+	"sent>draft":    false, // pull a sent invoice back to editing
+	"paid>sent":     false, // reopen path; guardPaidReopen still blocks a money-paid invoice
+	"pending>sent":  true,  // owner approves
+	"pending>draft": true,  // owner rejects
+}
+
+// checkStatusTransition applies the state machine; unmapped moves are invalid, same-status is an idempotent no-op, and leaving pending needs the owner role.
+func checkStatusTransition(c fiber.Ctx, from, to string) error {
+	if from == to {
+		return nil
+	}
+	ownerOnly, ok := statusTransitions[from+">"+to]
+	if !ok {
+		return ErrInvalidTransition
+	}
+	if !ownerOnly {
+		return nil
+	}
+	role, err := utils.CurrentOrgRole(c)
+	if err != nil || role != models.RoleOwner {
+		return ErrOwnerRequired
+	}
+	return nil
+}
+
+// guardInvoiceStatus rejects a status change that breaks an invoice rule: a live payment in flight, a move outside the state machine, or sending without a client.
+func guardInvoiceStatus(c fiber.Ctx, db database.Queries, orgID, id uuid.UUID, existing models.Invoice, status string) error {
+	if db.PendingInvoiceIDs(orgID)[id] {
 		return ErrPendingPayment
 	}
-	return validateInvoice(status, clientID)
+	if err := checkStatusTransition(c, existing.Status, status); err != nil {
+		return err
+	}
+	return validateInvoice(status, existing.ClientID)
 }
 
 // rejectLockedInvoice reports why an invoice refuses edits: a live payment
 // in flight, or money already covering the total. A PaidAmount load failure
 // is returned raw so the caller maps it to 500 instead of a rule status.
-func rejectLockedInvoice(db database.Queries, userID, id uuid.UUID, existing models.Invoice) error {
+func rejectLockedInvoice(db database.Queries, orgID, id uuid.UUID, existing models.Invoice) error {
 	paid, err := db.PaidAmount(id)
 	if err != nil {
 		return err
 	}
-	if db.PendingInvoiceIDs(userID)[id] {
+	if db.PendingInvoiceIDs(orgID)[id] {
 		return ErrPendingPayment
 	}
 	if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) {
 		return ErrInvoicePaid
+	}
+	return nil
+}
+
+// guardInvoiceDelete lets staff remove only drafts; deleting any other status needs the owner role (route-level guards cannot see the invoice).
+func guardInvoiceDelete(c fiber.Ctx, status string) error {
+	role, err := utils.CurrentOrgRole(c)
+	if err != nil {
+		return ErrOrgNotMember
+	}
+	if status != models.InvoiceStatusDraft && role != models.RoleOwner {
+		return ErrOwnerRequired
 	}
 	return nil
 }

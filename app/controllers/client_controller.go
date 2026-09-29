@@ -26,7 +26,7 @@ import (
 // @Security SessionCookie
 // @Router /clients [get]
 func ListClients(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -37,11 +37,11 @@ func ListClients(c fiber.Ctx) error {
 	}
 
 	paging := utils.ParsePagination(c)
-	clients, err := db.ListClients(userID, paging.Limit(), paging.Offset())
+	clients, err := db.ListClients(orgID, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load clients", nil)
 	}
-	total, err := db.CountClients(userID)
+	total, err := db.CountClients(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count clients", nil)
 	}
@@ -59,7 +59,7 @@ func ListClients(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /clients/{id} [get]
 func GetClient(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -74,7 +74,7 @@ func GetClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	client, err := db.GetClient(userID, id)
+	client, err := db.GetClient(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
@@ -82,14 +82,14 @@ func GetClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
 	}
 
-	rows, err := db.ClientInvoices(userID, id)
+	rows, err := db.ClientInvoices(orgID, id)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client invoices", nil)
 	}
 
 	invoices := make([]fiber.Map, 0, len(rows))
 	var totalBilled, paidTotal decimal.Decimal
-	pending := db.PendingInvoiceIDs(userID)
+	pending := db.PendingInvoiceIDs(orgID)
 	for _, row := range rows {
 		paid := row.PaidAmount
 		// Anything not still a draft is billed: sent, overdue, paid, pending.
@@ -135,7 +135,7 @@ func GetClient(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /clients [post]
 func CreateClient(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -152,13 +152,13 @@ func CreateClient(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-
 	now := time.Now()
 	client := &models.Client{
 		ID:        uuid.New(),
 		CreatedAt: now,
 		UpdatedAt: &now,
-		UserID:    userID,
+		OrgID:     orgID,
+		UserID:    utils.CurrentActorID(c),
 		Name:      input.Name,
 		Email:     input.Email,
 		Company:   input.Company,
@@ -169,7 +169,7 @@ func CreateClient(c fiber.Ctx) error {
 	if err := db.CreateClient(client); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create client", nil)
 	}
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"client": client})
 }
@@ -186,7 +186,7 @@ func CreateClient(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /clients/{id} [patch]
 func UpdateClient(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -209,7 +209,7 @@ func UpdateClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	client, err := db.GetClient(userID, id)
+	client, err := db.GetClient(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
@@ -229,7 +229,7 @@ func UpdateClient(c fiber.Ctx) error {
 	if err := db.UpdateClient(&client); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update client", nil)
 	}
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"client": client})
 }
@@ -245,7 +245,7 @@ func UpdateClient(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /clients/{id} [delete]
 func DeleteClient(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -260,18 +260,18 @@ func DeleteClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	if _, err := db.GetClient(userID, id); err != nil {
+	if _, err := db.GetClient(orgID, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
 	}
 
-	if err := db.DeleteClient(userID, id); err != nil {
+	if err := db.DeleteClient(orgID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete client", nil)
 	}
-	recordAudit(c, db, userID, "client.delete", "client", id.String(), "")
-	invalidateAggregates(c, userID)
+	recordAudit(c, db, utils.CurrentActorID(c), "client.delete", "client", id.String(), "")
+	invalidateAggregates(c, orgID)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

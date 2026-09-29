@@ -30,7 +30,7 @@ type publicIntentRequest struct {
 // when they differ.
 func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method, payCurrency string) error {
 	method = normalizedPaymentMethod(method)
-	settings, err := db.GetSettings(link.UserID)
+	settings, err := db.GetSettings(invoice.OrgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}

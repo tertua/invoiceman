@@ -11,7 +11,7 @@ import (
 	"github.com/tertua/tupay/platform/database"
 )
 
-// GetReports returns financial reports for the current user.
+// GetReports returns financial reports for the current organization.
 // @Description Get financial reports.
 // @Summary get financial reports
 // @Tags Reports
@@ -20,7 +20,7 @@ import (
 // @Security SessionCookie
 // @Router /reports [get]
 func GetReports(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -28,9 +28,9 @@ func GetReports(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	report, err := cache.FetchJSON(c.Context(), cache.AggKey(userID.String(), "reports", strings.TrimSpace(c.Query("currency"))),
+	report, err := cache.FetchJSON(c.Context(), cache.AggKey(orgID.String(), "reports", strings.TrimSpace(c.Query("currency"))),
 		func(ctx context.Context) (models.Reports, error) {
-			return db.GetReports(userID, strings.TrimSpace(c.Query("currency")))
+			return db.GetReports(orgID, strings.TrimSpace(c.Query("currency")))
 		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load reports", nil)

@@ -13,15 +13,16 @@ import (
 )
 
 func publicPaymentData(ctx context.Context, db database.Queries, link models.PaymentLink, payCurrency string) (fiber.Map, error) {
-	detail, err := invoiceDetail(db, link.UserID, link.InvoiceID)
+	invoice, err := db.GetInvoiceUnscoped(link.InvoiceID)
 	if err != nil {
 		return nil, err
 	}
-	settings, err := db.GetSettings(link.UserID)
+	orgID := invoice.OrgID
+	detail, err := invoiceDetail(db, orgID, link.InvoiceID)
 	if err != nil {
 		return nil, err
 	}
-	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,7 @@ func GetPublicPayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
 	}
-	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	invoice, err := db.GetInvoiceUnscoped(link.InvoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
@@ -123,7 +124,7 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
 	}
-	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	invoice, err := db.GetInvoiceUnscoped(link.InvoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
@@ -159,7 +160,11 @@ func GetPublicPaymentStatus(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
 	}
-	detail, err := invoiceDetail(*db, link.UserID, link.InvoiceID)
+	invoice, err := db.GetInvoiceUnscoped(link.InvoiceID)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
+	}
+	detail, err := invoiceDetail(*db, invoice.OrgID, link.InvoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}

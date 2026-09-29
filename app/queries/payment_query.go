@@ -14,10 +14,8 @@ type PaymentQueries struct {
 	*gorm.DB
 }
 
-// ListPayments returns one page of non-voided payments belonging to
-// invoices owned by a user. Voided rows stay in the table for audit but
-// are invisible here.
-func (q *PaymentQueries) ListPayments(userID uuid.UUID, limit, offset int) ([]models.PaymentListRow, error) {
+// ListPayments returns one page of non-voided payments over the org's invoices; voided rows stay for audit but stay invisible here.
+func (q *PaymentQueries) ListPayments(orgID uuid.UUID, limit, offset int) ([]models.PaymentListRow, error) {
 	payments := []models.PaymentListRow{}
 	err := q.Table("payments").
 		Select(`payments.id AS payment_id, payments.invoice_id, invoices.invoice_number,
@@ -26,37 +24,35 @@ func (q *PaymentQueries) ListPayments(userID uuid.UUID, limit, offset int) ([]mo
 			payments.gateway_order_id`).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
-		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
+		Where("payments.org_id = ? AND invoices.org_id = ? AND payments.voided_at IS NULL", orgID, orgID).
 		Order("payments.paid_on DESC").Order("payments.created_at DESC").
 		Limit(limit).Offset(offset).
 		Scan(&payments).Error
 	return payments, err
 }
 
-// CountPayments returns the total non-voided payments over invoices owned
-// by a user.
-func (q *PaymentQueries) CountPayments(userID uuid.UUID) (int64, error) {
+// CountPayments returns the total non-voided payments over the org's invoices.
+func (q *PaymentQueries) CountPayments(orgID uuid.UUID) (int64, error) {
 	var total int64
 	err := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
+		Where("payments.org_id = ? AND invoices.org_id = ? AND payments.voided_at IS NULL", orgID, orgID).
 		Count(&total).Error
 	return total, err
 }
 
-// PaymentTotals holds global payment aggregates for a user.
+// PaymentTotals holds payment aggregates for an org.
 type PaymentTotals struct {
 	Total     decimal.Decimal
 	ThisMonth decimal.Decimal
 }
 
-// GetPaymentTotals returns all-time and current-month sums over
-// non-voided payments.
-func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, error) {
+// GetPaymentTotals returns all-time and current-month sums over the org's non-voided payments.
+func (q *PaymentQueries) GetPaymentTotals(orgID uuid.UUID) (PaymentTotals, error) {
 	totals := PaymentTotals{}
 	base := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID)
+		Where("payments.org_id = ? AND invoices.org_id = ? AND payments.voided_at IS NULL", orgID, orgID)
 	if err := base.Select("COALESCE(SUM(payments.amount), 0)").Scan(&totals.Total).Error; err != nil {
 		return totals, err
 	}
@@ -65,7 +61,7 @@ func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, erro
 	nextMonth := monthStart.AddDate(0, 1, 0)
 	monthTx := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.user_id = ? AND invoices.user_id = ? AND payments.voided_at IS NULL", userID, userID).
+		Where("payments.org_id = ? AND invoices.org_id = ? AND payments.voided_at IS NULL", orgID, orgID).
 		Where("payments.paid_on >= ? AND payments.paid_on < ?", monthStart, nextMonth)
 	var thisMonth decimal.Decimal
 	if err := monthTx.Select("COALESCE(SUM(payments.amount), 0)").Scan(&thisMonth).Error; err != nil {
@@ -75,10 +71,10 @@ func (q *PaymentQueries) GetPaymentTotals(userID uuid.UUID) (PaymentTotals, erro
 	return totals, nil
 }
 
-// GetPayment returns a payment owned by a user.
-func (q *PaymentQueries) GetPayment(userID, id uuid.UUID) (models.Payment, error) {
+// GetPayment returns a payment of the org.
+func (q *PaymentQueries) GetPayment(orgID, id uuid.UUID) (models.Payment, error) {
 	payment := models.Payment{}
-	if err := q.Where("id = ? AND user_id = ?", id, userID).First(&payment).Error; err != nil {
+	if err := q.Where("id = ? AND org_id = ?", id, orgID).First(&payment).Error; err != nil {
 		return payment, notFound(err)
 	}
 	return payment, nil
@@ -91,13 +87,11 @@ func (q *PaymentQueries) CreatePayment(payment *models.Payment) error {
 	})
 }
 
-// VoidPayment marks a payment void instead of deleting it. The row stays
-// for audit but is excluded from every balance, list and aggregate query.
-// Only the first void wins: already-voided rows affect zero rows.
-func (q *PaymentQueries) VoidPayment(userID, id uuid.UUID, reason string) error {
+// VoidPayment marks a payment void instead of deleting it: the row stays for audit, drops out of every balance/list/aggregate, and only the first void wins.
+func (q *PaymentQueries) VoidPayment(orgID, id uuid.UUID, reason string) error {
 	return DoRetry(func() error {
 		res := q.Model(&models.Payment{}).
-			Where("id = ? AND user_id = ? AND voided_at IS NULL", id, userID).
+			Where("id = ? AND org_id = ? AND voided_at IS NULL", id, orgID).
 			Updates(map[string]any{
 				"voided_at":   time.Now(),
 				"void_reason": reason,
@@ -126,10 +120,12 @@ func (q *PaymentQueries) GetPaymentLink(token string) (models.PaymentLink, error
 	return link, nil
 }
 
-// GetPaymentLinkForInvoice returns the existing public link for an invoice.
-func (q *PaymentQueries) GetPaymentLinkForInvoice(invoiceID, userID uuid.UUID) (models.PaymentLink, error) {
+// GetPaymentLinkForInvoice returns the public link for an invoice, scoped by the invoice's org because payment_links carries no org_id column.
+func (q *PaymentQueries) GetPaymentLinkForInvoice(invoiceID, orgID uuid.UUID) (models.PaymentLink, error) {
 	link := models.PaymentLink{}
-	if err := q.Where("invoice_id = ? AND user_id = ?", invoiceID, userID).First(&link).Error; err != nil {
+	if err := q.Table("payment_links").Select("payment_links.*").
+		Joins("JOIN invoices ON invoices.id = payment_links.invoice_id").
+		Where("payment_links.invoice_id = ? AND invoices.org_id = ?", invoiceID, orgID).First(&link).Error; err != nil {
 		return link, notFound(err)
 	}
 	return link, nil

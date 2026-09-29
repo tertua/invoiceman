@@ -16,7 +16,7 @@ import (
 // ErrCacheMiss is returned when a key is absent or expired.
 var ErrCacheMiss = errors.New("cache miss")
 
-// AggCache stores per-user JSON aggregates (dashboard, reports) with
+// AggCache stores per-org JSON aggregates (dashboard, reports) with
 // identical behaviour on both backends: Redis when REDIS_HOST is set,
 // process-local memory otherwise. Only replica-sharing differs, never the
 // contract — resource-limited builds without Redis keep working.
@@ -26,9 +26,7 @@ type AggCache interface {
 	DeletePrefix(ctx context.Context, prefix string) error
 }
 
-// AggTTL returns the aggregate time-to-live from the central config.
-// Writes invalidate explicitly, so this only bounds staleness for
-// multi-replica deployments without Redis.
+// AggTTL returns the aggregate TTL from the central config; writes invalidate explicitly, so this only bounds staleness without Redis.
 func AggTTL() time.Duration {
 	if s := configs.Get().Cache.AggTTLSeconds; s > 0 {
 		return time.Duration(s) * time.Second
@@ -36,31 +34,27 @@ func AggTTL() time.Duration {
 	return 60 * time.Second
 }
 
-// AggKey builds the cache key for one aggregate slice. Currency is
-// normalized so "?currency=" and "?currency=USD" never collide.
-func AggKey(userID, kind, currency string) string {
+// AggKey builds the cache key for one aggregate slice of an org; currency is normalized so "?currency=" and "?currency=USD" never collide.
+func AggKey(orgID, kind, currency string) string {
 	cur := strings.ToLower(strings.TrimSpace(currency))
 	if cur == "" {
 		cur = "-"
 	}
-	return "agg:v1:" + userID + ":" + kind + ":" + cur
+	return "agg:v1:" + orgID + ":" + kind + ":" + cur
 }
 
-// AggScope returns the key prefix covering every aggregate of a user,
-// for invalidation after writes.
-func AggScope(userID string) string {
-	return "agg:v1:" + userID + ":"
+// AggScope returns the key prefix covering every aggregate of an org, for invalidation after writes.
+func AggScope(orgID string) string {
+	return "agg:v1:" + orgID + ":"
 }
 
-// InvalidateUser drops every cached aggregate of a user. Best-effort:
-// callers already committed the write, so a failure only costs TTL
-// staleness and is reported, never fatal.
-func InvalidateUser(ctx context.Context, userID string) error {
+// InvalidateOrg drops every cached aggregate of an org; best-effort, a failure only costs TTL staleness.
+func InvalidateOrg(ctx context.Context, orgID string) error {
 	ac, err := Aggregates()
 	if err != nil {
 		return err
 	}
-	return ac.DeletePrefix(ctx, AggScope(userID))
+	return ac.DeletePrefix(ctx, AggScope(orgID))
 }
 
 var (

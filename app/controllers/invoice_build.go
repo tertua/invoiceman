@@ -14,7 +14,7 @@ import (
 )
 
 // buildInvoice computes invoice and item rows.
-func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice, []models.InvoiceItem, error) {
+func buildInvoice(orgID, userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice, []models.InvoiceItem, error) {
 	issueDate, err := utils.ParseDate(input.IssueDate)
 	if err != nil {
 		return nil, nil, errors.New("invalid issue_date, expected YYYY-MM-DD")
@@ -34,6 +34,7 @@ func buildInvoice(userID uuid.UUID, input *models.InvoiceInput) (*models.Invoice
 		ID:        uuid.New(),
 		CreatedAt: now,
 		UpdatedAt: &now,
+		OrgID:     orgID,
 		UserID:    userID,
 		ClientID:  clientID,
 		Status:    input.Status,
@@ -89,9 +90,9 @@ func applyInvoiceTotals(invoice *models.Invoice) {
 	invoice.Total = taxable.Add(invoice.TaxAmount)
 }
 
-// invoiceDetail loads the full invoice response for the frontend.
-func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error) {
-	invoice, err := db.GetInvoice(userID, id)
+// invoiceDetail loads the full invoice response for the frontend, scoped to the caller's org.
+func invoiceDetail(db database.Queries, orgID, id uuid.UUID) (fiber.Map, error) {
+	invoice, err := db.GetInvoice(orgID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -130,17 +131,16 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 
 	var clientName, clientCompany, clientEmail string
 	if invoice.ClientID != nil {
-		if client, err := db.GetClient(userID, *invoice.ClientID); err == nil {
+		if client, err := db.GetClient(orgID, *invoice.ClientID); err == nil {
 			clientName = client.Name
 			clientCompany = client.Company
 			clientEmail = client.Email
 		}
 	}
 
-	// Expose the existing public payment link (if any) so the MPA can
-	// render it persistently instead of keeping it in transient state.
+	// Expose the existing public payment link (if any) so the MPA can render it persistently instead of transient state.
 	var paymentLink fiber.Map
-	if link, err := db.GetPaymentLinkForInvoice(id, userID); err == nil {
+	if link, err := db.GetPaymentLinkForInvoice(id, orgID); err == nil {
 		paymentLink = fiber.Map{"token": link.Token, "url": "/pay/" + link.Token}
 	}
 
@@ -148,7 +148,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 		"id":               invoice.ID,
 		"invoice_number":   invoice.InvoiceNumber,
 		"status":           invoice.Status,
-		"effective_status": models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid, db.PendingInvoiceIDs(userID)[id]),
+		"effective_status": models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid, db.PendingInvoiceIDs(orgID)[id]),
 		"payment_link":     paymentLink,
 		"client_id":        invoice.ClientID,
 		"client_name":      clientName,
@@ -172,8 +172,7 @@ func invoiceDetail(db database.Queries, userID, id uuid.UUID) (fiber.Map, error)
 	}, nil
 }
 
-// isPaidLocked reports whether an invoice is effectively paid (stored paid
-// or payments covering the total) and must be treated as immutable.
+// isPaidLocked reports whether an invoice is effectively paid (stored paid or payments covering the total) and must be treated as immutable.
 func isPaidLocked(status string, dueDate *time.Time, total, paid decimal.Decimal) bool {
 	return models.ResolveEffectiveStatus(status, dueDate, total, paid, false) == models.InvoiceStatusPaid
 }

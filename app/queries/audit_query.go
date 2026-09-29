@@ -13,8 +13,7 @@ type AuditQueries struct {
 	*gorm.DB
 }
 
-// RecordAudit stores one audit entry. Failures are returned so callers can
-// log them; an audit write must never fail the user action itself.
+// RecordAudit stores one audit entry; failures are returned for the caller to log and the user action itself never fails.
 func (q *AuditQueries) RecordAudit(entry *models.AuditLog) error {
 	if entry.ID == uuid.Nil {
 		entry.ID = uuid.New()
@@ -25,7 +24,7 @@ func (q *AuditQueries) RecordAudit(entry *models.AuditLog) error {
 	return q.Create(entry).Error
 }
 
-// ListAuditLogs returns one page of the trail, newest first.
+// ListAuditLogs returns one page of the trail, newest first; it stays cross-org for the global admin view (org_id is stamped on write by recordAudit).
 func (q *AuditQueries) ListAuditLogs(limit, offset int) ([]models.AuditLog, error) {
 	out := []models.AuditLog{}
 	if err := q.Order("created_at DESC").Limit(limit).Offset(offset).Find(&out).Error; err != nil {

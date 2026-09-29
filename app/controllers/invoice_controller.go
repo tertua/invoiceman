@@ -9,45 +9,7 @@ import (
 	"github.com/tertua/tupay/platform/database"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
 )
-
-// GetInvoice returns one invoice with items and payments.
-// @Description Get invoice by ID.
-// @Summary get invoice by ID
-// @Tags Invoices
-// @Accept json
-// @Produce json
-// @Param id path string true "Invoice ID"
-// @Success 200 {object} map[string]interface{}
-// @Security SessionCookie
-// @Router /invoices/{id} [get]
-func GetInvoice(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
-	}
-
-	id, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
-	}
-
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
-	}
-
-	detail, err := invoiceDetail(*db, userID, id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
-	}
-
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
-}
 
 // CreateInvoice creates a new invoice.
 // @Description Create a new invoice.
@@ -60,7 +22,7 @@ func GetInvoice(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /invoices [post]
 func CreateInvoice(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, userID, err := currentUserOrg(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -78,13 +40,13 @@ func CreateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	invoice, items, err := buildInvoice(userID, input)
+	invoice, items, err := buildInvoice(orgID, userID, input)
 	if err != nil {
 		return failInvoiceRule(c, err)
 	}
 
 	if invoice.ClientID != nil {
-		if _, err := db.GetClient(userID, *invoice.ClientID); err != nil {
+		if _, err := db.GetClient(orgID, *invoice.ClientID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
 			}
@@ -92,21 +54,20 @@ func CreateInvoice(c fiber.Ctx) error {
 		}
 	}
 
-	if err := db.CreateInvoice(userID, invoice, items); err != nil {
+	if err := db.CreateInvoice(orgID, invoice, items); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create invoice", nil)
 	}
 
-	// Online invoices mint their payment link in the same request, so the
-	// redirect target already shows it (see autoOnlinePaymentLink).
-	autoOnlinePaymentLink(*db, userID, *invoice)
+	// Online invoices mint their payment link in the same request, so the redirect target already shows it (see autoOnlinePaymentLink).
+	autoOnlinePaymentLink(*db, orgID, *invoice)
 
-	detail, err := invoiceDetail(*db, userID, invoice.ID)
+	detail, err := invoiceDetail(*db, orgID, invoice.ID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	invalidateAggregates(c, userID)
-	enqueueNotification(db, userID, models.NotifEventInvoiceCreated, "",
-		invoiceNotifData(db, userID, invoice.ID))
+	invalidateAggregates(c, orgID)
+	enqueueOrgNotification(db, orgID, models.NotifEventInvoiceCreated, "",
+		invoiceNotifData(db, orgID, invoice.ID))
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"invoice": detail})
 }

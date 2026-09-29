@@ -23,7 +23,7 @@ import (
 // @Security SessionCookie
 // @Router /items [get]
 func ListItems(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -32,11 +32,11 @@ func ListItems(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 	paging := utils.ParsePagination(c)
-	items, err := db.ListItems(userID, paging.Limit(), paging.Offset())
+	items, err := db.ListItems(orgID, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load items", nil)
 	}
-	total, err := db.CountItems(userID)
+	total, err := db.CountItems(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count items", nil)
 	}
@@ -54,7 +54,7 @@ func ListItems(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /items [post]
 func CreateItem(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -77,11 +77,11 @@ func CreateItem(c fiber.Ctx) error {
 		ID:          uuid.New(),
 		CreatedAt:   now,
 		UpdatedAt:   &now,
-		UserID:      userID,
+		UserID:      utils.CurrentActorID(c),
+		OrgID:       orgID,
 		Name:        input.Name,
 		Description: input.Description,
-		Rate:        input.Rate,
-		Unit:        input.Unit,
+		Rate:        input.Rate, Unit: input.Unit,
 	}
 	if err := db.CreateItem(item); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create item", nil)
@@ -101,7 +101,7 @@ func CreateItem(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /items/{id} [patch]
 func UpdateItem(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -120,7 +120,7 @@ func UpdateItem(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	item, err := db.GetItem(userID, id)
+	item, err := db.GetItem(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "item not found", nil)
@@ -147,7 +147,7 @@ func UpdateItem(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /items/{id} [delete]
 func DeleteItem(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -159,13 +159,13 @@ func DeleteItem(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	if _, err := db.GetItem(userID, id); err != nil {
+	if _, err := db.GetItem(orgID, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "item not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load item", nil)
 	}
-	if err := db.DeleteItem(userID, id); err != nil {
+	if err := db.DeleteItem(orgID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete item", nil)
 	}
 	return c.SendStatus(fiber.StatusNoContent)

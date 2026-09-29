@@ -1,7 +1,6 @@
 package queries
 
 import (
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,87 +12,6 @@ import (
 // InvoiceQueries provides invoice queries.
 type InvoiceQueries struct {
 	*gorm.DB
-}
-
-// invoiceSortColumns whitelists sortable columns for invoice listing.
-var invoiceSortColumns = map[string]string{
-	"issue_date": "invoices.issue_date",
-	"due_date":   "invoices.due_date",
-	"total":      "invoices.total",
-}
-
-// ListInvoices returns one page of invoices of a user with client names
-// and paid amounts.
-func (q *InvoiceQueries) ListInvoices(userID uuid.UUID, status, search, sort, order string, limit, offset int) ([]models.InvoiceListRow, error) {
-	invoices := []models.InvoiceListRow{}
-
-	tx := q.filteredInvoices(userID, status, search)
-
-	sortColumn := "invoices.created_at"
-	if column, ok := invoiceSortColumns[strings.ToLower(sort)]; ok {
-		sortColumn = column
-	}
-	sortOrder := "DESC"
-	if strings.EqualFold(order, "asc") {
-		sortOrder = "ASC"
-	}
-	tx = tx.Order(sortColumn + " " + sortOrder).Order("invoices.created_at DESC")
-
-	if err := tx.Limit(limit).Offset(offset).Scan(&invoices).Error; err != nil {
-		return invoices, err
-	}
-
-	return invoices, nil
-}
-
-// CountInvoices returns the total invoices matching the list filters.
-// It wraps the shared filter chain so the count can never diverge from
-// the listing.
-func (q *InvoiceQueries) CountInvoices(userID uuid.UUID, status, search string) (int64, error) {
-	var total int64
-	sub := q.filteredInvoices(userID, status, search).Select("invoices.id")
-	if err := q.Table("(?) AS invoice_ids", sub).Count(&total).Error; err != nil {
-		return 0, err
-	}
-	return total, nil
-}
-
-// filteredInvoices builds the shared filter chain for invoice listing and
-// counting so both stay in sync.
-func (q *InvoiceQueries) filteredInvoices(userID uuid.UUID, status, search string) *gorm.DB {
-	paidSubquery := q.Model(&models.Payment{}).
-		Select("invoice_id, SUM(amount) AS paid").
-		Where("voided_at IS NULL").
-		Group("invoice_id")
-
-	tx := q.Table("invoices").
-		Select(`invoices.id, invoices.invoice_number,
-			COALESCE(clients.name, '') AS client_name,
-			COALESCE(clients.company, '') AS client_company,
-			invoices.issue_date, invoices.due_date, invoices.total,
-			invoices.currency, invoices.status,
-			COALESCE(pay.paid, 0) AS paid_amount`).
-		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
-		Joins("LEFT JOIN (?) AS pay ON pay.invoice_id = invoices.id", paidSubquery).
-		Where("invoices.user_id = ?", userID)
-
-	switch status {
-	case models.InvoiceStatusDraft, models.InvoiceStatusSent:
-		tx = tx.Where("invoices.status = ?", status)
-	case models.InvoiceStatusPaid:
-		tx = tx.Where("invoices.status = ? OR (invoices.total > 0 AND COALESCE(pay.paid, 0) >= invoices.total)",
-			models.InvoiceStatusPaid)
-	case models.InvoiceEffectiveOverdue:
-		tx = tx.Where("invoices.status = ? AND invoices.due_date IS NOT NULL AND invoices.due_date < ?",
-			models.InvoiceStatusSent, time.Now())
-	}
-
-	if search != "" {
-		like := "%" + search + "%"
-		tx = tx.Where("invoices.invoice_number LIKE ? OR clients.name LIKE ?", like, like)
-	}
-
-	return tx
 }
 
 // ClientInvoiceRow struct to describe an invoice row for client detail.
@@ -114,34 +32,11 @@ func (r ClientInvoiceRow) EffectiveStatus(pending bool) string {
 	return models.ResolveEffectiveStatus(r.Status, r.DueDate, r.Total, r.PaidAmount, pending)
 }
 
-// ClientInvoices returns invoices of a client owned by a user.
-func (q *InvoiceQueries) ClientInvoices(userID, clientID uuid.UUID) ([]ClientInvoiceRow, error) {
-	rows := []ClientInvoiceRow{}
-
-	paidSubquery := q.Model(&models.Payment{}).
-		Select("invoice_id, SUM(amount) AS paid").
-		Where("voided_at IS NULL").
-		Group("invoice_id")
-
-	if err := q.Table("invoices").
-		Select(`invoices.id, invoices.invoice_number, invoices.issue_date, invoices.due_date,
-			invoices.total, invoices.currency, invoices.status,
-			COALESCE(pay.paid, 0) AS paid_amount`).
-		Joins("LEFT JOIN (?) AS pay ON pay.invoice_id = invoices.id", paidSubquery).
-		Where("invoices.user_id = ? AND invoices.client_id = ?", userID, clientID).
-		Order("invoices.created_at DESC").
-		Scan(&rows).Error; err != nil {
-		return rows, err
-	}
-
-	return rows, nil
-}
-
-// GetInvoice returns one invoice of a user by ID.
-func (q *InvoiceQueries) GetInvoice(userID, id uuid.UUID) (models.Invoice, error) {
+// GetInvoice returns one invoice of an org by ID.
+func (q *InvoiceQueries) GetInvoice(orgID, id uuid.UUID) (models.Invoice, error) {
 	invoice := models.Invoice{}
 
-	if err := q.Where("id = ? AND user_id = ?", id, userID).First(&invoice).Error; err != nil {
+	if err := q.Where("id = ? AND org_id = ?", id, orgID).First(&invoice).Error; err != nil {
 		return invoice, notFound(err)
 	}
 
@@ -187,10 +82,10 @@ func (q *InvoiceQueries) PaidAmount(invoiceID uuid.UUID) (decimal.Decimal, error
 
 // CreateInvoice creates an invoice with items, reserving the invoice number.
 // The sequence increment is atomic, so concurrent calls never produce duplicates.
-func (q *InvoiceQueries) CreateInvoice(userID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
+func (q *InvoiceQueries) CreateInvoice(orgID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
 	return DoRetry(func() error {
 		return q.Transaction(func(tx *gorm.DB) error {
-			number, err := q.ReserveInvoiceNumber(tx, userID)
+			number, err := q.ReserveInvoiceNumber(tx, orgID)
 			if err != nil {
 				return err
 			}
@@ -211,10 +106,10 @@ func (q *InvoiceQueries) CreateInvoice(userID uuid.UUID, invoice *models.Invoice
 }
 
 // UpdateInvoice replaces an invoice and its items.
-func (q *InvoiceQueries) UpdateInvoice(userID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
+func (q *InvoiceQueries) UpdateInvoice(orgID uuid.UUID, invoice *models.Invoice, items []models.InvoiceItem) error {
 	return DoRetry(func() error {
 		return q.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", invoice.ID, userID).
+			if err := tx.Model(&models.Invoice{}).Where("id = ? AND org_id = ?", invoice.ID, orgID).
 				Updates(map[string]any{
 					"updated_at":     time.Now(),
 					"client_id":      invoice.ClientID,
@@ -249,8 +144,8 @@ func (q *InvoiceQueries) UpdateInvoice(userID uuid.UUID, invoice *models.Invoice
 }
 
 // UpdateInvoiceStatus updates only the status of an invoice.
-func (q *InvoiceQueries) UpdateInvoiceStatus(userID, id uuid.UUID, status string) error {
-	if err := q.Model(&models.Invoice{}).Where("id = ? AND user_id = ?", id, userID).
+func (q *InvoiceQueries) UpdateInvoiceStatus(orgID, id uuid.UUID, status string) error {
+	if err := q.Model(&models.Invoice{}).Where("id = ? AND org_id = ?", id, orgID).
 		Updates(map[string]any{
 			"updated_at": time.Now(),
 			"status":     status,
@@ -261,9 +156,9 @@ func (q *InvoiceQueries) UpdateInvoiceStatus(userID, id uuid.UUID, status string
 	return nil
 }
 
-// DeleteInvoice deletes an invoice of a user.
-func (q *InvoiceQueries) DeleteInvoice(userID, id uuid.UUID) error {
+// DeleteInvoice deletes an invoice of an org.
+func (q *InvoiceQueries) DeleteInvoice(orgID, id uuid.UUID) error {
 	return DoRetry(func() error {
-		return q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Invoice{}).Error
+		return q.Where("id = ? AND org_id = ?", id, orgID).Delete(&models.Invoice{}).Error
 	})
 }

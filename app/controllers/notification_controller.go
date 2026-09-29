@@ -40,6 +40,7 @@ func sanitizeEvents(raw string) string {
 }
 
 // CreateEndpoint registers a webhook target for the current user.
+// D11: inbox, deliveries & endpoints stay user-scoped; org fan-out writes one row per member (via enqueueOrgNotification).
 // @Description Register a notification webhook endpoint.
 // @Summary create notification endpoint
 // @Tags Notifications
@@ -162,8 +163,7 @@ func UpdateEndpoint(c fiber.Ctx) error {
 		}
 		e.TargetURL = target
 	}
-	// Empty string clears the filter (subscribe to all); unknown tokens
-	// are dropped by sanitizeEvents, never stored.
+	// Empty string clears the filter (subscribe to all); unknown tokens are dropped by sanitizeEvents, never stored.
 	if input.Events != nil {
 		e.Events = sanitizeEvents(*input.Events)
 	}

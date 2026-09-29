@@ -35,7 +35,7 @@ func GetPublicQrImage(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "payment link not found", nil)
 	}
-	invoice, err := db.GetInvoice(link.UserID, link.InvoiceID)
+	invoice, err := db.GetInvoiceUnscoped(link.InvoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}

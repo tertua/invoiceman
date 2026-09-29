@@ -12,5 +12,5 @@ import (
 func effectiveInvoiceStatus(db database.Queries, invoice models.Invoice) string {
 	paid, _ := db.PaidAmount(invoice.ID)
 	return models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid,
-		db.PendingInvoiceIDs(invoice.UserID)[invoice.ID])
+		db.PendingInvoiceIDs(invoice.OrgID)[invoice.ID])
 }

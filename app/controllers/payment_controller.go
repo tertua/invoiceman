@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -14,10 +13,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
-	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
-	"github.com/tertua/tupay/platform/mail"
 	"gorm.io/gorm"
 )
 
@@ -56,7 +53,7 @@ func paymentResponse(row models.PaymentListRow) fiber.Map {
 // @Security SessionCookie
 // @Router /payments [get]
 func ListPayments(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -65,15 +62,15 @@ func ListPayments(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 	paging := utils.ParsePagination(c)
-	rows, err := db.ListPayments(userID, paging.Limit(), paging.Offset())
+	rows, err := db.ListPayments(orgID, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payments", nil)
 	}
-	total, err := db.CountPayments(userID)
+	total, err := db.CountPayments(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count payments", nil)
 	}
-	totals, err := db.GetPaymentTotals(userID)
+	totals, err := db.GetPaymentTotals(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment totals", nil)
 	}
@@ -103,7 +100,7 @@ func ListPayments(c fiber.Ctx) error {
 // @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /payments [post]
 func CreatePayment(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -129,7 +126,7 @@ func CreatePayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	invoice, err := db.GetInvoice(userID, invoiceID)
+	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
@@ -140,9 +137,8 @@ func CreatePayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
-	// Money in flight locks manual payments: a concurrent manual record
-	// would settle against a different balance than the Snap intent.
-	if db.PendingInvoiceIDs(userID)[invoiceID] {
+	// Money in flight locks manual payments: a concurrent manual record would settle against a different balance than the Snap intent.
+	if db.PendingInvoiceIDs(orgID)[invoiceID] {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
 	}
 	if paid.Add(input.Amount).GreaterThan(invoice.Total) {
@@ -152,7 +148,8 @@ func CreatePayment(c fiber.Ctx) error {
 	payment := &models.Payment{
 		ID:        uuid.New(),
 		CreatedAt: now,
-		UserID:    userID,
+		UserID:    utils.CurrentActorID(c),
+		OrgID:     orgID,
 		InvoiceID: invoiceID,
 		Amount:    input.Amount,
 		Method:    input.Method,
@@ -166,12 +163,12 @@ func CreatePayment(c fiber.Ctx) error {
 	// Auto-mark the invoice paid when payments now cover the total, so the
 	// stored status column stays in sync (display also uses effective_status).
 	if invoice.Status != models.InvoiceStatusPaid && paid.Add(input.Amount).GreaterThanOrEqual(invoice.Total) && invoice.Total.GreaterThan(decimal.Zero) {
-		_ = db.UpdateInvoiceStatus(userID, invoiceID, models.InvoiceStatusPaid)
+		_ = db.UpdateInvoiceStatus(orgID, invoiceID, models.InvoiceStatusPaid)
 	}
-	recordAudit(c, db, userID, "payment.create", "payment", payment.ID.String(),
+	recordAudit(c, db, utils.CurrentActorID(c), "payment.create", "payment", payment.ID.String(),
 		`{"invoice_id":"`+invoiceID.String()+`","amount":"`+input.Amount.String()+`"}`)
-	invalidateAggregates(c, userID)
-	enqueueNotification(db, userID, models.NotifEventPaymentCreated, "", paymentNotifData(db, *payment))
+	invalidateAggregates(c, orgID)
+	enqueueOrgNotification(db, orgID, models.NotifEventPaymentCreated, "", paymentNotifData(db, *payment))
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": fiber.Map{
 		"id":         payment.ID,
 		"invoice_id": payment.InvoiceID,
@@ -199,7 +196,7 @@ func CreatePayment(c fiber.Ctx) error {
 // @Param Idempotency-Key header string false "Replay protection key (uuid per void intent)"
 // @Router /payments/{id} [delete]
 func VoidPayment(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -211,7 +208,7 @@ func VoidPayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	payment, err := db.GetPayment(userID, id)
+	payment, err := db.GetPayment(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "payment not found", nil)
@@ -228,8 +225,8 @@ func VoidPayment(c fiber.Ctx) error {
 	}
 	// A pending overlay locks money movement: voiding would change the
 	// balance the live Snap intent settles against.
-	if _, err := db.GetInvoice(userID, payment.InvoiceID); err == nil {
-		if db.PendingInvoiceIDs(userID)[payment.InvoiceID] {
+	if _, err := db.GetInvoice(orgID, payment.InvoiceID); err == nil {
+		if db.PendingInvoiceIDs(orgID)[payment.InvoiceID] {
 			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
 		}
 	}
@@ -247,17 +244,17 @@ func VoidPayment(c fiber.Ctx) error {
 	if err := utils.NewValidator().Var(reason, "lte=500"); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "void reason is too long", nil)
 	}
-	if err := db.VoidPayment(userID, id, reason); err != nil {
+	if err := db.VoidPayment(orgID, id, reason); err != nil {
 		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, gorm.ErrRecordNotFound) {
 			return utils.Fail(c, fiber.StatusConflict, "payment is already voided", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to void payment", nil)
 	}
 	// Reopen the invoice when a void drops payments below the total again.
-	if invoice, err := db.GetInvoice(userID, payment.InvoiceID); err == nil {
+	if invoice, err := db.GetInvoice(orgID, payment.InvoiceID); err == nil {
 		if invoice.Status == models.InvoiceStatusPaid {
 			if remaining, err := db.PaidAmount(payment.InvoiceID); err == nil && remaining.LessThan(invoice.Total) {
-				_ = db.UpdateInvoiceStatus(userID, payment.InvoiceID, models.InvoiceStatusSent)
+				_ = db.UpdateInvoiceStatus(orgID, payment.InvoiceID, models.InvoiceStatusSent)
 			}
 		}
 	}
@@ -266,141 +263,14 @@ func VoidPayment(c fiber.Ctx) error {
 		"amount":     payment.Amount,
 		"reason":     reason,
 	})
-	recordAudit(c, db, userID, "payment.void", "payment", id.String(), string(meta))
+	recordAudit(c, db, utils.CurrentActorID(c), "payment.void", "payment", id.String(), string(meta))
 	voidData := paymentNotifData(db, payment)
 	voidData["void_reason"] = reason
-	enqueueNotification(db, userID, models.NotifEventPaymentVoided, "", voidData)
-	invalidateAggregates(c, userID)
+	enqueueOrgNotification(db, orgID, models.NotifEventPaymentVoided, "", voidData)
+	invalidateAggregates(c, orgID)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"payment": fiber.Map{
 		"id":         payment.ID,
 		"invoice_id": payment.InvoiceID,
 		"voided":     true,
 	}})
-}
-
-// CreateOnlineLink creates a public payment link without contacting a gateway.
-// @Description Create a public payment link.
-// @Summary create payment link
-// @Tags Payments
-// @Accept json
-// @Produce json
-// @Param request body map[string]string true "Invoice ID"
-// @Success 200 {object} map[string]interface{}
-// @Security SessionCookie
-// @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
-// @Router /payments/online [post]
-func CreateOnlineLink(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
-	}
-	var input struct {
-		InvoiceID string `json:"invoiceId"`
-	}
-	if err := c.Bind().Body(&input); err != nil || input.InvoiceID == "" {
-		return utils.Fail(c, fiber.StatusBadRequest, "invoiceId is required", nil)
-	}
-	invoiceID, err := uuid.Parse(input.InvoiceID)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
-	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
-	}
-	invoice, err := db.GetInvoice(userID, invoiceID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
-	}
-	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
-		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
-	}
-	// A second link would open a second Snap intent for the same invoice;
-	// the existing link (returned below when present) stays usable.
-	if db.PendingInvoiceIDs(userID)[invoiceID] {
-		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
-	}
-	link, err := ensurePaymentLink(*db, userID, invoice)
-	if err != nil {
-		return linkFail(c, err)
-	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"url": "/pay/" + link.Token, "token": link.Token})
-}
-
-func publicURL(path string) string {
-	base := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/")
-	return base + path
-}
-
-// SendOnlineLink emails a public payment link to the requested recipient.
-// @Description Send a public payment link by email.
-// @Summary send payment link email
-// @Tags Payments
-// @Accept json
-// @Produce json
-// @Param request body models.OnlineLinkEmailInput true "Payment link email payload"
-// @Success 200 {object} map[string]interface{}
-// @Security SessionCookie
-// @Router /payments/online/send [post]
-func SendOnlineLink(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
-	}
-	input := &models.OnlineLinkEmailInput{}
-	if err := c.Bind().Body(input); err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
-	if err := utils.NewValidator().Struct(input); err != nil {
-		return utils.ValidationFailed(c, err)
-	}
-	invoiceID, err := uuid.Parse(input.InvoiceID)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
-	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
-	}
-	invoice, err := db.GetInvoice(userID, invoiceID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
-	}
-	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
-		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
-	}
-	link, err := ensurePaymentLink(*db, userID, invoice)
-	if err != nil {
-		return linkFail(c, err)
-	}
-	// Fail fast when mail is not configured (501 contract), then queue
-	// for async delivery by the worker.
-	if _, err := mail.NewFromEnv(); errors.Is(err, mail.ErrNotConfigured) {
-		return utils.Fail(c, fiber.StatusNotImplemented, "email provider is not configured", nil)
-	} else if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "email provider configuration is invalid", nil)
-	}
-	url := publicURL("/pay/" + link.Token)
-	body := fmt.Sprintf("Hello,\n\nPlease use the following link to pay invoice %s:\n%s\n\nThank you.", invoice.InvoiceNumber, url)
-	htmlBody, terr := mail.Render("payment_link", mail.TemplateData{
-		AppName: configs.Get().AppName, URL: url, InvoiceNumber: invoice.InvoiceNumber,
-	})
-	if terr != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to render payment link email", nil)
-	}
-	if err := db.EnqueueMail(&models.MailOutbox{
-		To:       input.Email,
-		Subject:  "Payment link for invoice " + invoice.InvoiceNumber,
-		Body:     body,
-		HtmlBody: htmlBody,
-	}); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to queue payment link email", nil)
-	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "payment link queued", "queued": true})
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // UpdateInvoiceStatus updates only the invoice status.
@@ -29,7 +28,7 @@ import (
 // @Security SessionCookie
 // @Router /invoices/{id}/status [patch]
 func UpdateInvoiceStatus(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -52,7 +51,7 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	existing, err := db.GetInvoice(userID, id)
+	existing, err := db.GetInvoice(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
@@ -60,34 +59,28 @@ func UpdateInvoiceStatus(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	if err := guardInvoiceStatus(*db, userID, id, input.Status, existing.ClientID); err != nil {
+	if err := guardInvoiceStatus(c, *db, orgID, id, existing, input.Status); err != nil {
 		return failInvoiceRule(c, err)
 	}
 
-	// Reopening a money-paid invoice must go through voiding payments so
-	// balances stay consistent. A manually-marked paid invoice with no
-	// money attached may still be reopened to sent/draft.
-	if paid, err := db.PaidAmount(id); err == nil {
-		if isPaidLocked(existing.Status, existing.DueDate, existing.Total, paid) &&
-			input.Status != models.InvoiceStatusPaid &&
-			existing.Total.GreaterThan(decimal.Zero) && paid.GreaterThanOrEqual(existing.Total) {
-			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is already paid", nil)
+	if err := guardPaidReopen(*db, id, existing, input.Status); err != nil {
+		if errors.Is(err, ErrInvoicePaid) {
+			return failInvoiceRule(c, err)
 		}
-	} else {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
 
-	if err := db.UpdateInvoiceStatus(userID, id, input.Status); err != nil {
+	if err := db.UpdateInvoiceStatus(orgID, id, input.Status); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update invoice status", nil)
 	}
 
-	detail, err := invoiceDetail(*db, userID, id)
+	detail, err := invoiceDetail(*db, orgID, id)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	invalidateAggregates(c, userID)
-	enqueueNotification(db, userID, models.NotifEventInvoiceStatusUpdated, "",
-		invoiceNotifData(db, userID, id))
+	invalidateAggregates(c, orgID)
+	enqueueOrgNotification(db, orgID, models.NotifEventInvoiceStatusUpdated, "",
+		invoiceNotifData(db, orgID, id))
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
 }

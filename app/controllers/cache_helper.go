@@ -7,11 +7,9 @@ import (
 	"github.com/tertua/tupay/platform/cache"
 )
 
-// invalidateAggregates drops cached dashboard/report aggregates after a
-// write. Best-effort: the write already committed, so a cache failure only
-// costs TTL staleness — it is logged, never fatal.
-func invalidateAggregates(c fiber.Ctx, userID uuid.UUID) {
-	if err := cache.InvalidateUser(c.Context(), userID.String()); err != nil {
+// invalidateAggregates drops cached dashboard/report aggregates after a write; best-effort, a failure only costs TTL staleness and is logged, never fatal.
+func invalidateAggregates(c fiber.Ctx, orgID uuid.UUID) {
+	if err := cache.InvalidateOrg(c.Context(), orgID.String()); err != nil {
 		utils.RequestLogger(c).Warn("aggregate cache invalidation failed", "err", err)
 	}
 }
