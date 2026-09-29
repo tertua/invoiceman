@@ -15,8 +15,8 @@ type ReportQueries struct {
 	*gorm.DB
 }
 
-// GetReports aggregates invoices, payments, expenses, and clients for a user.
-func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Reports, error) {
+// GetReports aggregates invoices, payments, expenses, and clients per org.
+func (q *ReportQueries) GetReports(orgID uuid.UUID, currency string) (models.Reports, error) {
 	report := models.Reports{
 		Monthly:         make([]models.ReportMonthlyPoint, 0),
 		Aging:           make([]models.ReportValuePoint, 0),
@@ -24,15 +24,15 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 		StatusBreakdown: make([]models.ReportValuePoint, 0),
 	}
 	var invoices []models.Invoice
-	if err := q.Where("user_id = ?", userID).Find(&invoices).Error; err != nil {
+	if err := q.Where("org_id = ?", orgID).Find(&invoices).Error; err != nil {
 		return report, err
 	}
 	var payments []models.Payment
-	if err := q.Where("user_id = ? AND voided_at IS NULL", userID).Find(&payments).Error; err != nil {
+	if err := q.Where("org_id = ? AND voided_at IS NULL", orgID).Find(&payments).Error; err != nil {
 		return report, err
 	}
 	var expenses []models.Expense
-	if err := q.Where("user_id = ?", userID).Find(&expenses).Error; err != nil {
+	if err := q.Where("org_id = ?", orgID).Find(&expenses).Error; err != nil {
 		return report, err
 	}
 	if currency != "" {
@@ -63,7 +63,7 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 		payments = filteredPayments
 	}
 	var clients []models.Client
-	if err := q.Where("user_id = ?", userID).Find(&clients).Error; err != nil {
+	if err := q.Where("org_id = ?", orgID).Find(&clients).Error; err != nil {
 		return report, err
 	}
 
@@ -82,7 +82,7 @@ func (q *ReportQueries) GetReports(userID uuid.UUID, currency string) (models.Re
 	clientBilled := make(map[uuid.UUID]decimal.Decimal)
 	clientPaid := make(map[uuid.UUID]decimal.Decimal)
 	now := time.Now()
-	pending := pendingInvoiceSet(q.DB, userID)
+	pending := pendingInvoiceSet(q.DB, orgID)
 	for _, invoice := range invoices {
 		paid := paidByInvoice[invoice.ID]
 		balance := invoice.Total.Sub(paid)

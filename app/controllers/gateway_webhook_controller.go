@@ -78,8 +78,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 	}
 
 	statusChanged := txn.Status != status
-	// Idempotent: same status + same gateway txn id needs no further work,
-	// unless no delivery ever succeeded (forward may have failed earlier).
+	// Idempotent: same status + same gateway txn id needs no work unless no delivery ever succeeded (forward may have failed earlier).
 	if !statusChanged && txn.MidtransTxnID == notif.TransactionID {
 		if deliveries, derr := db.ListDeliveriesByOrder(txn.OrderID); derr == nil {
 			for _, d := range deliveries {
@@ -110,12 +109,13 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 		if err := db.SaveTransactionAndSettleInvoice(&txn, gateway.SettleAmount(models.MoneyFromMinor(notif.GrossMinor), notif.Currency, txn.InvoiceCurrency, txn.UsdToIdr), gateway.DisplayName(gatewayName)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to settle invoice payment", nil)
 		}
-		if err := cache.InvalidateUser(c.Context(), txn.UserID.String()); err != nil {
-			logger.L().Warn("cache invalidation failed after payment settlement", "user_id", txn.UserID.String(), "order_id", notif.OrderID, "err", err)
+		orgID, oerr := db.OrgIDForTransaction(&txn)
+		if ierr := cache.InvalidateOrg(c.Context(), orgID.String()); oerr != nil || ierr != nil {
+			logger.L().Warn("cache invalidation failed after payment settlement", "org_id", orgID.String(), "order_id", notif.OrderID, "err", errors.Join(oerr, ierr))
 		}
 		eventHex, _ := randHex(8)
 		enqueueNotification(db, *txn.UserID, models.NotifEventInvoiceStatusUpdated, "evt_"+eventHex,
-			invoiceNotifData(db, *txn.UserID, *txn.InvoiceID))
+			invoiceNotifData(db, orgID, *txn.InvoiceID))
 	} else if err := db.SaveTransaction(&txn); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update transaction", nil)
 	}

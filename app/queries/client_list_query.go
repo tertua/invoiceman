@@ -5,26 +5,26 @@ import (
 	"github.com/tertua/tupay/app/models"
 )
 
-// ListClients returns one page of clients of a user with billing aggregates.
-func (q *ClientQueries) ListClients(userID uuid.UUID, limit, offset int) ([]models.ClientListRow, error) {
+// ListClients returns one page of clients of an org with billing aggregates.
+func (q *ClientQueries) ListClients(orgID uuid.UUID, limit, offset int) ([]models.ClientListRow, error) {
 	clients := []models.ClientListRow{}
 
 	// Billed invoices are sent + paid; drafts are not billed yet. A draft
 	// with money in flight (pending) still owes, so it is billed too,
 	// matching dashboard/reports. Paid must stay in total_billed so
 	// auto-marking paid never shrinks client totals.
-	pending := pendingInvoiceIDs(q.DB, userID)
+	pending := pendingInvoiceIDs(q.DB, orgID)
 
 	billedSubquery := q.Model(&models.Invoice{}).
 		Select("client_id, SUM(total) AS total_billed").
-		Where("user_id = ? AND status IN ?", userID, []string{models.InvoiceStatusSent, models.InvoiceStatusPaid})
+		Where("org_id = ? AND status IN ?", orgID, []string{models.InvoiceStatusSent, models.InvoiceStatusPaid})
 	paidSubquery := q.Model(&models.Payment{}).
 		Select("invoices.client_id AS client_id, SUM(payments.amount) AS paid").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("payments.voided_at IS NULL AND invoices.user_id = ? AND invoices.status IN ?", userID, []string{models.InvoiceStatusSent, models.InvoiceStatusPaid})
+		Where("payments.voided_at IS NULL AND invoices.org_id = ? AND invoices.status IN ?", orgID, []string{models.InvoiceStatusSent, models.InvoiceStatusPaid})
 	if len(pending) > 0 {
-		billedSubquery = billedSubquery.Or("user_id = ? AND id IN ?", userID, pending)
-		paidSubquery = paidSubquery.Or("invoices.user_id = ? AND invoices.id IN ?", userID, pending)
+		billedSubquery = billedSubquery.Or("org_id = ? AND id IN ?", orgID, pending)
+		paidSubquery = paidSubquery.Or("invoices.org_id = ? AND invoices.id IN ?", orgID, pending)
 	}
 	billedSubquery = billedSubquery.Group("client_id")
 	paidSubquery = paidSubquery.Group("invoices.client_id")
@@ -34,7 +34,7 @@ func (q *ClientQueries) ListClients(userID uuid.UUID, limit, offset int) ([]mode
 			COALESCE(inv.total_billed, 0) - COALESCE(pay.paid, 0) AS outstanding`).
 		Joins("LEFT JOIN (?) AS inv ON inv.client_id = c.id", billedSubquery).
 		Joins("LEFT JOIN (?) AS pay ON pay.client_id = c.id", paidSubquery).
-		Where("c.user_id = ?", userID).
+		Where("c.org_id = ?", orgID).
 		Order("c.created_at DESC").
 		Limit(limit).Offset(offset).
 		Scan(&clients).Error; err != nil {

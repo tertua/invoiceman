@@ -92,7 +92,7 @@ func createRelayIntent(c fiber.Ctx) error {
 	}
 	usdToIdr := decimal.Zero
 	if project.OwnerUserID != nil {
-		if s, err := db.GetSettings(*project.OwnerUserID); err == nil {
+		if s, err := db.GetSettings(project.OrgID); err == nil {
 			usdToIdr = s.UsdToIdr
 		}
 	}

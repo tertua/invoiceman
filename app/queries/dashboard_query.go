@@ -14,12 +14,12 @@ type DashboardQueries struct {
 	*gorm.DB
 }
 
-// GetStats returns dashboard aggregate numbers for a user.
-func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.DashboardStats, error) {
+// GetStats returns dashboard aggregate numbers for an org.
+func (q *DashboardQueries) GetStats(orgID uuid.UUID, currency string) (models.DashboardStats, error) {
 	stats := models.DashboardStats{}
 
 	var invoices []models.Invoice
-	invoiceQuery := q.Select("id, status, due_date, total").Where("user_id = ?", userID)
+	invoiceQuery := q.Select("id, status, due_date, total").Where("org_id = ?", orgID)
 	if currency != "" {
 		invoiceQuery = invoiceQuery.Where("currency = ?", currency)
 	}
@@ -29,7 +29,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	stats.InvoiceCount = len(invoices)
 
 	var clientCount int64
-	if err := q.Model(&models.Client{}).Where("user_id = ?", userID).Count(&clientCount).Error; err != nil {
+	if err := q.Model(&models.Client{}).Where("org_id = ?", orgID).Count(&clientCount).Error; err != nil {
 		return stats, err
 	}
 	stats.ClientCount = int(clientCount)
@@ -42,7 +42,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	paidInvoiceQuery := q.Model(&models.Payment{}).
 		Select("invoice_id, SUM(amount) AS paid").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.voided_at IS NULL", userID)
+		Where("invoices.org_id = ? AND payments.voided_at IS NULL", orgID)
 	if currency != "" {
 		paidInvoiceQuery = paidInvoiceQuery.Where("invoices.currency = ?", currency)
 	}
@@ -65,7 +65,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	var paidThisMonth decimal.Decimal
 	paidQuery := q.Model(&models.Payment{}).
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", userID, monthStart)
+		Where("invoices.org_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", orgID, monthStart)
 	if currency != "" {
 		paidQuery = paidQuery.Where("invoices.currency = ?", currency)
 	}
@@ -74,7 +74,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 	}
 	stats.PaidThisMonth = paidThisMonth
 
-	pending := pendingInvoiceSet(q.DB, userID)
+	pending := pendingInvoiceSet(q.DB, orgID)
 	for _, invoice := range invoices {
 		paid := paidByInvoice[invoice.ID]
 		balance := invoice.Total.Sub(paid)
@@ -98,7 +98,7 @@ func (q *DashboardQueries) GetStats(userID uuid.UUID, currency string) (models.D
 }
 
 // GetRevenueSeries returns revenue per month for the last 6 months.
-func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) ([]models.RevenuePoint, error) {
+func (q *DashboardQueries) GetRevenueSeries(orgID uuid.UUID, currency string) ([]models.RevenuePoint, error) {
 	now := time.Now()
 	oldest := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -5, 0)
 
@@ -110,7 +110,7 @@ func (q *DashboardQueries) GetRevenueSeries(userID uuid.UUID, currency string) (
 	revenueQuery := q.Model(&models.Payment{}).
 		Select("payments.created_at AS created_at, payments.amount AS amount").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
-		Where("invoices.user_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", userID, oldest)
+		Where("invoices.org_id = ? AND payments.created_at >= ? AND payments.voided_at IS NULL", orgID, oldest)
 	if currency != "" {
 		revenueQuery = revenueQuery.Where("invoices.currency = ?", currency)
 	}

@@ -13,10 +13,10 @@ import (
 	"github.com/tertua/tupay/platform/database"
 )
 
-// invoiceNotifData builds the data block shared by invoice.* events.
-func invoiceNotifData(db *database.Queries, userID, invoiceID uuid.UUID) fiber.Map {
+// invoiceNotifData builds the data block shared by invoice.* events; orgID scopes both lookups.
+func invoiceNotifData(db *database.Queries, orgID, invoiceID uuid.UUID) fiber.Map {
 	out := fiber.Map{"invoice_id": invoiceID.String()}
-	invoice, err := db.GetInvoice(userID, invoiceID)
+	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
 		return out
 	}
@@ -27,7 +27,7 @@ func invoiceNotifData(db *database.Queries, userID, invoiceID uuid.UUID) fiber.M
 	out["currency"] = invoice.Currency
 	out["total"] = invoice.Total
 	if invoice.ClientID != nil {
-		if client, err := db.GetClient(userID, *invoice.ClientID); err == nil {
+		if client, err := db.GetClient(orgID, *invoice.ClientID); err == nil {
 			out["client_name"] = client.Name
 			out["client_company"] = client.Company
 			out["client_email"] = client.Email
@@ -46,7 +46,7 @@ func paymentNotifData(db *database.Queries, payment models.Payment) fiber.Map {
 		"method":     payment.Method,
 		"paid_on":    utils.FormatDate(payment.PaidOn),
 	}
-	for k, v := range invoiceNotifData(db, payment.UserID, payment.InvoiceID) {
+	for k, v := range invoiceNotifData(db, payment.OrgID, payment.InvoiceID) {
 		if _, exists := out[k]; !exists {
 			out[k] = v
 		}

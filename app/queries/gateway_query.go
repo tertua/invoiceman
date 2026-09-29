@@ -1,14 +1,11 @@
 package queries
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // GatewayQueries provides persistence for the central payment relay.
@@ -40,6 +37,7 @@ func (q *GatewayQueries) GetProjectByKeyHash(hash string) (models.GatewayProject
 }
 
 // ListProjects returns one page of registered projects ordered by slug.
+// Stays cross-org on purpose: the admin console route (RequireRoles("admin")) spans all tenants.
 func (q *GatewayQueries) ListProjects(limit, offset int) ([]models.GatewayProject, error) {
 	out := []models.GatewayProject{}
 	if err := q.Order("slug ASC").Limit(limit).Offset(offset).Find(&out).Error; err != nil {
@@ -76,8 +74,7 @@ func (q *GatewayQueries) GetTransaction(orderID string) (models.GatewayTransacti
 	return t, nil
 }
 
-// ListTransactionsByProject returns one page of transactions for one
-// project, newest first.
+// ListTransactionsByProject returns one page of transactions for one project, newest first.
 func (q *GatewayQueries) ListTransactionsByProject(projectSlug string, limit, offset int) ([]models.GatewayTransaction, error) {
 	out := []models.GatewayTransaction{}
 	if err := q.Where("project_slug = ?", projectSlug).Order("created_at DESC").Limit(limit).Offset(offset).Find(&out).Error; err != nil {
@@ -96,6 +93,7 @@ func (q *GatewayQueries) CountTransactionsByProject(projectSlug string) (int64, 
 }
 
 // ListAllTransactions returns one page of transactions across projects.
+// Stays cross-org on purpose: platform-admin transaction audit spans all orgs.
 func (q *GatewayQueries) ListAllTransactions(limit, offset int) ([]models.GatewayTransaction, error) {
 	out := []models.GatewayTransaction{}
 	if err := q.Order("created_at DESC").Limit(limit).Offset(offset).Find(&out).Error; err != nil {
@@ -116,78 +114,6 @@ func (q *GatewayQueries) CountAllTransactions() (int64, error) {
 // SaveTransaction persists transaction changes.
 func (q *GatewayQueries) SaveTransaction(t *models.GatewayTransaction) error {
 	return q.Save(t).Error
-}
-
-// SaveTransactionAndSettleInvoice atomically stores a successful local
-// transaction and its invoice payment. GatewayOrderID makes webhook replays
-// idempotent; the invoice row lock serializes distinct payments against its
-// remaining balance on PostgreSQL (SQLite serializes writers itself).
-// method is the human payment label recorded on the payment row.
-func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransaction, gross decimal.Decimal, method string) error {
-	return q.Transaction(func(tx *gorm.DB) error {
-		if t.InvoiceID == nil || t.UserID == nil {
-			return tx.Save(t).Error
-		}
-
-		var invoice models.Invoice
-		loadErr := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND user_id = ?", *t.InvoiceID, *t.UserID).
-			First(&invoice).Error
-		if loadErr != nil && !errors.Is(loadErr, gorm.ErrRecordNotFound) {
-			return loadErr
-		}
-
-		// Record the provider's success even when the invoice was deleted
-		// after the intent was created (nothing left to settle).
-		if err := tx.Save(t).Error; err != nil {
-			return err
-		}
-		if loadErr != nil {
-			return nil
-		}
-
-		var existing models.Payment
-		err := tx.Where("gateway_order_id = ?", t.OrderID).First(&existing).Error
-		if err == nil {
-			return nil
-		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-
-		var paid decimal.Decimal
-		if err := tx.Model(&models.Payment{}).Where("invoice_id = ? AND voided_at IS NULL", invoice.ID).
-			Select("COALESCE(SUM(amount), 0)").Scan(&paid).Error; err != nil {
-			return err
-		}
-		balance := invoice.Total.Sub(paid)
-		if !balance.GreaterThan(decimal.Zero) {
-			return nil
-		}
-		amount := balance
-		if gross.GreaterThan(decimal.Zero) && gross.LessThan(balance) {
-			amount = gross
-		}
-		now := time.Now()
-		orderID := t.OrderID
-		if err := tx.Create(&models.Payment{
-			ID: uuid.New(), CreatedAt: now, UserID: *t.UserID,
-			InvoiceID: invoice.ID, Amount: amount,
-			Method: method, PaidOn: &now,
-			TxnID: t.MidtransTxnID, GatewayOrderID: &orderID,
-			Notes: method + " " + t.OrderID,
-		}).Error; err != nil {
-			return err
-		}
-		// Auto-mark paid when the settlement covers the invoice total.
-		if invoice.Status != models.InvoiceStatusPaid && invoice.Total.GreaterThan(decimal.Zero) && paid.Add(amount).GreaterThanOrEqual(invoice.Total) {
-			if err := tx.Model(&models.Invoice{}).Where("id = ?", invoice.ID).
-				Updates(map[string]any{"status": models.InvoiceStatusPaid, "updated_at": now}).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }
 
 // CreateEvent stores a raw gateway event for audit.
@@ -249,8 +175,7 @@ func (q *GatewayQueries) SaveDelivery(d *models.WebhookDelivery) error {
 	})
 }
 
-// FailDelivery records a failed forward attempt without touching payload
-// or signature. Used by the background worker.
+// FailDelivery records a failed forward attempt without touching payload or signature; used by the background worker.
 func (q *GatewayQueries) FailDelivery(id uuid.UUID, status string, attempt int, retry *time.Time, respBody string, now time.Time) error {
 	return DoRetry(func() error {
 		return q.Model(&models.WebhookDelivery{}).Where("id = ?", id).

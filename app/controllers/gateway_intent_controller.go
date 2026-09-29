@@ -157,7 +157,7 @@ func GatewayStatus(c fiber.Ctx) error {
 // @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /invoices/{id}/intents [post]
 func CreateInvoiceIntent(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, userID, err := currentUserOrg(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -169,7 +169,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	invoice, err := db.GetInvoice(userID, invoiceID)
+	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
@@ -191,7 +191,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "payment gateway is not registered", nil)
 	}
-	settings, err := db.GetSettings(userID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}

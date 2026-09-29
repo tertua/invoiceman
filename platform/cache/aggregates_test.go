@@ -10,18 +10,18 @@ import (
 )
 
 func TestAggKeyNormalization(t *testing.T) {
-	a := AggKey("u1", "dashboard:stats", "USD")
-	if AggKey("u1", "dashboard:stats", " usd ") != a {
+	a := AggKey("org-1", "dashboard:stats", "USD")
+	if AggKey("org-1", "dashboard:stats", " usd ") != a {
 		t.Error("expected case/space-insensitive currency")
 	}
-	if AggKey("u1", "dashboard:stats", "") == a {
+	if AggKey("org-1", "dashboard:stats", "") == a {
 		t.Error("expected empty currency to differ from USD")
 	}
-	if AggScope("u1") != "agg:v1:u1:" {
-		t.Errorf("unexpected scope %q", AggScope("u1"))
+	if AggScope("org-1") != "agg:v1:org-1:" {
+		t.Errorf("unexpected scope %q", AggScope("org-1"))
 	}
-	if AggKey("u1", "reports", "USD") == a {
-		t.Error("expected kinds to differ")
+	if AggKey("org-1", "reports", "USD") == a || AggKey("org-2", "dashboard:stats", "USD") == a {
+		t.Error("expected kind and org to yield distinct keys")
 	}
 }
 
@@ -48,21 +48,21 @@ func TestMemoryAggRoundTrip(t *testing.T) {
 	}
 }
 
-func TestMemoryAggDeletePrefix(t *testing.T) {
+func TestInvalidateOrgScope(t *testing.T) {
 	ctx := context.Background()
-	a := newMemoryAgg()
-	_ = a.Set(ctx, AggKey("u1", "reports", "USD"), []byte(`1`), time.Minute)
-	_ = a.Set(ctx, AggKey("u1", "dashboard:stats", ""), []byte(`2`), time.Minute)
-	_ = a.Set(ctx, AggKey("u2", "reports", "USD"), []byte(`3`), time.Minute)
+	a := mustAgg(t)
+	_ = a.Set(ctx, AggKey("org-1", "reports", "USD"), []byte(`1`), time.Minute)
+	_ = a.Set(ctx, AggKey("org-1", "dashboard:stats", ""), []byte(`2`), time.Minute)
+	_ = a.Set(ctx, AggKey("org-2", "reports", "USD"), []byte(`3`), time.Minute)
 
-	if err := a.DeletePrefix(ctx, AggScope("u1")); err != nil {
+	if err := InvalidateOrg(ctx, "org-1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Get(ctx, AggKey("u1", "reports", "USD")); !errors.Is(err, ErrCacheMiss) {
-		t.Error("expected u1 entries invalidated")
+	if _, err := a.Get(ctx, AggKey("org-1", "reports", "USD")); !errors.Is(err, ErrCacheMiss) {
+		t.Error("expected org-1 entries invalidated")
 	}
-	if _, err := a.Get(ctx, AggKey("u2", "reports", "USD")); err != nil {
-		t.Errorf("expected u2 entry kept, got %v", err)
+	if _, err := a.Get(ctx, AggKey("org-2", "reports", "USD")); err != nil {
+		t.Errorf("expected org-2 entry kept, got %v", err)
 	}
 }
 

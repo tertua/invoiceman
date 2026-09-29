@@ -8,8 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// NotificationQueries persists user-owned webhook endpoints and their
-// outbound deliveries for the background worker.
+// NotificationQueries persists user-owned webhook endpoints and their outbound deliveries for the worker.
+// Inbox rows stay user-scoped (D11); org fan-out writes one row per member via enqueueOrgNotification.
 type NotificationQueries struct {
 	*gorm.DB
 }

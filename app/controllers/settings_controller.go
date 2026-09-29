@@ -21,7 +21,7 @@ import (
 // @Security SessionCookie
 // @Router /settings [get]
 func GetSettings(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -29,7 +29,7 @@ func GetSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	settings, err := db.GetSettings(userID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
@@ -47,7 +47,7 @@ func GetSettings(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /settings [patch]
 func UpdateSettings(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -62,7 +62,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	settings, err := db.GetSettings(userID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
@@ -74,8 +74,8 @@ func UpdateSettings(c fiber.Ctx) error {
 	if err := db.UpdateSettings(&settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update settings", nil)
 	}
-	recordAudit(c, db, userID, "settings.update", "settings", userID.String(), "")
-	settings, err = db.GetSettings(userID)
+	recordAudit(c, db, utils.CurrentActorID(c), "settings.update", "settings", orgID.String(), "")
+	settings, err = db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)
 	}
@@ -103,7 +103,7 @@ var allowedLogoTypes = map[string]string{
 // @Security SessionCookie
 // @Router /settings/logo [post]
 func UploadLogo(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -111,7 +111,7 @@ func UploadLogo(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	settings, err := db.GetSettings(userID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
@@ -139,7 +139,7 @@ func UploadLogo(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "file storage is not configured", nil)
 	}
-	key := storage.LogoKey(userID.String(), ext)
+	key := storage.LogoKey(orgID.String(), ext)
 	if _, err := reader.Seek(0, io.SeekStart); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read logo file", nil)
 	}
@@ -150,8 +150,8 @@ func UploadLogo(c fiber.Ctx) error {
 	if err := db.UpdateSettings(&settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update settings", nil)
 	}
-	recordAudit(c, db, userID, "settings.logo.upload", "settings", userID.String(), "")
-	settings, err = db.GetSettings(userID)
+	recordAudit(c, db, utils.CurrentActorID(c), "settings.logo.upload", "settings", orgID.String(), "")
+	settings, err = db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)
 	}

@@ -13,38 +13,37 @@ type ClientQueries struct {
 	*gorm.DB
 }
 
-// CountClients returns the total clients of a user for pagination meta.
-func (q *ClientQueries) CountClients(userID uuid.UUID) (int64, error) {
+// CountClients returns the total clients of an org for pagination meta.
+func (q *ClientQueries) CountClients(orgID uuid.UUID) (int64, error) {
 	var total int64
-	if err := q.Model(&models.Client{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+	if err := q.Model(&models.Client{}).Where("org_id = ?", orgID).Count(&total).Error; err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
-// GetClient returns one client of a user by ID.
-func (q *ClientQueries) GetClient(userID, id uuid.UUID) (models.Client, error) {
+// GetClient returns one client of an org by ID.
+func (q *ClientQueries) GetClient(orgID, id uuid.UUID) (models.Client, error) {
 	client := models.Client{}
 
-	if err := q.Where("id = ? AND user_id = ?", id, userID).First(&client).Error; err != nil {
+	if err := q.Where("id = ? AND org_id = ?", id, orgID).First(&client).Error; err != nil {
 		return client, notFound(err)
 	}
 
 	return client, nil
 }
 
-// CreateClient creates a new client.
+// CreateClient creates a new client; a missing OrgID rides as the creator UserID until callers pass org scope (rides-as).
 func (q *ClientQueries) CreateClient(c *models.Client) error {
-	if err := q.Create(c).Error; err != nil {
-		return err
+	if c.OrgID == uuid.Nil {
+		c.OrgID = c.UserID
 	}
-
-	return nil
+	return q.Create(c).Error
 }
 
-// UpdateClient updates a client of a user.
+// UpdateClient updates a client of an org.
 func (q *ClientQueries) UpdateClient(c *models.Client) error {
-	if err := q.Model(&models.Client{}).Where("id = ? AND user_id = ?", c.ID, c.UserID).
+	if err := q.Model(&models.Client{}).Where("id = ? AND org_id = ?", c.ID, c.OrgID).
 		Updates(map[string]any{
 			"updated_at": time.Now(),
 			"name":       c.Name,
@@ -60,9 +59,9 @@ func (q *ClientQueries) UpdateClient(c *models.Client) error {
 	return nil
 }
 
-// DeleteClient deletes a client of a user.
-func (q *ClientQueries) DeleteClient(userID, id uuid.UUID) error {
-	if err := q.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Client{}).Error; err != nil {
+// DeleteClient deletes a client of an org.
+func (q *ClientQueries) DeleteClient(orgID, id uuid.UUID) error {
+	if err := q.Where("id = ? AND org_id = ?", id, orgID).Delete(&models.Client{}).Error; err != nil {
 		return err
 	}
 

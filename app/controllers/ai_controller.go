@@ -135,7 +135,7 @@ func ReceiptParse(c fiber.Ctx) error {
 // @Param X-Locale header string false "Answer language: en or id (default en)"
 // @Router /ai/business-summary [post]
 func BusinessSummary(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -143,17 +143,17 @@ func BusinessSummary(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	stats, err := db.GetStats(userID, "")
+	stats, err := db.GetStats(orgID, "")
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load business data", nil)
 	}
-	report, err := db.GetReports(userID, "")
+	report, err := db.GetReports(orgID, "")
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load business data", nil)
 	}
 	// Best-effort: without a currency the model defaults bare numbers to $.
 	currency := ""
-	if settings, serr := db.GetSettings(userID); serr == nil {
+	if settings, serr := db.GetSettings(orgID); serr == nil {
 		currency = settings.Currency
 	}
 	lang := aiLocale(c)
@@ -177,7 +177,7 @@ func BusinessSummary(c fiber.Ctx) error {
 // @Param X-Locale header string false "Answer language: en or id (default en)"
 // @Router /ai/payment-reminder [post]
 func PaymentReminder(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -196,11 +196,11 @@ func PaymentReminder(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	invoice, err := db.GetInvoice(userID, invoiceID)
+	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
-	detail, err := invoiceDetail(*db, userID, invoiceID)
+	detail, err := invoiceDetail(*db, orgID, invoiceID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
@@ -229,7 +229,7 @@ func PaymentReminder(c fiber.Ctx) error {
 // @Param X-Locale header string false "Answer language: en or id (default en)"
 // @Router /ai/write-note [post]
 func WriteNote(c fiber.Ctx) error {
-	if _, err := utils.CurrentUserID(c); err != nil {
+	if _, err := utils.CurrentOrgID(c); err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 	input := &models.WriteNoteInput{}

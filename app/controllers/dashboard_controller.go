@@ -12,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// GetDashboard returns dashboard aggregates for the current user.
+// GetDashboard returns dashboard aggregates for the current organization.
 // @Description Get dashboard aggregates.
 // @Summary get dashboard aggregates
 // @Tags Dashboard
@@ -22,7 +22,7 @@ import (
 // @Security SessionCookie
 // @Router /dashboard [get]
 func GetDashboard(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -34,25 +34,25 @@ func GetDashboard(c fiber.Ctx) error {
 
 	currency := strings.TrimSpace(c.Query("currency"))
 	ctx := c.Context()
-	stats, err := cache.FetchJSON(ctx, cache.AggKey(userID.String(), "dashboard:stats", currency),
+	stats, err := cache.FetchJSON(ctx, cache.AggKey(orgID.String(), "dashboard:stats", currency),
 		func(ctx context.Context) (models.DashboardStats, error) {
-			return db.GetStats(userID, currency)
+			return db.GetStats(orgID, currency)
 		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load dashboard stats", nil)
 	}
 
-	series, err := cache.FetchJSON(ctx, cache.AggKey(userID.String(), "dashboard:series", currency),
+	series, err := cache.FetchJSON(ctx, cache.AggKey(orgID.String(), "dashboard:series", currency),
 		func(ctx context.Context) ([]models.RevenuePoint, error) {
-			return db.GetRevenueSeries(userID, currency)
+			return db.GetRevenueSeries(orgID, currency)
 		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load revenue series", nil)
 	}
 
-	recent, err := cache.FetchJSON(ctx, cache.AggKey(userID.String(), "dashboard:recent", currency),
+	recent, err := cache.FetchJSON(ctx, cache.AggKey(orgID.String(), "dashboard:recent", currency),
 		func(ctx context.Context) ([]models.RecentInvoice, error) {
-			return db.GetRecentInvoices(userID, currency)
+			return db.GetRecentInvoices(orgID, currency)
 		})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load recent invoices", nil)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
@@ -33,7 +34,6 @@ func projectResponse(p models.GatewayProject, revealSecrets bool, apiKey string)
 	return out
 }
 
-// CreateProject registers a downstream project and returns secrets once.
 // @Description Register a downstream project.
 // @Summary create gateway project
 // @Tags Admin
@@ -43,10 +43,11 @@ func projectResponse(p models.GatewayProject, revealSecrets bool, apiKey string)
 // @Success 201 {object} map[string]interface{}
 // @Router /admin/gateway/projects [post]
 func CreateProject(c fiber.Ctx) error {
-	ownerID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
-		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
+	ownerID := utils.CurrentActorID(c)
 	input := &models.CreateProjectInput{}
 	if err := c.Bind().Body(input); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
@@ -81,6 +82,7 @@ func CreateProject(c fiber.Ctx) error {
 	p := &models.GatewayProject{
 		Slug:           input.Slug,
 		OwnerUserID:    &ownerID,
+		OrgID:          orgID,
 		Name:           strings.TrimSpace(input.Name),
 		APIKeyHash:     relay.HashKey(apiKey),
 		WebhookURL:     strings.TrimSpace(input.WebhookURL),
@@ -178,7 +180,6 @@ func UpdateProject(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, "")})
 }
 
-// RotateProjectKey issues a new API key for a project (old key stops working).
 // @Description Rotate a project API key.
 // @Summary rotate project key
 // @Tags Admin
@@ -207,13 +208,12 @@ func RotateProjectKey(c fiber.Ctx) error {
 	if err := db.SaveProject(&p); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate key", nil)
 	}
-	if adminID, aerr := utils.CurrentUserID(c); aerr == nil {
+	if adminID := utils.CurrentActorID(c); adminID != uuid.Nil {
 		recordAudit(c, db, adminID, "gateway.key.rotate", "project", p.Slug, "")
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, apiKey)})
 }
 
-// RotateProjectSecret issues a new webhook secret for a project.
 // @Description Rotate a project webhook secret.
 // @Summary rotate project secret
 // @Tags Admin
@@ -242,7 +242,7 @@ func RotateProjectSecret(c fiber.Ctx) error {
 	if err := db.SaveProject(&p); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate secret", nil)
 	}
-	if adminID, aerr := utils.CurrentUserID(c); aerr == nil {
+	if adminID := utils.CurrentActorID(c); adminID != uuid.Nil {
 		recordAudit(c, db, adminID, "gateway.secret.rotate", "project", p.Slug, "")
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"project": projectResponse(p, true, "")})

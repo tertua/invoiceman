@@ -17,6 +17,7 @@ import (
 // idle proxies from closing the stream, retry tells EventSource how fast
 // to reconnect. No timeout middleware here by design: the connection is
 // meant to stay open (see WithAITimeout, which this route skips).
+// D11: this SSE stream stays per-user — org fan-out repeats the per-member publish, it never widens one shared stream.
 // @Description Live aggregate-change events for the current user.
 // @Summary subscribe to live events
 // @Tags Events

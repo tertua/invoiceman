@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
 )
@@ -41,7 +42,7 @@ func DeleteProject(c fiber.Ctx) error {
 	if err := db.DeleteProject(p.Slug); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete project", nil)
 	}
-	if adminID, aerr := utils.CurrentUserID(c); aerr == nil {
+	if adminID := utils.CurrentActorID(c); adminID != uuid.Nil {
 		recordAudit(c, db, adminID, "gateway.project.delete", "project", p.Slug, "")
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "project deleted"})

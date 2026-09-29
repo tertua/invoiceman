@@ -9,28 +9,9 @@ import (
 	"time"
 
 	"github.com/tertua/tupay/app/models"
-	"github.com/tertua/tupay/app/queries"
 	"github.com/tertua/tupay/pkg/configs"
 	"gorm.io/gorm"
 )
-
-// Queries struct for collect all app queries.
-type Queries struct {
-	*queries.UserQueries         // load queries from User model
-	*queries.ClientQueries       // load queries from Client model
-	*queries.InvoiceQueries      // load queries from Invoice model
-	*queries.ItemQueries         // load queries from Item model
-	*queries.ExpenseQueries      // load queries from Expense model
-	*queries.PaymentQueries      // load queries from Payment model
-	*queries.GatewayQueries      // load queries for central payment relay
-	*queries.ReportQueries       // load queries for Reports aggregates
-	*queries.SettingsQueries     // load queries from Settings model
-	*queries.DashboardQueries    // load queries for Dashboard aggregates
-	*queries.IdempotencyQueries  // load queries for idempotency keys
-	*queries.MailOutboxQueries   // load queries for mail outbox
-	*queries.NotificationQueries // load queries for notification webhooks
-	*queries.AuditQueries        // load queries for audit trail
-}
 
 var (
 	sharedDB  *gorm.DB
@@ -53,31 +34,13 @@ func OpenDBConnection() (*Queries, error) {
 		return nil, err
 	}
 
-	return &Queries{
-		// Set queries from models:
-		UserQueries:         &queries.UserQueries{DB: db},         // from User model
-		ClientQueries:       &queries.ClientQueries{DB: db},       // from Client model
-		InvoiceQueries:      &queries.InvoiceQueries{DB: db},      // from Invoice model
-		ItemQueries:         &queries.ItemQueries{DB: db},         // from Item model
-		ExpenseQueries:      &queries.ExpenseQueries{DB: db},      // from Expense model
-		PaymentQueries:      &queries.PaymentQueries{DB: db},      // from Payment model
-		GatewayQueries:      &queries.GatewayQueries{DB: db},      // for central payment relay
-		ReportQueries:       &queries.ReportQueries{DB: db},       // for Reports aggregates
-		SettingsQueries:     &queries.SettingsQueries{DB: db},     // from Settings model
-		DashboardQueries:    &queries.DashboardQueries{DB: db},    // for Dashboard aggregates
-		IdempotencyQueries:  &queries.IdempotencyQueries{DB: db},  // for idempotency keys
-		MailOutboxQueries:   &queries.MailOutboxQueries{DB: db},   // for mail outbox
-		NotificationQueries: &queries.NotificationQueries{DB: db}, // for notification webhooks
-		AuditQueries:        &queries.AuditQueries{DB: db},        // for audit trail
-	}, nil
+	return newQueries(db), nil
 }
 
-// SchemaVersion is the current schema revision. Bump it by 1 every time a
-// model changes so the version guard below can detect newer databases.
-const SchemaVersion = 15
+// SchemaVersion is the current schema revision; bump it by 1 whenever a model changes so the version guard below can detect newer databases.
+const SchemaVersion = 16
 
-// Migrate creates or updates tables from models, then enforces the schema
-// version guard (forward-only upgrades; newer DB than binary is fatal).
+// Migrate creates or updates tables from models, then enforces the forward-only version guard (newer DB than binary is fatal).
 func Migrate() error {
 	db, err := openShared()
 	if err != nil {
@@ -106,14 +69,14 @@ func Migrate() error {
 		&models.SchemaMigration{},
 		&models.AuditLog{},
 		&models.AdminClaim{},
+		&models.Organization{},
+		&models.Membership{},
+		&models.OrgInvite{},
 	); err != nil {
 		return err
 	}
 
-	// Data heal (idempotent, no schema change): invoices that are fully
-	// covered by non-voided payments must read stored as paid, so the
-	// status column stays in sync for rows created before auto-marking.
-	// Standard SQL here runs on both SQLite and PostgreSQL.
+	// Data heal (idempotent, no schema change): re-mark invoices fully covered by non-voided payments as paid so the status column stays in sync for rows created before auto-marking; the SQL is standard on both SQLite and PostgreSQL.
 	_ = db.Exec(
 		"UPDATE invoices SET status = 'paid', updated_at = ? "+
 			"WHERE status = 'sent' AND total > 0 AND "+
@@ -121,6 +84,11 @@ func Migrate() error {
 			"WHERE payments.invoice_id = invoices.id AND payments.voided_at IS NULL) >= invoices.total",
 		time.Now(),
 	).Error
+
+	// Personal-org backfill is idempotent and must finish before the version guard: any failure aborts startup.
+	if err := backfillOrganizations(db); err != nil {
+		return fmt.Errorf("organization backfill: %w", err)
+	}
 
 	return checkSchemaVersion(db)
 }

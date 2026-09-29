@@ -23,7 +23,7 @@ import (
 // @Security SessionCookie
 // @Router /invoices [get]
 func ListInvoices(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -36,7 +36,7 @@ func ListInvoices(c fiber.Ctx) error {
 	status, search := c.Query("status"), c.Query("search")
 	paging := utils.ParsePagination(c)
 	rows, err := db.ListInvoices(
-		userID,
+		orgID,
 		status,
 		search,
 		c.Query("sort"),
@@ -47,13 +47,13 @@ func ListInvoices(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoices", nil)
 	}
-	total, err := db.CountInvoices(userID, status, search)
+	total, err := db.CountInvoices(orgID, status, search)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count invoices", nil)
 	}
 
 	invoices := make([]fiber.Map, 0, len(rows))
-	pending := db.PendingInvoiceIDs(userID)
+	pending := db.PendingInvoiceIDs(orgID)
 	for _, row := range rows {
 		invoices = append(invoices, fiber.Map{
 			"id":               row.ID,

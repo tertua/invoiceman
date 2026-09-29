@@ -23,8 +23,8 @@ type recentInvoiceRow struct {
 	CreatedAt     time.Time
 }
 
-// GetRecentInvoices returns the 5 most recent invoices of a user.
-func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) ([]models.RecentInvoice, error) {
+// GetRecentInvoices returns the 5 most recent invoices of an org.
+func (q *DashboardQueries) GetRecentInvoices(orgID uuid.UUID, currency string) ([]models.RecentInvoice, error) {
 	invoices := []models.RecentInvoice{}
 
 	paidSubquery := q.Model(&models.Payment{}).
@@ -41,7 +41,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 			COALESCE(pay.paid, 0) AS paid_amount`).
 		Joins("LEFT JOIN clients ON clients.id = invoices.client_id").
 		Joins("LEFT JOIN (?) AS pay ON pay.invoice_id = invoices.id", paidSubquery).
-		Where("invoices.user_id = ?", userID)
+		Where("invoices.org_id = ?", orgID)
 	if currency != "" {
 		recentQuery = recentQuery.Where("invoices.currency = ?", currency)
 	}
@@ -52,7 +52,7 @@ func (q *DashboardQueries) GetRecentInvoices(userID uuid.UUID, currency string) 
 		return invoices, err
 	}
 
-	pending := pendingInvoiceSet(q.DB, userID)
+	pending := pendingInvoiceSet(q.DB, orgID)
 	for _, row := range rows {
 		issueDate := ""
 		if row.IssueDate != nil {

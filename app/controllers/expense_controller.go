@@ -29,8 +29,7 @@ func expenseResponse(expense models.Expense) fiber.Map {
 	}
 }
 
-// receiptProxyURL returns the authenticated proxy path for an attached
-// receipt, or "" when none is attached.
+// receiptProxyURL returns the authenticated proxy path for an attached receipt, or "" when none is attached.
 func receiptProxyURL(expense models.Expense) string {
 	if strings.TrimSpace(expense.ReceiptURL) == "" {
 		return ""
@@ -52,7 +51,7 @@ func receiptProxyURL(expense models.Expense) string {
 // @Security SessionCookie
 // @Router /expenses [get]
 func ListExpenses(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -62,19 +61,19 @@ func ListExpenses(c fiber.Ctx) error {
 	}
 	category := c.Query("category")
 	paging := utils.ParsePagination(c)
-	page, err := db.ListExpenses(userID, category, paging.Limit(), paging.Offset())
+	page, err := db.ListExpenses(orgID, category, paging.Limit(), paging.Offset())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expenses", nil)
 	}
-	total, err := db.CountExpenses(userID, category)
+	total, err := db.CountExpenses(orgID, category)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count expenses", nil)
 	}
-	totals, err := db.GetExpenseTotals(userID, category)
+	totals, err := db.GetExpenseTotals(orgID, category)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense totals", nil)
 	}
-	categories, err := db.ExpenseCategories(userID)
+	categories, err := db.ExpenseCategories(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense categories", nil)
 	}
@@ -106,7 +105,7 @@ func ListExpenses(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /expenses [post]
 func CreateExpense(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -128,7 +127,7 @@ func CreateExpense(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	settings, err := db.GetSettings(userID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
@@ -141,7 +140,8 @@ func CreateExpense(c fiber.Ctx) error {
 		ID:          uuid.New(),
 		CreatedAt:   now,
 		UpdatedAt:   &now,
-		UserID:      userID,
+		UserID:      utils.CurrentActorID(c),
+		OrgID:       orgID,
 		Vendor:      input.Vendor,
 		Category:    input.Category,
 		ExpenseDate: expenseDate,
@@ -152,7 +152,7 @@ func CreateExpense(c fiber.Ctx) error {
 	if err := db.CreateExpense(expense); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create expense", nil)
 	}
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"expense": expenseResponse(*expense)})
 }
 
@@ -168,7 +168,7 @@ func CreateExpense(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /expenses/{id} [patch]
 func UpdateExpense(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -191,11 +191,11 @@ func UpdateExpense(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	settings, err := db.GetSettings(userID)
+	settings, err := db.GetSettings(orgID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
-	expense, err := db.GetExpense(userID, id)
+	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
@@ -214,7 +214,7 @@ func UpdateExpense(c fiber.Ctx) error {
 	if err := db.UpdateExpense(&expense); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update expense", nil)
 	}
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"expense": expenseResponse(expense)})
 }
 
@@ -228,7 +228,7 @@ func UpdateExpense(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /expenses/{id} [delete]
 func DeleteExpense(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -240,16 +240,16 @@ func DeleteExpense(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	if _, err := db.GetExpense(userID, id); err != nil {
+	if _, err := db.GetExpense(orgID, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
 	}
-	if err := db.DeleteExpense(userID, id); err != nil {
+	if err := db.DeleteExpense(orgID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete expense", nil)
 	}
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
@@ -287,7 +287,7 @@ func receiptContentType(header, sniffed string) (string, bool) {
 // @Security SessionCookie
 // @Router /expenses/{id}/receipt [post]
 func UploadReceipt(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -299,7 +299,7 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	expense, err := db.GetExpense(userID, id)
+	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
@@ -326,7 +326,7 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "file storage is not configured", nil)
 	}
-	key := storage.ReceiptKey(userID.String(), id.String(), extForContentType(ct))
+	key := storage.ReceiptKey(orgID.String(), id.String(), extForContentType(ct))
 	if _, err := reader.Seek(0, io.SeekStart); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
 	}
@@ -340,7 +340,7 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err := db.UpdateExpense(&expense); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to save receipt", nil)
 	}
-	recordAudit(c, db, userID, "expense.receipt.upload", "expense", id.String(), "")
+	recordAudit(c, db, utils.CurrentActorID(c), "expense.receipt.upload", "expense", id.String(), "")
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"expense": expenseResponse(expense)})
 }
 
@@ -355,7 +355,7 @@ func UploadReceipt(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /expenses/{id}/receipt [get]
 func GetReceipt(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -367,7 +367,7 @@ func GetReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	expense, err := db.GetExpense(userID, id)
+	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
@@ -409,7 +409,7 @@ func GetReceipt(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /expenses/{id}/receipt [delete]
 func DeleteReceipt(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, err := utils.CurrentOrgID(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -421,7 +421,7 @@ func DeleteReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	expense, err := db.GetExpense(userID, id)
+	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
@@ -437,7 +437,7 @@ func DeleteReceipt(c fiber.Ctx) error {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to remove receipt", nil)
 		}
 	}
-	recordAudit(c, db, userID, "expense.receipt.delete", "expense", id.String(), "")
+	recordAudit(c, db, utils.CurrentActorID(c), "expense.receipt.delete", "expense", id.String(), "")
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

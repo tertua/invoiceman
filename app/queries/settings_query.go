@@ -1,7 +1,6 @@
 package queries
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,32 +13,26 @@ type SettingsQueries struct {
 	*gorm.DB
 }
 
-// GetSettings returns user settings, creating defaults on first use.
-func (q *SettingsQueries) GetSettings(userID uuid.UUID) (models.Settings, error) {
-	settings := models.Settings{UserID: userID}
-
-	if err := q.Where("user_id = ?", userID).First(&settings).Error; err == nil {
-		return settings, nil
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+// GetSettings returns org settings, creating defaults on first use.
+func (q *SettingsQueries) GetSettings(orgID uuid.UUID) (models.Settings, error) {
+	settings := models.Settings{OrgID: orgID}
+	// No actor param here, so user_id rides as orgID until register provisions the personal org (6.11).
+	if err := q.Where("org_id = ?", orgID).
+		Attrs(models.DefaultSettings(orgID)).
+		FirstOrCreate(&settings).Error; err != nil {
 		return settings, err
 	}
-
-	defaults := models.DefaultSettings(userID)
-	if err := q.Create(defaults).Error; err != nil {
-		return settings, err
-	}
-	settings = *defaults
 	return settings, nil
 }
 
-// CreateSettings creates the default settings row for a user.
+// CreateSettings creates the default settings row for an org, leaving an existing row untouched (an invite join reuses the inviting org's settings).
 func (q *SettingsQueries) CreateSettings(s *models.Settings) error {
-	return q.Create(s).Error
+	return q.Where("org_id = ?", s.OrgID).Attrs(*s).FirstOrCreate(s).Error
 }
 
-// UpdateSettings updates user settings.
+// UpdateSettings updates org settings.
 func (q *SettingsQueries) UpdateSettings(s *models.Settings) error {
-	if err := q.Model(&models.Settings{}).Where("user_id = ?", s.UserID).
+	if err := q.Model(&models.Settings{}).Where("org_id = ?", s.OrgID).
 		Updates(map[string]any{
 			"updated_at":       time.Now(),
 			"company_name":     s.CompanyName,

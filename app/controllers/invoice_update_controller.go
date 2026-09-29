@@ -28,7 +28,7 @@ import (
 // @Security SessionCookie
 // @Router /invoices/{id} [patch]
 func UpdateInvoice(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
+	orgID, userID, err := currentUserOrg(c)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
@@ -51,7 +51,7 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
-	existing, err := db.GetInvoice(userID, id)
+	existing, err := db.GetInvoice(orgID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
@@ -59,14 +59,14 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	if err := rejectLockedInvoice(*db, userID, id, existing); err != nil {
+	if err := rejectLockedInvoice(*db, orgID, id, existing); err != nil {
 		if errors.Is(err, ErrPendingPayment) || errors.Is(err, ErrInvoicePaid) {
 			return failInvoiceRule(c, err)
 		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 	}
 
-	invoice, items, err := buildInvoice(userID, input)
+	invoice, items, err := buildInvoice(orgID, userID, input)
 	if err != nil {
 		return failInvoiceRule(c, err)
 	}
@@ -77,7 +77,7 @@ func UpdateInvoice(c fiber.Ctx) error {
 	}
 
 	if invoice.ClientID != nil {
-		if _, err := db.GetClient(userID, *invoice.ClientID); err != nil {
+		if _, err := db.GetClient(orgID, *invoice.ClientID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
 			}
@@ -85,19 +85,19 @@ func UpdateInvoice(c fiber.Ctx) error {
 		}
 	}
 
-	if err := db.UpdateInvoice(userID, invoice, items); err != nil {
+	if err := db.UpdateInvoice(orgID, invoice, items); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update invoice", nil)
 	}
 
-	detail, err := invoiceDetail(*db, userID, existing.ID)
+	detail, err := invoiceDetail(*db, orgID, existing.ID)
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	invalidateAggregates(c, userID)
+	invalidateAggregates(c, orgID)
 	if existing.Status != invoice.Status {
-		enqueueNotification(db, userID, models.NotifEventInvoiceStatusUpdated, "",
-			invoiceNotifData(db, userID, existing.ID))
+		enqueueOrgNotification(db, orgID, models.NotifEventInvoiceStatusUpdated, "",
+			invoiceNotifData(db, orgID, existing.ID))
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"invoice": detail})
 }

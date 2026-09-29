@@ -149,7 +149,8 @@ func (w *Worker) reconcileOne(ctx context.Context, db *database.Queries, txn mod
 			logger.L().Warn("outbox reconcile settle failed", "order_id", txn.OrderID, "err", err)
 			return
 		}
-		recordErr("invalidate user cache", cache.InvalidateUser(ctx, txn.UserID.String()), "order_id", txn.OrderID)
+		orgID, oerr := db.OrgIDForTransaction(&txn)
+		recordErr("invalidate org cache", errors.Join(oerr, cache.InvalidateOrg(ctx, orgID.String())), "order_id", txn.OrderID)
 		logger.L().Info("outbox reconcile settled invoice", "order_id", txn.OrderID)
 		return
 	}

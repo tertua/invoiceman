@@ -17,20 +17,21 @@ import (
 	"github.com/tertua/tupay/platform/midtrans"
 )
 
-// seedReconcileInvoice creates a user with one sent invoice for reconcile tests.
-func seedReconcileInvoice(t *testing.T, db *database.Queries, total string) (uuid.UUID, models.Invoice) {
+// seedReconcileInvoice creates a user with one sent invoice for reconcile tests, returning the owning org first.
+func seedReconcileInvoice(t *testing.T, db *database.Queries, total string) (orgID, uid uuid.UUID, inv models.Invoice) {
 	t.Helper()
-	uid := uuid.New()
+	orgID = uuid.New()
+	uid = uuid.New()
 	require.NoError(t, db.CreateUser(&models.User{
 		ID: uid, Name: "Recon", Email: "recon-" + uid.String() + "@example.com",
 		PasswordHash: "x", UserStatus: 1, UserRole: "user",
 	}))
-	inv := models.Invoice{
-		ID: uuid.New(), UserID: uid, Status: models.InvoiceStatusSent,
+	inv = models.Invoice{
+		ID: uuid.New(), UserID: uid, OrgID: orgID, Status: models.InvoiceStatusSent,
 		Currency: "IDR", Total: decimal.RequireFromString(total),
 	}
-	require.NoError(t, db.CreateInvoice(uid, &inv, nil))
-	return uid, inv
+	require.NoError(t, db.CreateInvoice(orgID, &inv, nil))
+	return orgID, uid, inv
 }
 
 func seedPendingTxn(t *testing.T, db *database.Queries, uid uuid.UUID, inv *models.Invoice) string {
@@ -65,7 +66,7 @@ func stubFetchTxStatus(status, gross string) func() {
 func TestReconcileExpired(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "test")
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	_, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedPendingTxn(t, db, uid, &inv)
 	defer stubFetchTxStatus(models.GatewayStatusExpired, "0")()
 
@@ -83,7 +84,7 @@ func TestReconcileExpired(t *testing.T) {
 func TestReconcileSuccessSettles(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "test")
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	orgID, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedPendingTxn(t, db, uid, &inv)
 	defer stubFetchTxStatus(models.GatewayStatusSuccess, "100000")()
 
@@ -95,7 +96,7 @@ func TestReconcileSuccessSettles(t *testing.T) {
 	paid, err := db.PaidAmount(inv.ID)
 	require.NoError(t, err)
 	assert.True(t, paid.Equal(decimal.RequireFromString("100000")), "got %s", paid.String())
-	updated, err := db.GetInvoice(uid, inv.ID)
+	updated, err := db.GetInvoice(orgID, inv.ID)
 	require.NoError(t, err)
 	assert.Equal(t, models.InvoiceStatusPaid, updated.Status)
 }
@@ -104,7 +105,7 @@ func TestReconcileSuccessSettles(t *testing.T) {
 func TestReconcilePendingUnchanged(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "test")
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	_, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedPendingTxn(t, db, uid, &inv)
 	defer stubFetchTxStatus(models.GatewayStatusPending, "0")()
 
@@ -120,7 +121,7 @@ func TestReconcilePendingUnchanged(t *testing.T) {
 func TestReconcileSkippedWithoutGateway(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "")
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	_, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedPendingTxn(t, db, uid, &inv)
 
 	(&Worker{batch: 20}).reconcileGateway(context.Background())
@@ -136,7 +137,7 @@ func TestReconcileSkippedWithoutGateway(t *testing.T) {
 func TestReconcileUnknownOrderMarkedFailed(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "test")
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	orgID, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedPendingTxn(t, db, uid, &inv)
 	old := FetchTxStatus
 	FetchTxStatus = func(ctx context.Context, txn models.GatewayTransaction) (*txStatus, error) {
@@ -152,7 +153,7 @@ func TestReconcileUnknownOrderMarkedFailed(t *testing.T) {
 	paid, err := db.PaidAmount(inv.ID)
 	require.NoError(t, err)
 	assert.True(t, paid.IsZero(), "unknown order must not record a payment")
-	updated, err := db.GetInvoice(uid, inv.ID)
+	updated, err := db.GetInvoice(orgID, inv.ID)
 	require.NoError(t, err)
 	assert.Equal(t, models.InvoiceStatusSent, updated.Status)
 }
@@ -192,7 +193,7 @@ func TestReconcileNowPaymentsSettles(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "test")
 
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	orgID, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedNowPaymentsTxn(t, db, uid, &inv, "pay_np_1", "TAddrNP")
 
 	(&Worker{batch: 20}).reconcileGateway(context.Background())
@@ -205,7 +206,7 @@ func TestReconcileNowPaymentsSettles(t *testing.T) {
 	paid, err := db.PaidAmount(inv.ID)
 	require.NoError(t, err)
 	assert.True(t, paid.Equal(decimal.RequireFromString("100000")), "finished must credit the balance, got %s", paid.String())
-	updated, err := db.GetInvoice(uid, inv.ID)
+	updated, err := db.GetInvoice(orgID, inv.ID)
 	require.NoError(t, err)
 	assert.Equal(t, models.InvoiceStatusPaid, updated.Status)
 }
@@ -224,7 +225,7 @@ func TestReconcileNowPaymentsHostedInvoiceSkipped(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", "test")
 
 	db := testDB(t)
-	uid, inv := seedReconcileInvoice(t, db, "100000")
+	_, uid, inv := seedReconcileInvoice(t, db, "100000")
 	orderID := seedNowPaymentsTxn(t, db, uid, &inv, "inv_hosted", "")
 
 	(&Worker{batch: 20}).reconcileGateway(context.Background())

@@ -89,7 +89,7 @@ func sessionMatches(c fiber.Ctx, userID uuid.UUID, sid string) bool {
 	if err != nil {
 		return false
 	}
-	storedSID, _, _, ok := cache.DecodeSessionValue(stored)
+	storedSID, _, _, _, ok := cache.DecodeSessionValue(stored)
 	if !ok {
 		return false
 	}
@@ -131,7 +131,7 @@ func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 	if err != nil {
 		return uuid.Nil, false
 	}
-	storedSID, storedRefresh, storedCSRF, ok := cache.DecodeSessionValue(stored)
+	storedSID, storedRefresh, storedCSRF, storedOrg, ok := cache.DecodeSessionValue(stored)
 	if !ok || storedRefresh != refreshString {
 		return uuid.Nil, false
 	}
@@ -163,7 +163,7 @@ func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 	if err != nil {
 		return uuid.Nil, false
 	}
-	if err := store.Set(c.Context(), userID.String(), cache.EncodeSessionValue(tokens.SID, tokens.Refresh, storedCSRF), cache.RefreshTTL()); err != nil {
+	if err := store.Set(c.Context(), userID.String(), cache.EncodeSessionValue(tokens.SID, tokens.Refresh, storedCSRF, storedOrg), cache.RefreshTTL()); err != nil {
 		return uuid.Nil, false
 	}
 
