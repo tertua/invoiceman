@@ -20,6 +20,7 @@ type Payment struct {
 	ID             uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id" validate:"required,uuid"`
 	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
 	UserID         uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
+	OrgID          uuid.UUID  `gorm:"type:uuid;index" db:"org_id" json:"org_id"`
 	InvoiceID      uuid.UUID  `gorm:"type:uuid" db:"invoice_id" json:"invoice_id" validate:"required,uuid"`
 	Amount         Money      `gorm:"type:decimal(19,4)" db:"amount" json:"amount"`
 	Method         string     `db:"method" json:"method" validate:"lte=50"`

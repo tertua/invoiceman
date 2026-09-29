@@ -8,12 +8,12 @@ import (
 
 // Register struct to describe register a new user.
 type Register struct {
-	Name     string `json:"name" validate:"required,lte=255"`
-	Email    string `json:"email" validate:"required,email,lte=255"`
-	Password string `json:"password" validate:"required,min=8,lte=255"`
+	Name        string `json:"name" validate:"required,lte=255"`
+	Email       string `json:"email" validate:"required,email,lte=255"`
+	Password    string `json:"password" validate:"required,min=8,lte=255"`
+	InviteToken string `json:"invite_token,omitempty" validate:"omitempty"`
 }
 
-// Login struct to describe login user.
 type Login struct {
 	Email    string `json:"email" validate:"required,email,lte=255"`
 	Password string `json:"password" validate:"required,lte=255"`

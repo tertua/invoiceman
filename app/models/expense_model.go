@@ -12,6 +12,7 @@ type Expense struct {
 	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt   *time.Time `db:"updated_at" json:"updated_at"`
 	UserID      uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
+	OrgID       uuid.UUID  `gorm:"type:uuid;index" db:"org_id" json:"org_id"`
 	Vendor      string     `db:"vendor" json:"vendor" validate:"lte=255"`
 	Category    string     `db:"category" json:"category" validate:"required,lte=100"`
 	ExpenseDate time.Time  `db:"expense_date" json:"expense_date"`

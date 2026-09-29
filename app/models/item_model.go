@@ -12,6 +12,7 @@ type Item struct {
 	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt   *time.Time `db:"updated_at" json:"updated_at"`
 	UserID      uuid.UUID  `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
+	OrgID       uuid.UUID  `gorm:"type:uuid;index" db:"org_id" json:"org_id"`
 	Name        string     `db:"name" json:"name" validate:"required,lte=255"`
 	Description string     `db:"description" json:"description" validate:"lte=1000"`
 	Rate        Money      `gorm:"type:decimal(19,4)" db:"rate" json:"rate"`
