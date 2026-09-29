@@ -13,6 +13,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { authApi } from "@/api/auth";
 import { useSettings, useUpdateSettings, useUploadLogo } from "@/hooks/useSettings";
 import NotificationsTab from "@/components/settings/NotificationsTab";
+import OrgTab from "@/components/settings/OrgTab";
 import DefaultsCard from "@/components/settings/DefaultsCard";
 
 import { cn } from "@/lib/utils";
@@ -393,6 +394,7 @@ export default function Settings() {
           <TabsTrigger value="profile">{t("settings.tabAccount")}</TabsTrigger>
           <TabsTrigger value="appearance">{t("settings.tabAppearance")}</TabsTrigger>
           <TabsTrigger value="notifications">{t("settings.tabNotifications")}</TabsTrigger>
+          <TabsTrigger value="team">{t("org.tab")}</TabsTrigger>
         </TabsList>
 
         <div className="mt-6">
@@ -413,6 +415,9 @@ export default function Settings() {
           </TabsContent>
           <TabsContent value="notifications">
             <NotificationsTab />
+          </TabsContent>
+          <TabsContent value="team">
+            <OrgTab />
           </TabsContent>
         </div>
       </Tabs>

@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import RouteError from "@/components/ui/RouteError";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
-import { publicRoutes } from "@/routesPublic";
+import { fallbackRoute, publicRoutes } from "@/routes/publicRoutes";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Invoices = lazy(() => import("@/pages/Invoices"));
@@ -54,5 +54,5 @@ export const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
+  fallbackRoute,
 ]);
