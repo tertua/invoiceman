@@ -16,6 +16,6 @@ func MetricsRoutes(a *fiber.App) {
 	}
 	a.Get("/metrics", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "text/plain; version=0.0.4")
-		return c.SendString(metrics.Shared().Render())
+		return c.SendString(metrics.Shared().Render() + renderOutboxMetrics())
 	})
 }

@@ -806,6 +806,23 @@ paths:
       summary: rollback schema version
       tags:
       - Admin
+  /admin/outbox/status:
+    get:
+      description: Queue depth per status for every outbox queue, with oldest pending/processing
+        age and worker poll settings.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: get outbox queue status
+      tags:
+      - Admin
   /admin/users:
     get:
       description: List registered users.

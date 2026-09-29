@@ -94,8 +94,5 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Post("/ai/payment-reminder", middleware.WithAITimeout(controllers.PaymentReminder))
 	route.Post("/ai/write-note", middleware.WithAITimeout(controllers.WriteNote))
 
-	admin := a.Group(prefix+"/admin", middleware.GeneralLimiter(), middleware.AuthRequired(), middleware.RequireCSRF(), middleware.RequireRoles("admin"))
-	admin.Get("/users", controllers.ListUsers)
-	admin.Get("/audit-logs", controllers.ListAuditLogs)
-	admin.Post("/migrate/down", controllers.MigrateDown)
+	registerAdminRoutes(a, prefix)
 }
