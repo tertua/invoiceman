@@ -32,7 +32,7 @@ data/
 *.sw?
 
 # Misc.
-*opencode*
+.opencode/
 thoughts/
 TODO.md
 .mindmodel/
