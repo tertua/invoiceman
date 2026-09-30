@@ -14,7 +14,6 @@ import (
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/gateway"
-	"github.com/tertua/tupay/platform/midtrans"
 )
 
 // CreateIntent creates a Midtrans Snap transaction.
@@ -97,25 +96,6 @@ func ListMyTransactions(c fiber.Ctx) error {
 		out = append(out, intentResponse(t))
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"transactions": out, "meta": paging.Meta(total)})
-}
-
-// GatewayConfig returns public browser configuration for the active gateway.
-// Server credentials are never exposed here; the client key is intentionally
-// public and is required by the provider's browser SDK.
-// @Description Get public payment gateway browser configuration.
-// @Summary get gateway browser config
-// @Tags Gateway
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /gateway/config [get]
-func GatewayConfig(c fiber.Ctx) error {
-	cfg := midtrans.FromEnv()
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"gateway":       "midtrans",
-		"client_key":    cfg.ClientKey,
-		"is_production": cfg.IsProd,
-		"configured":    cfg.ServerKey != "",
-	})
 }
 
 // GatewayStatus returns public per-gateway availability for admins and

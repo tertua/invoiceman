@@ -27,15 +27,15 @@ type Config struct {
 	CoreBase string
 }
 
-// FromEnv reads Midtrans config from the central config.
+// FromEnv reads Midtrans config from the provider-keyed environment map.
 func FromEnv() Config {
-	cfg := configs.Get().Midtrans
+	cfg := configs.Get()
 	return Config{
-		ServerKey: cfg.ServerKey,
-		ClientKey: cfg.ClientKey,
-		IsProd:    cfg.IsProd,
-		BaseURL:   cfg.SnapBase,
-		CoreBase:  cfg.CoreBase,
+		ServerKey: cfg.ProviderString(GatewayName, "server_key", ""),
+		ClientKey: cfg.ProviderString(GatewayName, "client_key", ""),
+		IsProd:    cfg.ProviderBool(GatewayName, "is_prod", false),
+		BaseURL:   cfg.ProviderString(GatewayName, "snap_base_url", ""),
+		CoreBase:  cfg.ProviderString(GatewayName, "core_base_url", ""),
 	}
 }
 

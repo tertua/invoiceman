@@ -11,11 +11,12 @@
 // the permitted platform imports; anything else under platform/ is treated as
 // a provider and fails.
 //
-// ORDERING: this check becomes a REQUIRED CI gate at the end of Phase 2 of
-// plans/2026-09-30-gateway-provider-pluggability.md. Until then two files
-// still import a provider package and are allowlisted in DEFERRED_UNTIL_PHASE_2
-// below (with the removal slated for Phase 2). Do NOT "fix" a failure by
-// adding a new name to that list — remove the import instead.
+// ORDERING: this check became a REQUIRED CI gate at the end of Phase 2 of
+// plans/2026-09-30-gateway-provider-pluggability.md. The two files that used to
+// import a provider package (settings_methods.go, gateway_intent_controller.go)
+// were rewired through the registry, so DEFERRED_UNTIL_PHASE_2 is now empty and
+// the check hard-fails on ANY provider import under app/. Do NOT re-add a name
+// to that list — remove the import instead.
 //
 // Usage: node scripts/check-no-provider-imports.mjs
 import { readdir, readFile } from "node:fs/promises";
@@ -36,11 +37,8 @@ const INFRA_PACKAGES = new Set([
   "ai",
 ]);
 
-// Files whose provider import Phase 2 removes. Keep this list frozen.
-const DEFERRED_UNTIL_PHASE_2 = new Set([
-  "app/controllers/settings_methods.go",
-  "app/controllers/gateway_intent_controller.go",
-]);
+// Files whose provider import Phase 2 removes. Frozen empty — see ORDERING.
+const DEFERRED_UNTIL_PHASE_2 = new Set([]);
 
 const IMPORT = /"github\.com\/tertua\/tupay\/platform\/([a-z0-9_]+)"/g;
 
@@ -79,4 +77,4 @@ if (violations.length) {
   console.error("\nRoute through platform/gateway (registry + capabilities), then re-run: node scripts/check-no-provider-imports.mjs");
   process.exit(1);
 }
-console.log("provider imports OK: no app/ file imports a provider package outside the deferred list.");
+console.log("provider imports OK: no app/ file imports a provider package.");

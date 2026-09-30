@@ -84,7 +84,7 @@ func nowpaymentsTxStatus(ctx context.Context, txn models.GatewayTransaction) (*t
 
 // reconcileGateway polls stale pending transactions once per tick.
 func (w *Worker) reconcileGateway(ctx context.Context) {
-	if configs.Get().Midtrans.ServerKey == "" && nowpayments.FromEnv().APIKey == "" {
+	if configs.Get().ProviderString(midtrans.GatewayName, "server_key", "") == "" && nowpayments.FromEnv().APIKey == "" {
 		return // dev without a gateway: nothing to reconcile
 	}
 	db, err := database.OpenDBConnection()

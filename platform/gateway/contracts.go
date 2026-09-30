@@ -87,6 +87,14 @@ type BrowserSDKProvider interface {
 	BrowserSDK() bool
 }
 
+// PayerConfigProvider is an optional capability: providers whose browser
+// checkout needs public configuration report it so the pay page and the
+// /gateway/config endpoint never hardcode a provider. Only public values
+// (client key, environment flags) may be returned — never server secrets.
+type PayerConfigProvider interface {
+	PayerConfig() map[string]any
+}
+
 // MinAmountChecker is an optional capability: providers with live
 // per-currency minimums report them so endpoints can hide a method whose
 // charge could never succeed, instead of failing after the payer commits.

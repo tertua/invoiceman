@@ -35,6 +35,17 @@ func (Gateway) RequiresDecimalAmount() bool { return false }
 // Midtrans Snap browser SDK.
 func (Gateway) BrowserSDK() bool { return true }
 
+// PayerConfig returns the browser-safe Midtrans settings the pay page needs:
+// the public client key and the environment flag. The server key is a secret
+// and is never exposed here.
+func (Gateway) PayerConfig() map[string]any {
+	cfg := FromEnv()
+	return map[string]any{
+		"client_key":    cfg.ClientKey,
+		"is_production": cfg.IsProd,
+	}
+}
+
 func StandardizePaymentType(raw string) string {
 	if method, ok := paymentTypes[strings.ToLower(strings.TrimSpace(raw))]; ok {
 		return method

@@ -23,14 +23,14 @@ type Config struct {
 	CallbackBase string
 }
 
-// FromEnv reads NOWPayments config from the central config.
+// FromEnv reads NOWPayments config from the provider-keyed environment map.
 func FromEnv() Config {
 	cfg := configs.Get()
 	return Config{
-		APIKey:       cfg.NOWPayments.APIKey,
-		IPNSecret:    cfg.NOWPayments.IPNSecret,
-		Sandbox:      cfg.NOWPayments.Sandbox,
-		Endpoint:     cfg.NOWPayments.BaseURL,
+		APIKey:       cfg.ProviderString(GatewayName, "api_key", ""),
+		IPNSecret:    cfg.ProviderString(GatewayName, "ipn_secret", ""),
+		Sandbox:      cfg.ProviderBool(GatewayName, "sandbox", false),
+		Endpoint:     cfg.ProviderString(GatewayName, "base_url", ""),
 		CallbackBase: cfg.Relay.PublicURL,
 	}
 }

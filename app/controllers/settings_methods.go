@@ -5,7 +5,6 @@ import (
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/gateway"
-	"github.com/tertua/tupay/platform/midtrans"
 )
 
 // methodAllowedFor reports whether a provider may offer a neutral method.
@@ -52,11 +51,13 @@ func applyEnabledMethods(spec *chargeSpec, provider string) {
 	spec.EnabledMethods = enabledMidtransMethods()
 }
 
-// ListMidtransMethods returns the Midtrans methods an owner can enable,
-// provider-neutral, for the settings UI. It mirrors gateway.MethodName so the
-// dashboard labels match the public pay page.
-// @Description List selectable Midtrans payment methods.
-// @Summary list midtrans methods
+// ListMidtransMethods returns the methods an owner can enable for a provider,
+// provider-neutral, for the settings UI. It enumerates through the registry
+// (never a provider package) and mirrors gateway.MethodName so the dashboard
+// labels match the public pay page. Phase 3 renames it (ListSettingsMethods)
+// and adds an optional ?gateway= selector.
+// @Description List selectable payment methods for the settings UI.
+// @Summary list payment methods
 // @Tags Settings
 // @Produce json
 // @Success 200 {object} map[string]interface{}
@@ -64,7 +65,15 @@ func applyEnabledMethods(spec *chargeSpec, provider string) {
 // @Router /settings/methods [get]
 func ListMidtransMethods(c fiber.Ctx) error {
 	methods := make([]models.GatewayMethod, 0)
-	for _, method := range (midtrans.Gateway{}).Methods() {
+	gw, err := gateway.Get(gateway.DefaultProvider())
+	if err != nil {
+		return utils.OK(c, fiber.StatusOK, fiber.Map{"methods": methods})
+	}
+	provider, ok := gw.(gateway.PaymentMethodProvider)
+	if !ok {
+		return utils.OK(c, fiber.StatusOK, fiber.Map{"methods": methods})
+	}
+	for _, method := range provider.Methods() {
 		methods = append(methods, models.GatewayMethod{ID: method, Name: gateway.MethodName(method)})
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"methods": methods})

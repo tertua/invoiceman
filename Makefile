@@ -1,4 +1,4 @@
-.PHONY: clean critic security lint test build run webui.check dev-be dev-fe db.backup db.restore promote promote-prod check-flow
+.PHONY: clean critic security lint test build run webui.check dev-be dev-fe db.backup db.restore promote promote-prod check-flow check.imports
 
 APP_NAME = apiserver
 BUILD_DIR = $(PWD)/build
@@ -20,9 +20,14 @@ security:
 lint:
 	golangci-lint run ./...
 
-test: clean critic security lint
+test: clean critic security lint check.imports
 	go test -v -timeout 30s -coverprofile=cover.out -cover ./...
 	go tool cover -func=cover.out
+
+# Controllers must route through platform/gateway (registry + capabilities),
+# never import a provider package. Required gate (see ARCHITECTURE.md #4).
+check.imports:
+	node scripts/check-no-provider-imports.mjs
 
 build: test
 	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) main.go

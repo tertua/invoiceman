@@ -7,9 +7,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
-	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 func publicPaymentData(ctx context.Context, db database.Queries, link models.PaymentLink, payCurrency string) (fiber.Map, error) {
@@ -59,10 +59,7 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 			"company_name": settings.CompanyName,
 			"logo_url":     settings.LogoURL,
 		},
-		"gateway": fiber.Map{
-			"client_key":    configs.Get().Midtrans.ClientKey,
-			"is_production": configs.Get().Midtrans.IsProd,
-		},
+		"gateway": payerConfigFor(gateway.DefaultProvider()),
 		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist(), payCurrency),
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil

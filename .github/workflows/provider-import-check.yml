@@ -1,0 +1,25 @@
+name: Provider Import Check
+
+on:
+  push:
+    paths:
+      - "scripts/check-no-provider-imports.mjs"
+      - "app/**"
+      - "platform/**"
+      - ".github/workflows/provider-import-check.yml"
+  pull_request:
+    paths:
+      - "scripts/check-no-provider-imports.mjs"
+      - "app/**"
+      - "platform/**"
+      - ".github/workflows/provider-import-check.yml"
+
+jobs:
+  provider-imports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun run --cwd=webui check:imports

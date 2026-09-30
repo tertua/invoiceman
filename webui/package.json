@@ -18,6 +18,7 @@
     "sync:version": "node ../scripts/sync-version.mjs",
     "check:map": "node ../scripts/check-module-map.mjs",
     "check:fixtures": "node ../scripts/check-fixtures.mjs",
+    "check:imports": "node ../scripts/check-no-provider-imports.mjs",
     "check:size": "node ../scripts/check-file-size.mjs",
     "preview": "vite preview"
   },

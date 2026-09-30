@@ -504,6 +504,7 @@ Checks yang **wajib pass**:
 - `bun run --cwd=webui check:bundles:strict` (bundle size)
 - `bun run --cwd=webui check:size` (file size baseline)
 - `node scripts/check-fixtures.mjs` (no raw JSON inline)
+- `node scripts/check-no-provider-imports.mjs` (no `app/` file imports a provider package — controllers use the `platform/gateway` registry)
 - `node scripts/sync-version.mjs --check` (VERSION sync)
 - `make check-flow` (branching flow validation)
 

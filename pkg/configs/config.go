@@ -30,9 +30,6 @@ type Config struct {
 	Auth      AuthConfig
 	WebUI     WebUIConfig
 
-	Midtrans    MidtransConfig
-	NOWPayments NOWPaymentsConfig
-
 	Relay RelayConfig
 	Log   LogConfig
 
@@ -257,23 +254,6 @@ type StorageConfig struct {
 	S3UseSSL    bool   // S3_USE_SSL
 }
 
-// MidtransConfig holds Midtrans relay credentials.
-type MidtransConfig struct {
-	ServerKey string // MIDTRANS_SERVER_KEY
-	ClientKey string // MIDTRANS_CLIENT_KEY
-	IsProd    bool   // MIDTRANS_IS_PROD
-	SnapBase  string // MIDTRANS_SNAP_BASE_URL (test override)
-	CoreBase  string // MIDTRANS_CORE_BASE_URL (test override)
-}
-
-// NOWPaymentsConfig holds crypto relay credentials.
-type NOWPaymentsConfig struct {
-	APIKey    string // NOWPAYMENTS_API_KEY
-	IPNSecret string // NOWPAYMENTS_IPN_SECRET
-	Sandbox   bool   // NOWPAYMENTS_SANDBOX
-	BaseURL   string // NOWPAYMENTS_BASE_URL (test override)
-}
-
 // LogConfig holds structured logging settings.
 type LogConfig struct {
 	Level string // LOG_LEVEL: debug|info|warn|error
@@ -358,19 +338,6 @@ func Load() (Config, error) {
 			SMTPPass:     os.Getenv("SMTP_PASS"),
 			SMTPFrom:     strings.TrimSpace(os.Getenv("SMTP_FROM")),
 			AppPublicURL: envOr("APP_PUBLIC_URL", "http://localhost:5173"),
-		},
-		Midtrans: MidtransConfig{
-			ServerKey: strings.TrimSpace(os.Getenv("MIDTRANS_SERVER_KEY")),
-			ClientKey: strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
-			IsProd:    envBool("MIDTRANS_IS_PROD", false),
-			SnapBase:  strings.TrimSpace(os.Getenv("MIDTRANS_SNAP_BASE_URL")),
-			CoreBase:  strings.TrimSpace(os.Getenv("MIDTRANS_CORE_BASE_URL")),
-		},
-		NOWPayments: NOWPaymentsConfig{
-			APIKey:    strings.TrimSpace(os.Getenv("NOWPAYMENTS_API_KEY")),
-			IPNSecret: strings.TrimSpace(os.Getenv("NOWPAYMENTS_IPN_SECRET")),
-			Sandbox:   envBool("NOWPAYMENTS_SANDBOX", false),
-			BaseURL:   strings.TrimSpace(os.Getenv("NOWPAYMENTS_BASE_URL")),
 		},
 		Relay: RelayConfig{
 			PublicURL: envOr("TUPAY_PUBLIC_URL", envOr("INVOICEMAN_PUBLIC_URL", "http://localhost:5000")),
