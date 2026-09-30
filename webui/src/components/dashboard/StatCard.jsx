@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
+import { StatValue } from "./StatValue";
 
 function MiniLine({ data, color }) {
   const values = data.map((point) => Number(point?.v) || 0);
@@ -56,11 +56,12 @@ export function StatCard({
   data = [],
   icon: Icon,
   accent = false,
+  animateValue = false,
+  valueNumber,
+  renderValue,
 }) {
-  const positive = delta == null ? null : delta >= 0;
   const color = accent ? "#FFFFFF" : "var(--accent)";
   const ChartCmp = chart === "bars" ? MiniBars : MiniLine;
-  const displayValue = value == null || value === "" ? "—" : value;
   const hasData = Array.isArray(data) && data.length > 0;
 
   return (
@@ -72,54 +73,17 @@ export function StatCard({
       )}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            {Icon && (
-              <div
-                className={cn(
-                  "h-7 w-7 rounded-full flex items-center justify-center",
-                  accent
-                    ? "bg-white/15 text-white"
-                    : "bg-[var(--accent-soft)] text-[var(--accent-strong)]"
-                )}
-              >
-                <Icon size={14} />
-              </div>
-            )}
-            <span
-              className={cn(
-                "text-xs",
-                accent ? "text-white/70" : "text-[var(--ink-muted)]"
-              )}
-            >
-              {label}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="font-display tabular text-3xl font-semibold tracking-tight">
-              {displayValue}
-            </span>
-            {suffix && (
-              <span
-                className={cn(
-                  "text-sm font-medium",
-                  accent ? "text-white/70" : "text-[var(--ink-muted)]"
-                )}
-              >
-                {suffix}
-              </span>
-            )}
-          </div>
-          {delta != null && (
-            <Badge
-              tone={accent ? "ink" : positive ? "success" : "danger"}
-              className={cn(accent && "bg-white/15 text-white")}
-            >
-              {positive ? "+" : ""}
-              {delta}%
-            </Badge>
-          )}
-        </div>
+        <StatValue
+          Icon={Icon}
+          label={label}
+          value={value}
+          suffix={suffix}
+          delta={delta}
+          accent={accent}
+          animateValue={animateValue}
+          valueNumber={valueNumber}
+          renderValue={renderValue}
+        />
 
         {hasData && (
           <div className="w-[110px] shrink-0 self-end opacity-90">

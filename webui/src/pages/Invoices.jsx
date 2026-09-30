@@ -5,12 +5,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InvoicesIllo } from "@/components/ui/EmptyIllustrations";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { InvoiceTable } from "@/components/invoice/InvoiceTable";
+import { InvoiceStatusTabs } from "@/components/invoice/InvoiceStatusTabs";
 import { useLang } from "@/context/LangContext";
 import { useInvoices, useDeleteInvoice } from "@/hooks/useInvoices";
-import { cn } from "@/lib/utils";
+import { useInvoiceStatusCounts } from "@/hooks/useInvoiceStatusCounts";
 
 function getStatusTabs(t) {
   return [
@@ -36,6 +38,7 @@ export default function Invoices() {
     order: sort.order,
   });
   const del = useDeleteInvoice();
+  const { data: counts, error: countsError } = useInvoiceStatusCounts();
 
   const invoices = data || [];
   const STATUS_TABS = useMemo(() => getStatusTabs(t), [t]);
@@ -65,22 +68,14 @@ export default function Invoices() {
       />
 
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-5">
-        <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-card w-fit">
-          {STATUS_TABS.map((tab) => (
-            <button type="button"
-              key={tab.key}
-              onClick={() => setStatus(tab.key)}
-              className={cn(
-                "h-8 px-4 rounded-full text-xs font-semibold transition-colors",
-                status === tab.key
-                  ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <InvoiceStatusTabs
+          tabs={STATUS_TABS}
+          status={status}
+          onChange={setStatus}
+          counts={counts}
+          countsError={countsError}
+          errorLabel={t("invoices.statusCountsFailed")}
+        />
         <div className="md:ml-auto md:w-[320px]">
           <SearchInput
             leftIcon={<Search size={16} />}
@@ -102,6 +97,7 @@ export default function Invoices() {
       ) : invoices.length === 0 ? (
         <EmptyState
           icon={FileText}
+          illustration={<InvoicesIllo />}
           title={search || status !== "all" ? t("invoices.noMatching") : t("invoices.noneYet")}
           description={
             search || status !== "all"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -35,6 +36,7 @@ const STATE_META = {
 export default function PaymentFinish() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [lang, setLang] = useState(() => detectLang(searchParams));
+  const reduce = useReducedMotion();
   const orderId = searchParams.get("order_id") || "";
   const meta = STATE_META[finishState(searchParams.get("transaction_status"))];
   const Icon = meta.icon;
@@ -65,12 +67,17 @@ export default function PaymentFinish() {
   return (
     <PublicShell lang={lang} onLang={changeLang}>
       <Card padding="lg" className="max-w-md w-full flex flex-col items-center text-center py-12">
-        <div
+        <motion.div
           className="h-14 w-14 rounded-2xl flex items-center justify-center mb-4"
+          role="img"
+          aria-label={t(lang, "finish.successAnimAria")}
           style={{ backgroundColor: `color-mix(in srgb, ${meta.tone} 12%, transparent)`, color: meta.tone }}
+          initial={reduce ? false : { scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 18 }}
         >
           <Icon size={26} />
-        </div>
+        </motion.div>
         <div className="font-display text-lg font-semibold tracking-tight text-[var(--ink)]">
           {t(lang, meta.titleKey)}
         </div>

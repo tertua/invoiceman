@@ -151,7 +151,17 @@ export const invoicesApi = {
 };
 ```
 
-**i18n** (`webui/src/lib/`) — `i18n.js` hanya re-export; sumber: `i18n.en.js`/`i18n.id.js` + split `i18n.*.settings.js`/`i18n.*.gateway.js`
+**i18n** (`webui/src/lib/`) — `i18n.js` hanya re-export; sumber: `i18n.en.js`/`i18n.id.js` + split `i18n.*.settings.js`/`i18n.*.gateway.js`/`i18n.*.ui.js`
+
+### Typography (frontend)
+
+Tiga font, tiga peran — jangan dicampur:
+
+- **Geist (`font-display`)** — display/UI app: judul halaman, judul kartu, angka besar (StatCard, gauge), tabel, navigasi. Ini default untuk seluruh app shell.
+- **Inter (body, `--font-sans`)** — body text, label, tombol, input. Default tanpa kelas.
+- **Cormorant Garamond (`font-serif`)** — editorial voice, **hanya** di: (a) Landing (hero + section heading), (b) halaman auth (`Login`/`Register`/`ForgotPassword`/`ResetPassword`, lewat `AuthShell`), (c) heading dokumen invoice di `InvoicePreview.jsx` (HTML preview saja — **bukan** PDF `@react-pdf/renderer`). Angka, tabel, dan StatCard tetap Geist.
+
+Aturan: `font-serif` dilarang di shell app, tabel, atau angka. `font-display` wajib untuk heading app agar konsisten.
 
 ## Import Style
 

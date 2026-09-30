@@ -99,7 +99,7 @@ function Hero() {
           <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface)]/80 border border-[var(--border)] text-[var(--accent-strong)] text-xs font-semibold shadow-sm">
             <Sparkles size={13} /> {t("landing.hero.badge")}
           </span>
-          <h1 className="font-display text-[clamp(40px,6.4vw,68px)] font-semibold leading-[0.98] tracking-tight mt-6">
+          <h1 className="font-serif text-[clamp(40px,6.4vw,68px)] font-semibold leading-[0.98] tracking-tight mt-6">
             {t("landing.hero.t1")}
             <br />
             <span style={{ background: "linear-gradient(120deg,var(--accent-strong),var(--accent) 55%,var(--accent-hero-2))", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
@@ -450,7 +450,7 @@ function CTASection() {
           <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/90 text-xs font-semibold backdrop-blur-md">
             <Sparkles size={13} /> {t("landing.cta.badge")}
           </span>
-          <h2 className="font-display text-[clamp(30px,4.5vw,48px)] font-semibold tracking-tight mt-6">
+          <h2 className="font-serif text-[clamp(30px,4.5vw,48px)] font-semibold tracking-tight mt-6">
             {t("landing.cta.title")}
           </h2>
           <p className="text-white/75 mt-4 max-w-md mx-auto text-lg">
@@ -554,7 +554,7 @@ function SectionHead({ eyebrow, title, sub }) {
   return (
     <div className="text-center max-w-2xl mx-auto">
       <span className="inline-block text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)] mb-3">{eyebrow}</span>
-      <h2 className="font-display text-[clamp(28px,4vw,42px)] font-semibold tracking-tight text-[var(--ink)]">{title}</h2>
+      <h2 className="font-serif text-[clamp(28px,4vw,42px)] font-semibold tracking-tight text-[var(--ink)]">{title}</h2>
       <p className="text-[var(--ink-muted)] mt-3 text-lg">{sub}</p>
     </div>
   );
