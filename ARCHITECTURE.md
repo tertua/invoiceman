@@ -291,14 +291,14 @@ Outbox Worker (10s poll, batch 20)
 
 ### How to add a provider
 
-Adding provider X touches only these files (nothing under `app/controllers/*`, `app/models/*`, `pkg/configs/config.go`, `pkg/routes/*`, the frontend, or the database schema):
+Adding provider X touches only these files (nothing under `app/controllers/*`, `app/models/*`, `pkg/configs/config.go`, `pkg/routes/*`, the frontend, or the database schema — the one known exception is a crypto-asset provider, see step 6):
 
 1. `platform/xendit/gateway.go` — `const GatewayName = "xendit"`; `type Gateway struct{}`; implement `Name()`, `CreateTransaction()`, `ParseAndVerify()`.
 2. `platform/xendit/methods.go` — the optional capabilities X actually needs (e.g. `Methods()`, `Configured()`, `Sandbox()`, `ChargeCurrency()`, `PayerConfig()`, `DefaultMethods()`, `RequiresDecimalAmount()`).
 3. `platform/xendit/config.go` — read `configs.Get().Provider("xendit")` (`XENDIT_API_KEY`, `XENDIT_CALLBACK_TOKEN`, …).
 4. Split provider logic per the ≤400-line budget (`create.go`, `verify.go`, `status.go`) with `*_test.go` beside each.
-5. `main.go` — one line: `gateway.Register(xendit.Gateway{})` (headroom exists after the `bootstrap.go` split).
-6. `webui/src/lib/<x>.js` — **only if** X needs a browser SDK; otherwise nothing (`payerCheckout.js` falls back to `redirect_url`/`payment_url`).
+5. `main.go` — one line: `gateway.Register(xendit.Gateway{})`. `main.go` sits exactly at its size baseline (172 lines), so this line fails `check:size` as-is: split another helper out of `main.go` first (into `bootstrap.go` or a new file), then **lower** its baseline entry — lower only, never raise.
+6. `webui/src/lib/<x>.js` — **only if** X needs a browser SDK; otherwise nothing for hosted checkout (`payerCheckout.js` falls back to `redirect_url`/`payment_url`). Crypto-asset providers are the exception: new asset codes need display entries in `webui/src/lib/cryptoAssets.js` (`CRYPTO_ASSETS` picker) and `app/controllers/public_method_label.go` (`cryptoAssetLabels`) — both are display-only mirrors of `platform/<provider>/assets.go`, no logic changes.
 7. `docs/MODULE_MAP.md` (gateway row) + this file's provider list + `.env.example`.
 
 ### AI (Gemini)
