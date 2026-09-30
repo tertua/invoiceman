@@ -1,31 +1,13 @@
 import { NavLink } from "react-router-dom";
-import {
-  LayoutGrid,
-  FileText,
-  Users,
-  Receipt,
-  Wallet,
-  Package,
-  BarChart3,
-  Settings,
-  ShieldCheck,
-} from "lucide-react";
+import { Settings, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useAppName } from "@/hooks/useConfig";
 import AILogo from "./AILogo";
 import { UserCard } from "./SidebarUserCard";
-
-const NAV = [
-  { to: "/dashboard", icon: LayoutGrid, labelKey: "sidebar.dashboard" },
-  { to: "/invoices", icon: FileText, labelKey: "sidebar.invoices" },
-  { to: "/clients", icon: Users, labelKey: "sidebar.clients" },
-  { to: "/expenses", icon: Receipt, labelKey: "sidebar.expenses" },
-  { to: "/payments", icon: Wallet, labelKey: "sidebar.payments" },
-  { to: "/items", icon: Package, labelKey: "sidebar.items" },
-  { to: "/reports", icon: BarChart3, labelKey: "sidebar.reports" },
-];
+import { NAV } from "./navItems";
+import { MobileNav } from "./MobileNav";
 
 const ROW_BASE =
   "relative flex items-center h-11 w-11 rounded-2xl overflow-hidden " +
@@ -99,6 +81,7 @@ export function Sidebar() {
   const appName = useAppName();
 
   return (
+    <>
     <aside
       className={cn(
         "group/sidebar hidden md:flex shrink-0 h-[calc(100vh-32px)] sticky top-4 ml-4",
@@ -146,5 +129,7 @@ export function Sidebar() {
         <UserCard user={user} logout={logout} t={t} />
       </div>
     </aside>
+    <MobileNav />
+    </>
   );
 }
