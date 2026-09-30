@@ -40,9 +40,9 @@ func (q *ItemQueries) GetItem(orgID, id uuid.UUID) (models.Item, error) {
 	return item, nil
 }
 
-// CreateItem persists a catalog item; OrgID rides on the caller-set scope and UserID stays audit.
+// CreateItem persists a catalog item; an unset OrgID rides as the creator UserID (rides-as), UserID stays audit.
 func (q *ItemQueries) CreateItem(item *models.Item) error {
-	return q.Create(item).Error
+	return rideOrg(q.DB, item, &item.OrgID, item.UserID)
 }
 
 // UpdateItem updates a catalog item owned by an org.

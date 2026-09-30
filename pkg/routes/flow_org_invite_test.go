@@ -125,3 +125,39 @@ func TestInviteClaimSingleUse(t *testing.T) {
 	require.NoError(t, db.MarkAccepted(invite.ID, uuid.New()))
 	require.ErrorIs(t, db.MarkAccepted(invite.ID, uuid.New()), queries.ErrInviteAccepted)
 }
+
+// TestOrgInviteRoleFlow proves the invite honours the requested role: owner invites join as owner, a role-less invite still joins as staff, and an unknown role is refused.
+func TestOrgInviteRoleFlow(t *testing.T) {
+	t.Setenv("RATE_LIMIT_AUTH", "100")
+	app := newTestApp()
+
+	owner := registerUser(t, app, "inviterole-owner@example.com", "secret123")
+	ownerOrg := myOrgID(t, app, owner)
+
+	// role=owner in the payload → the accepter lands as owner of the inviting org.
+	resp := doRequest(t, app, "POST", "/api/orgs/invites", `{"role":"owner"}`, owner)
+	require.Equal(t, 201, resp.StatusCode)
+	ownerInvite := decodeBody(t, resp)["invite"].(map[string]interface{})
+	assert.Equal(t, "owner", ownerInvite["role"])
+	joinOwner := registerUser(t, app, "inviterole-joiner@example.com", "secret123")
+	resp = doRequest(t, app, "POST", "/api/orgs/invites/accept", `{"token":"`+ownerInvite["token"].(string)+`"}`, joinOwner)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "owner", decodeBody(t, resp)["role"])
+	assert.Equal(t, ownerOrg, myOrgID(t, app, joinOwner))
+	assert.Equal(t, "owner", meOrg(t, app, joinOwner)["role"])
+
+	// No role in the payload → staff, and the minted invite records staff.
+	resp = doRequest(t, app, "POST", "/api/orgs/invites", `{}`, owner)
+	require.Equal(t, 201, resp.StatusCode)
+	staffInvite := decodeBody(t, resp)["invite"].(map[string]interface{})
+	assert.Equal(t, "staff", staffInvite["role"])
+	joinStaff := registerUser(t, app, "inviterole-staff@example.com", "secret123")
+	resp = doRequest(t, app, "POST", "/api/orgs/invites/accept", `{"token":"`+staffInvite["token"].(string)+`"}`, joinStaff)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "staff", decodeBody(t, resp)["role"])
+
+	// An unknown role is rejected before a token is minted.
+	resp = doRequest(t, app, "POST", "/api/orgs/invites", `{"role":"moderator"}`, owner)
+	require.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, "invalid invite role", envelopeMessage(t, resp))
+}

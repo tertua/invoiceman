@@ -398,6 +398,16 @@ definitions:
     - new_password
     - token
     type: object
+  models.RoleInput:
+    properties:
+      role:
+        enum:
+        - user
+        - admin
+        type: string
+    required:
+    - role
+    type: object
   models.SettingsInput:
     properties:
       address:
@@ -848,6 +858,36 @@ paths:
       security:
       - SessionCookie: []
       summary: list users
+      tags:
+      - Admin
+  /admin/users/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Update a user's role.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RoleInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: update user role
       tags:
       - Admin
   /ai/business-summary:

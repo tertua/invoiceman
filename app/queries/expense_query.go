@@ -90,9 +90,9 @@ func (q *ExpenseQueries) GetExpense(orgID, id uuid.UUID) (models.Expense, error)
 	return expense, nil
 }
 
-// CreateExpense persists an expense; OrgID rides on the caller-set scope and UserID stays audit.
+// CreateExpense persists an expense; an unset OrgID rides as the creator UserID (rides-as), UserID stays audit.
 func (q *ExpenseQueries) CreateExpense(expense *models.Expense) error {
-	return q.Create(expense).Error
+	return rideOrg(q.DB, expense, &expense.OrgID, expense.UserID)
 }
 
 // UpdateExpense updates an expense owned by an org.

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
@@ -31,12 +33,16 @@ func OrgContext() fiber.Handler {
 	}
 }
 
-// RequireOrgRole permits only the given active-org role; OrgContext must run first (D4 keeps role guards at the route layer).
-func RequireOrgRole(role string) fiber.Handler {
+// RequireOrgRole permits only the given active-org role(s); OrgContext must run first (D4 keeps role guards at the route layer). A single allowed role keeps its bespoke "org.<role>Required" message; multi-role collapses to a generic denial.
+func RequireOrgRole(allowed ...string) fiber.Handler {
+	message := "insufficient permissions"
+	if len(allowed) == 1 {
+		message = fmt.Sprintf("org.%sRequired", allowed[0])
+	}
 	return func(c fiber.Ctx) error {
 		current, err := utils.CurrentOrgRole(c)
-		if err != nil || current != role {
-			return utils.Fail(c, fiber.StatusForbidden, "org.ownerRequired", nil)
+		if err != nil || !utils.HasRole(current, allowed...) {
+			return utils.Fail(c, fiber.StatusForbidden, message, nil)
 		}
 		return c.Next()
 	}

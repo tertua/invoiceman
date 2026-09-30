@@ -95,6 +95,7 @@ func orgTestApp(t *testing.T, userID uuid.UUID) *fiber.App {
 	app.Get("/owner", withUser, OrgContext(), RequireOrgRole("owner"), ok)
 	app.Get("/staff-guard", withRole(models.RoleStaff), RequireOrgRole("owner"), ok)
 	app.Get("/owner-guard", withRole(models.RoleOwner), RequireOrgRole("owner"), ok)
+	app.Get("/owner-or-staff", withRole(models.RoleStaff), RequireOrgRole(models.RoleOwner, models.RoleStaff), ok)
 	return app
 }
 
@@ -191,4 +192,16 @@ func TestRequireOrgRoleAllowsOwner(t *testing.T) {
 
 	status, _ = orgGet(t, app, "/owner")
 	assert.Equal(t, fiber.StatusOK, status)
+}
+
+// TestRequireOrgRoleMultiRoleAllowsStaff proves the variadic guard admits any listed role: staff passes "owner","staff" while the single-role owner guard still refuses it.
+func TestRequireOrgRoleMultiRoleAllowsStaff(t *testing.T) {
+	app := orgTestApp(t, uuid.New())
+
+	status, _ := orgGet(t, app, "/owner-or-staff")
+	assert.Equal(t, fiber.StatusOK, status)
+
+	status, body := orgGet(t, app, "/staff-guard")
+	assert.Equal(t, fiber.StatusForbidden, status)
+	assert.Equal(t, "org.ownerRequired", errorMessage(body))
 }

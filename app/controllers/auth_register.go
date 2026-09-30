@@ -138,7 +138,7 @@ func Register(c fiber.Ctx) error {
 			return utils.Fail(c, fiber.StatusBadRequest, inviteErrorMessage(err), nil)
 		}
 		orgID = invite.OrgID
-		if err := db.CreateIfAbsent(orgID, user.ID, models.RoleStaff); err != nil {
+		if err := db.CreateIfAbsent(orgID, user.ID, inviteRole(*invite)); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
 		}
 	} else {

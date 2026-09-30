@@ -19,7 +19,9 @@ func registerInvoiceRoutes(route fiber.Router) {
 	route.Patch("/invoices/:id/status", controllers.UpdateInvoiceStatus)                                           // update invoice status
 	route.Delete("/invoices/:id", controllers.DeleteInvoice)                                                       // delete an invoice
 	// Local Snap intent for one invoice (session user, no service key); kept under /invoices so the /gateway API-key group cannot shadow it.
+	// Owner-only unconditionally, so it is gated here by middleware; state-dependent rules (draft-only edits, transition matrix) stay in invoice_rules.go because they must read the row.
 	route.Post("/invoices/:id/intents",
+		middleware.RequireOrgRole("owner"),
 		middleware.Idempotency(middleware.SessionIdempotencyScope),
 		middleware.WithAITimeout(controllers.CreateInvoiceIntent))
 }

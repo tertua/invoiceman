@@ -139,6 +139,7 @@ function InvitesCard() {
   const qc = useQueryClient();
   const { data: invites = [], isLoading, error } = useOrgInvites();
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState("staff");
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
   const create = useMutation({
@@ -165,6 +166,7 @@ function InvitesCard() {
           <div className="truncate text-xs text-[var(--ink)]" title={inviteUrl(inv)}>{inviteUrl(inv)}</div>
           <div className="mt-0.5 text-[11px] text-[var(--ink-muted)]">{t("org.expiresOn", { date: formatDate(inv.expires_at) })}{inv.email ? ` · ${inv.email}` : ""}</div>
         </div>
+        <Badge tone={inv.role === "owner" ? "accent" : "neutral"}>{inv.role === "owner" ? t("org.roleOwner") : t("org.roleStaff")}</Badge>
         <Badge tone={meta.tone}>{t(meta.key)}</Badge>
         <Button type="button" size="iconSm" variant="ghost" onClick={() => { if (window.confirm(t("org.revokeConfirm"))) revoke.mutate(inv.id); }} disabled={revoke.isPending || state !== "pending"} aria-label={t("org.revoke")}>
           <Trash2 size={13} />
@@ -175,8 +177,12 @@ function InvitesCard() {
   return (
     <Card padding="lg">
       <SectionHead icon={UserPlus} title={t("org.invites")} desc={`${t("org.invitesDesc")} ${t("org.inviteTTL")}`} />
-      <form onSubmit={(e) => { e.preventDefault(); if (!emailBad) create.mutate(email.trim() ? { email: email.trim() } : {}); }} className="mt-4 flex flex-col gap-3 sm:flex-row">
+      <form onSubmit={(e) => { e.preventDefault(); if (!emailBad) create.mutate(email.trim() ? { email: email.trim(), role } : { role }); }} className="mt-4 flex flex-col gap-3 sm:flex-row">
         <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("org.inviteEmail")} type="email" className="flex-1" />
+        <select aria-label={t("org.role")} value={role} onChange={(e) => setRole(e.target.value)} className={`${SELECT_CLASS} sm:w-36`}>
+          <option value="staff">{t("org.roleStaff")}</option>
+          <option value="owner">{t("org.roleOwner")}</option>
+        </select>
         <Button type="submit" variant="accent" disabled={create.isPending || emailBad}>
           {create.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}{t("org.createInvite")}
         </Button>

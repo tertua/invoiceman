@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"database/sql"
+	"errors"
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
@@ -49,6 +52,60 @@ func ListUsers(c fiber.Ctx) error {
 		result = append(result, adminUserResponse(user))
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"users": result, "meta": paging.Meta(total)})
+}
+
+// UpdateUserRole assigns a platform role (user or admin) to another account; promoting and demoting both work, only self-change is refused.
+// @Description Update a user's role.
+// @Summary update user role
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body models.RoleInput true "Role payload"
+// @Success 200 {object} map[string]interface{}
+// @Security SessionCookie
+// @Router /admin/users/{id}/role [patch]
+func UpdateUserRole(c fiber.Ctx) error {
+	adminID, err := utils.CurrentUserID(c)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+	}
+	userID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid user id", nil)
+	}
+	if adminID == userID {
+		return utils.Fail(c, fiber.StatusBadRequest, "you cannot change your own role", nil)
+	}
+	input := &models.RoleInput{}
+	if err := c.Bind().Body(input); err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	if err := utils.NewValidator().Struct(input); err != nil {
+		return utils.ValidationFailed(c, err)
+	}
+	db, err := database.OpenDBConnection()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	}
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load user", nil)
+	}
+	if err := db.UpdateUserRole(userID, input.Role); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update user role", nil)
+	}
+	recordAudit(c, db, adminID, "user.role.update", "user", userID.String(), `{"role":"`+input.Role+`"}`)
+	// Privilege moment: rotate the admin's own CSRF token and rebind it, so a
+	// leaked token paired with the old role mix is rejected.
+	if err := rotateCSRF(c, adminID); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate csrf token", nil)
+	}
+	user.UserRole = input.Role
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": adminUserResponse(user)})
 }
 
 // ListAuditLogs returns one page of the audit trail for an administrator.

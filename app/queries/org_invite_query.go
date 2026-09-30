@@ -24,8 +24,8 @@ type OrgInviteQueries struct {
 	*gorm.DB
 }
 
-// CreateInvite mints a 64-hex token valid for ttl (zero falls back to models.OrgInviteDefaultTTL); email is optional.
-func (q *OrgInviteQueries) CreateInvite(orgID uuid.UUID, email *string, ttl time.Duration) (models.OrgInvite, error) {
+// CreateInvite mints a 64-hex token valid for ttl (zero falls back to models.OrgInviteDefaultTTL); email is optional and role is the join role the accepter inherits.
+func (q *OrgInviteQueries) CreateInvite(orgID uuid.UUID, email *string, role string, ttl time.Duration) (models.OrgInvite, error) {
 	if ttl <= 0 {
 		ttl = models.OrgInviteDefaultTTL
 	}
@@ -34,7 +34,7 @@ func (q *OrgInviteQueries) CreateInvite(orgID uuid.UUID, email *string, ttl time
 		return models.OrgInvite{}, err
 	}
 	invite := models.OrgInvite{
-		ID: uuid.New(), OrgID: orgID, Token: hex.EncodeToString(raw), Role: models.RoleStaff,
+		ID: uuid.New(), OrgID: orgID, Token: hex.EncodeToString(raw), Role: role,
 		ExpiresAt: time.Now().Add(ttl), CreatedAt: time.Now(),
 	}
 	if email != nil {

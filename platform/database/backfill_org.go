@@ -84,29 +84,91 @@ func ownerOrgFor(db *gorm.DB, user models.User) (uuid.UUID, bool, error) {
 		return uuid.Nil, false, err
 	}
 	if memberships == 0 {
-		org := models.Organization{ID: uuid.New(), Name: defaultOrgName(user)}
-		membership := models.Membership{ID: uuid.New(), OrgID: org.ID, UserID: user.ID, Role: models.RoleOwner}
-		// Both rows or neither: a lone org would strand the user with an owner membership pointing at nothing.
-		err := db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Create(&org).Error; err != nil {
-				return err
-			}
-			return tx.Create(&membership).Error
-		})
-		if err != nil {
-			return uuid.Nil, false, err
-		}
-		return org.ID, true, nil
+		return createPersonalOrg(db, user)
 	}
 	var owner models.Membership
 	err := db.Where("user_id = ? AND role = ?", user.ID, models.RoleOwner).Order("created_at, id").First(&owner).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return uuid.Nil, false, nil // staff-only member: their legacy rows belong to the owner's org, stamped by that user
+		// Staff-only: stamping runs per user_id, so no other user's pass covers
+		// these rows. If unstamped legacy rows exist, mint them a personal org so
+		// they land in a tenant instead of staying org-less forever; without rows
+		// there is nothing to claim (an invite join deliberately has no personal org).
+		if !hasUnstampedRows(db, user.ID) {
+			return uuid.Nil, false, nil
+		}
+		return createPersonalOrg(db, user)
 	}
 	if err != nil {
 		return uuid.Nil, false, err
 	}
 	return owner.OrgID, true, nil
+}
+
+// createPersonalOrg provisions the user's personal owner org + membership in one transaction (both rows or neither).
+func createPersonalOrg(db *gorm.DB, user models.User) (uuid.UUID, bool, error) {
+	org := models.Organization{ID: uuid.New(), Name: defaultOrgName(user)}
+	membership := models.Membership{ID: uuid.New(), OrgID: org.ID, UserID: user.ID, Role: models.RoleOwner}
+	// Both rows or neither: a lone org would strand the user with an owner membership pointing at nothing.
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&org).Error; err != nil {
+			return err
+		}
+		return tx.Create(&membership).Error
+	})
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	return org.ID, true, nil
+}
+
+// hasUnstampedRows reports whether the user holds any legacy row that still needs a
+// tenant (org_id NULL/Nil) and that no other user's stamp would cover. The audit trail
+// is excluded: every register writes an org-less "auth.register" entry and audit stays
+// cross-org anyway, so counting it would mint a personal org for every invited staff
+// member. Settings only count when org_id is the primary key: on a v15-upgraded table
+// the user_id key is the intended per-user tenant (kept by rebuildSettingsPK).
+func hasUnstampedRows(db *gorm.DB, userID uuid.UUID) bool {
+	for _, target := range []any{&models.Invoice{}, &models.Client{}, &models.Item{}, &models.Expense{}, &models.Payment{}} {
+		if hasUnstampedRowsFor(db, target, "user_id = ? AND (org_id IS NULL OR org_id = ?)", userID, uuid.Nil) {
+			return true
+		}
+	}
+	if hasUnstampedRowsFor(db, &models.GatewayProject{}, "owner_user_id = ? AND (org_id IS NULL OR org_id = ?)", userID, uuid.Nil) {
+		return true
+	}
+	return hasUnstampedSettings(db, userID)
+}
+
+// hasUnstampedRowsFor counts matching rows; a query error is treated as "no rows" so a probe failure never mints an org by accident.
+func hasUnstampedRowsFor(db *gorm.DB, model any, where string, args ...any) bool {
+	var count int64
+	return db.Model(model).Where(where, args...).Count(&count).Error == nil && count > 0
+}
+
+// hasUnstampedSettings reports unstamped settings rows only when org_id is already the settings key; a user_id-keyed table is left to rebuildSettingsPK.
+func hasUnstampedSettings(db *gorm.DB, userID uuid.UUID) bool {
+	if !db.Migrator().HasColumn(&models.Settings{}, "org_id") || !settingsOrgIDIsPK(db) {
+		return false
+	}
+	var count int64
+	return db.Model(&models.Settings{}).
+		Where("user_id = ? AND (org_id IS NULL OR org_id = ?)", userID, uuid.Nil).Count(&count).Error == nil && count > 0
+}
+
+// settingsOrgIDIsPK reports whether org_id is the settings primary key (fresh schema) rather than a plain column (v15 upgrade).
+func settingsOrgIDIsPK(db *gorm.DB) bool {
+	cols, err := db.Migrator().ColumnTypes("settings")
+	if err != nil {
+		return false
+	}
+	for _, col := range cols {
+		if col.Name() != "org_id" {
+			continue
+		}
+		pk, ok := col.PrimaryKey()
+		return ok && pk
+	}
+	return false
 }
 
 // defaultOrgName uses the user's name, falling back to the email local part, then a generic label.

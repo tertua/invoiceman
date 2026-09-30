@@ -26,3 +26,8 @@ type MigrateDownInput struct {
 	TargetVersion int  `json:"target_version" validate:"required,min=1"`
 	Confirm       bool `json:"confirm" validate:"eq=true"`
 }
+
+// RoleInput is the admin role-change payload; only the two platform roles are accepted.
+type RoleInput struct {
+	Role string `json:"role" validate:"required,oneof=user admin"`
+}

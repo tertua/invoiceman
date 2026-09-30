@@ -48,6 +48,11 @@ func TestOrgRoleFlow(t *testing.T) {
 	require.Equal(t, 403, resp.StatusCode)
 	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
 
+	// Creating a Snap payment intent is owner-only: the guard runs before the handler, so staff is refused up front.
+	resp = doRequest(t, app, "POST", "/api/invoices/"+invoiceID+"/intents", "", staff)
+	require.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
+
 	// Listing members needs no owner role: the route carries no RequireOrgRole.
 	resp = doRequest(t, app, "GET", "/api/orgs/members", "", staff)
 	require.Equal(t, 200, resp.StatusCode)

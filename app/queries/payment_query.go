@@ -80,10 +80,10 @@ func (q *PaymentQueries) GetPayment(orgID, id uuid.UUID) (models.Payment, error)
 	return payment, nil
 }
 
-// CreatePayment persists a payment.
+// CreatePayment persists a payment; an unset OrgID rides as the creator UserID (rides-as), UserID stays audit.
 func (q *PaymentQueries) CreatePayment(payment *models.Payment) error {
 	return DoRetry(func() error {
-		return q.Create(payment).Error
+		return rideOrg(q.DB, payment, &payment.OrgID, payment.UserID)
 	})
 }
 

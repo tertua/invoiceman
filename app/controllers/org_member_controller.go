@@ -16,15 +16,36 @@ import (
 	"github.com/tertua/tupay/platform/database"
 )
 
-// orgInviteBody is the optional POST /orgs/invites payload; both fields fall back to defaults when absent.
+// orgInviteBody is the optional POST /orgs/invites payload; absent fields fall back to defaults (role staff, TTL 7 days).
 type orgInviteBody struct {
 	Email    string `json:"email"`
+	Role     string `json:"role"`
 	TTLHours int    `json:"ttl_hours"`
 }
 
 // orgAcceptBody is the POST /orgs/invites/accept payload.
 type orgAcceptBody struct {
 	Token string `json:"token"`
+}
+
+// normalizeInviteRole resolves the requested invite role: empty means staff; owner/staff pass through; anything else is refused with ok=false.
+func normalizeInviteRole(raw string) (string, bool) {
+	switch role := strings.TrimSpace(raw); role {
+	case "":
+		return models.RoleStaff, true
+	case models.RoleOwner, models.RoleStaff:
+		return role, true
+	default:
+		return "", false
+	}
+}
+
+// inviteRole resolves the role an invite grants, falling back to staff for rows minted before roles were stored.
+func inviteRole(invite models.OrgInvite) string {
+	if invite.Role == models.RoleOwner || invite.Role == models.RoleStaff {
+		return invite.Role
+	}
+	return models.RoleStaff
 }
 
 // inviteTTL converts the requested hours to a duration; 0 or less hands the default (7 days) back to the query.
@@ -56,7 +77,7 @@ func queueInviteMail(c fiber.Ctx, db *database.Queries, orgID uuid.UUID, to, tok
 	}
 	cfg := configs.Get()
 	link := strings.TrimRight(cfg.Mail.AppPublicURL, "/") + "/invite/" + token
-	body := fmt.Sprintf("You have been invited to join %s on %s.\n\nOpen this link to join as staff:\n%s\n\nIt stops working once it expires, is revoked or someone else uses it.", org.Name, cfg.AppName, link)
+	body := fmt.Sprintf("You have been invited to join %s on %s.\n\nOpen this link to join the team:\n%s\n\nIt stops working once it expires, is revoked or someone else uses it.", org.Name, cfg.AppName, link)
 	if err := db.EnqueueMail(&models.MailOutbox{To: to, Subject: "Join " + org.Name + " on " + cfg.AppName, Body: body}); err != nil {
 		utils.RequestLogger(c).Warn("invite mail queue failed", "email", to, "err", err)
 	}
@@ -122,11 +143,15 @@ func CreateOrgInvite(c fiber.Ctx) error {
 	if trimmed := strings.TrimSpace(input.Email); trimmed != "" {
 		email = &trimmed
 	}
+	joinRole, ok := normalizeInviteRole(input.Role)
+	if !ok {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid invite role", nil)
+	}
 	db, err := database.OpenDBConnection()
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
-	invite, err := db.CreateInvite(orgID, email, inviteTTL(input.TTLHours))
+	invite, err := db.CreateInvite(orgID, email, joinRole, inviteTTL(input.TTLHours))
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create invite", nil)
 	}
@@ -135,7 +160,7 @@ func CreateOrgInvite(c fiber.Ctx) error {
 		queueInviteMail(c, db, orgID, *email, invite.Token)
 	}
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"invite": fiber.Map{
-		"id": invite.ID, "token": invite.Token, "expires_at": invite.ExpiresAt, "url": "/invite/" + invite.Token,
+		"id": invite.ID, "token": invite.Token, "role": invite.Role, "expires_at": invite.ExpiresAt, "url": "/invite/" + invite.Token,
 	}})
 }
 
@@ -242,10 +267,11 @@ func AcceptOrgInvite(c fiber.Ctx) error {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load membership", nil)
 		}
-		if cerr := db.CreateIfAbsent(orgID, userID, models.RoleStaff); cerr != nil {
+		joinRole := inviteRole(invite)
+		if cerr := db.CreateIfAbsent(orgID, userID, joinRole); cerr != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to join organization", nil)
 		}
-		role = models.RoleStaff
+		role = joinRole
 	}
 	if err := persistActiveOrg(c, userID, orgID); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
