@@ -34,11 +34,11 @@ func GetSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settings})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
 }
 
 // UpdateSettings updates settings for the current user.
-// @Description Update settings of current user.
+// @Description Update settings of current user. The provider_methods key is canonical; the deprecated midtrans_methods input alias is still accepted, and responses carry both keys.
 // @Summary update current user settings
 // @Tags Settings
 // @Accept json
@@ -70,7 +70,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	if input.UsdToIdr.IsNegative() {
 		return utils.Fail(c, fiber.StatusBadRequest, "usd_to_idr cannot be negative", nil)
 	}
-	input.MidtransMethods = normalizeProviderMethods(gateway.DefaultProviderName, input.MidtransMethods)
+	input.ProviderMethods = normalizeProviderMethods(gateway.DefaultProviderName, input.EffectiveProviderMethods())
 	applySettingsInput(&settings, input)
 	if err := db.UpdateSettings(&settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update settings", nil)
@@ -80,7 +80,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settings})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
 }
 
 // maxLogoSize caps uploaded company logos (matches the MPA hint).
@@ -156,5 +156,5 @@ func UploadLogo(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settings})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
 }

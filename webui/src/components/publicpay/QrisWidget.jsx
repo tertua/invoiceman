@@ -117,14 +117,14 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
         setPending(false);
         return;
       }
-      if (res.snap_token) {
+      if (res.provider_token || res.snap_token) {
         setPending(false);
         // Core API unavailable: fall back to the provider-declared browser
         // checkout (openCheckout dispatches on config.checkout, never on a
         // provider name). Success/close/error keep the same no-op semantics
         // as before, so the widget never traps the payer.
         await openCheckout({
-          token: res.snap_token,
+          token: res.provider_token || res.snap_token,
           config: { ...gateway, ...res, is_production: isProd, checkout: gateway?.checkout },
           onClose: () => {},
           onError: () => {},

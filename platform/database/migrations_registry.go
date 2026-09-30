@@ -182,4 +182,11 @@ var migrations = []Migration{
 			return nil
 		},
 	},
+	{
+		Version:     17,
+		Description: "provider-neutral gateway columns (provider_txn_id, provider_token, provider_methods)",
+		// The forward rename (copy old -> new, then drop old) lives in
+		// migrateProviderColumnsUp; only the rollback is registered here.
+		Down: migrateProviderColumnsDown,
+	},
 }

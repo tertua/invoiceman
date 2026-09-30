@@ -353,6 +353,7 @@ Adding provider X touches only these files (nothing under `app/controllers/*`, `
 **Database Migrations**
 - Auto migrate via GORM `AutoMigrate` di startup
 - Reversible migrations di `platform/database/migrations.go` (backend-agnostic)
+- Data steps yang tak bisa dilakukan `AutoMigrate` (mis. rename kolom provider v17: copy data lama → kolom baru, lalu drop kolom lama) hidup di `platform/database` sebagai `db.Exec` idempotent + crash-safe, dijalankan sebelum version guard
 - Version guard: newer DB schema → binary refuses to start
 
 ## Build & Deploy

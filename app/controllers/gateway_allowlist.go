@@ -8,8 +8,8 @@ import (
 )
 
 // providerAllowlist resolves the owner's allowed methods for one provider.
-// nil means "unrestricted" (no veto). The legacy midtrans_methods column is
-// read as the allowlist for provider "midtrans"; every other provider is
+// nil means "unrestricted" (no veto). The legacy provider_methods column is
+// read as the allowlist for the default provider; every other provider is
 // unrestricted today because no other provider needs owner narrowing yet. A
 // future provider gets its own column only when it needs one (no speculative
 // schema).
@@ -17,7 +17,7 @@ func providerAllowlist(settings models.Settings, provider string) map[string]boo
 	if provider != gateway.DefaultProviderName {
 		return nil
 	}
-	// The stored midtrans_methods value is intentionally ignored: the account
+	// The stored provider_methods value is intentionally ignored: the account
 	// only offers QRIS, so the allowlist stays pinned to QRIS regardless of
 	// what the owner submitted or what an old row holds.
 	return map[string]bool{gateway.MethodQRIS: true}

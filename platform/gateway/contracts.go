@@ -80,9 +80,9 @@ type DecimalAmountProvider interface {
 
 // BrowserSDKProvider is an optional capability: providers whose stored token
 // is meant to be consumed by an embedded browser checkout SDK report it, so
-// public payloads expose the token as "snap_token" only when a widget can use
-// it. A hosted payment-page id kept in the same column must never leak out as
-// a widget token (the pay panel would hand it to the wrong SDK).
+// public payloads expose the token as "provider_token" only when a widget can
+// use it. A hosted payment-page id kept in the same column must never leak out
+// as a widget token (the pay panel would hand it to the wrong SDK).
 type BrowserSDKProvider interface {
 	BrowserSDK() bool
 }

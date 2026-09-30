@@ -97,10 +97,10 @@ func OfferedMethods() []MethodRef {
 }
 
 // ExposesBrowserToken reports whether a stored provider token may be sent to
-// browsers under the payload key "snap_token". Only providers declaring the
-// BrowserSDKProvider capability qualify; unresolvable gateways and empty
-// tokens expose nothing. This keeps hosted payment-page ids (stored in the
-// same column) from being fed to an embedded checkout SDK.
+// browsers under "provider_token" (and its deprecated "snap_token" alias). Only
+// providers declaring the BrowserSDKProvider capability qualify; unresolvable
+// gateways and empty tokens expose nothing. This keeps hosted payment-page ids
+// (stored in the same column) from being fed to an embedded checkout SDK.
 func ExposesBrowserToken(g Gateway, token string) bool {
 	if token == "" {
 		return false

@@ -143,7 +143,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		}
 		claim.Gateway = gw.Name()
 		claim.Status = models.GatewayStatusPending
-		claim.SnapToken = created.Token
+		claim.ProviderToken = created.Token
 		claim.RedirectURL = created.RedirectURL
 		claim.PaymentURL = created.PaymentURL
 		claim.QRString = created.QRString
@@ -250,10 +250,10 @@ func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
 	// column would be handed to the wrong browser SDK otherwise. Both the
 	// provider-neutral key (provider_token) and the legacy key (snap_token)
 	// carry the same value; the legacy key stays until pay-page clients
-	// migrate (Phase 5 column rename was skipped).
-	if gw, err := gateway.Get(t.Gateway); err == nil && gateway.ExposesBrowserToken(gw, t.SnapToken) {
-		out["provider_token"] = t.SnapToken
-		out["snap_token"] = t.SnapToken
+	// migrate.
+	if gw, err := gateway.Get(t.Gateway); err == nil && gateway.ExposesBrowserToken(gw, t.ProviderToken) {
+		out["provider_token"] = t.ProviderToken
+		out["snap_token"] = t.ProviderToken
 	}
 	return out
 }

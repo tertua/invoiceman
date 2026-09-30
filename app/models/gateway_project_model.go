@@ -13,7 +13,7 @@ type GatewayProject struct {
 	APIKeyHash     string    `gorm:"size:128;uniqueIndex" db:"api_key_hash" json:"-"`
 	WebhookURL     string    `gorm:"size:1024" db:"webhook_url" json:"webhook_url" validate:"required,lte=1024"`
 	WebhookSecret  string    `gorm:"size:128" db:"webhook_secret" json:"webhook_secret"`
-	DefaultGateway string    `gorm:"size:32;default:midtrans" db:"default_gateway" json:"default_gateway"`
+	DefaultGateway string    `gorm:"size:32" db:"default_gateway" json:"default_gateway"`
 	IsActive       bool      `gorm:"default:true" db:"is_active" json:"is_active"`
 	CreatedAt      time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`

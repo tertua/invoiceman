@@ -129,7 +129,7 @@ func TestPublicPayMidtransMethodAllowlist(t *testing.T) {
 		cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	settings := decodeBody(t, resp)["settings"].(map[string]interface{})
-	assert.Equal(t, "qris", settings["midtrans_methods"]) // unknown id dropped
+	assert.Equal(t, "qris", settings["provider_methods"]) // unknown id dropped; input alias accepted
 	resp.Body.Close()
 
 	spec := newInvoice()

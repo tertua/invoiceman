@@ -432,12 +432,21 @@ definitions:
       logo_url:
         type: string
       midtrans_methods:
-        description: MidtransMethods is a single gateway method id; it normalizes
-          to gopay when empty or unknown.
+        description: |-
+          MidtransMethods is the DEPRECATED input alias for ProviderMethods, kept
+          until clients migrate; provider_methods wins when both are sent.
         maxLength: 255
         type: string
       phone:
         maxLength: 100
+        type: string
+      provider_methods:
+        description: |-
+          ProviderMethods is the single legacy gateway method id for the default
+          provider. normalizeProviderMethods pins it to the provider's declared
+          default (qris for the default provider); other providers keep the raw
+          trimmed value.
+        maxLength: 255
         type: string
       tax_rate:
         minimum: 0
@@ -2748,7 +2757,9 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Update settings of current user.
+      description: Update settings of current user. The provider_methods key is canonical;
+        the deprecated midtrans_methods input alias is still accepted, and responses
+        carry both keys.
       parameters:
       - description: Settings payload
         in: body

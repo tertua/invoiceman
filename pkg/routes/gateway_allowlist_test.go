@@ -47,7 +47,7 @@ func TestPublicPaySecondProviderNotVetoedByMidtransAllowlist(t *testing.T) {
 	resp.Body.Close()
 
 	resp = doRequest(t, app, "PATCH", "/api/settings",
-		`{"company_name":"Gen MP","currency":"IDR","tax_rate":0,"invoice_prefix":"INV-","usd_to_idr":"18000","midtrans_methods":"qris"}`, cookies)
+		`{"company_name":"Gen MP","currency":"IDR","tax_rate":0,"invoice_prefix":"INV-","usd_to_idr":"18000","provider_methods":"qris"}`, cookies)
 	if resp.StatusCode != 200 {
 		t.Fatalf("settings: got %d", resp.StatusCode)
 	}

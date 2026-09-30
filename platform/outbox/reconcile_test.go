@@ -159,14 +159,14 @@ func TestReconcileUnknownOrderMarkedFailed(t *testing.T) {
 }
 
 // seedNowPaymentsTxn stores a stale pending direct-payment row the way the
-// public pay widget creates one: payment id in SnapToken plus a pay address.
+// public pay widget creates one: payment id in ProviderToken plus a pay address.
 func seedNowPaymentsTxn(t *testing.T, db *database.Queries, uid uuid.UUID, inv *models.Invoice, paymentID, address string) string {
 	t.Helper()
 	orderID := "PAY-NP-" + uuid.NewString()[:8]
 	old := time.Now().Add(-time.Hour)
 	txn := &models.GatewayTransaction{
 		OrderID: orderID, ProjectSlug: "local", Gateway: "nowpayments",
-		SnapToken: paymentID, Address: address, PayAmount: "5.55", PayCurrency: "usdttrc20",
+		ProviderToken: paymentID, Address: address, PayAmount: "5.55", PayCurrency: "usdttrc20",
 		AmountIDR: 100000, Currency: "USD", InvoiceCurrency: "IDR",
 		InvoiceAmount: decimal.RequireFromString("100000"), Status: models.GatewayStatusPending,
 		CreatedAt: old, UpdatedAt: old, InvoiceID: &inv.ID, UserID: &uid,
@@ -201,7 +201,7 @@ func TestReconcileNowPaymentsSettles(t *testing.T) {
 	txn, err := db.GetTransaction(orderID)
 	require.NoError(t, err)
 	assert.Equal(t, models.GatewayStatusSuccess, txn.Status)
-	assert.Equal(t, "pay_np_1", txn.MidtransTxnID)
+	assert.Equal(t, "pay_np_1", txn.ProviderTxnID)
 	assert.Equal(t, "usdttrc20", txn.PaymentType)
 	paid, err := db.PaidAmount(inv.ID)
 	require.NoError(t, err)

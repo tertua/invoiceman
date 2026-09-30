@@ -17,10 +17,10 @@ func TestMidtransLockedToQRIS(t *testing.T) {
 		}
 	}
 
-	// The stored midtrans_methods value is intentionally ignored: even a
+	// The stored provider_methods value is intentionally ignored: even a
 	// settings row that claims another method resolves to QRIS-only.
 	settings := models.Settings{}
-	settings.MidtransMethods = "gopay,bank_transfer"
+	settings.ProviderMethods = "gopay,bank_transfer"
 	allow := providerAllowlist(settings, gateway.DefaultProviderName)
 	if !allow[gateway.MethodQRIS] {
 		t.Fatalf("allowlist must admit QRIS, got %v", allow)
@@ -36,7 +36,7 @@ func TestMidtransLockedToQRIS(t *testing.T) {
 // its raw method value is preserved rather than normalized to QRIS.
 func TestUnknownProviderIsUnrestricted(t *testing.T) {
 	settings := models.Settings{}
-	settings.MidtransMethods = "qris"
+	settings.ProviderMethods = "qris"
 	if allow := providerAllowlist(settings, "someotherprovider"); allow != nil {
 		t.Fatalf("unknown provider allowlist = %v, want nil", allow)
 	}

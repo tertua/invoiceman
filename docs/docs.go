@@ -3451,7 +3451,7 @@ const docTemplate = `{
                         "SessionCookie": []
                     }
                 ],
-                "description": "Update settings of current user.",
+                "description": "Update settings of current user. The provider_methods key is canonical; the deprecated midtrans_methods input alias is still accepted, and responses carry both keys.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4214,13 +4214,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "midtrans_methods": {
-                    "description": "MidtransMethods is a single gateway method id; it normalizes to gopay when empty or unknown.",
+                    "description": "MidtransMethods is the DEPRECATED input alias for ProviderMethods, kept\nuntil clients migrate; provider_methods wins when both are sent.",
                     "type": "string",
                     "maxLength": 255
                 },
                 "phone": {
                     "type": "string",
                     "maxLength": 100
+                },
+                "provider_methods": {
+                    "description": "ProviderMethods is the single legacy gateway method id for the default\nprovider. normalizeProviderMethods pins it to the provider's declared\ndefault (qris for the default provider); other providers keep the raw\ntrimmed value.",
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "tax_rate": {
                     "type": "number",

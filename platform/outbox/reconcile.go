@@ -69,10 +69,10 @@ var FetchTxStatus = func(ctx context.Context, txn models.GatewayTransaction) (*t
 // reuses the IPN rendering so status mapping and gross rules never drift
 // between the webhook and the worker.
 func nowpaymentsTxStatus(ctx context.Context, txn models.GatewayTransaction) (*txStatus, error) {
-	if strings.TrimSpace(txn.SnapToken) == "" || strings.TrimSpace(txn.Address) == "" {
+	if strings.TrimSpace(txn.ProviderToken) == "" || strings.TrimSpace(txn.Address) == "" {
 		return nil, errNoPoll
 	}
-	notif, err := nowpayments.StatusNotification(ctx, nowpayments.FromEnv(), txn.SnapToken)
+	notif, err := nowpayments.StatusNotification(ctx, nowpayments.FromEnv(), txn.ProviderToken)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (w *Worker) reconcileOne(ctx context.Context, db *database.Queries, txn mod
 		return
 	}
 	txn.Status = st.Status
-	txn.MidtransTxnID = st.TransactionID
+	txn.ProviderTxnID = st.TransactionID
 	txn.PaymentType = st.PaymentType
 	if st.Status == models.GatewayStatusSuccess {
 		txn.PaidAt = &now

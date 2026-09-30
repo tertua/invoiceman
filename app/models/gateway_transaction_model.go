@@ -17,7 +17,7 @@ const (
 )
 
 // GatewayTransaction is the central record for one payment intent.
-// OrderID is the global Midtrans order id (EXT-<slug>-<external>-<rand>
+// OrderID is the global provider order id (EXT-<slug>-<external>-<rand>
 // for relayed projects, PAY-<invoice>-<rand> for local invoices;
 // pre-rename local rows use the legacy INV- prefix).
 // ExternalOrderID preserves the downstream id (e.g. one-api topup_*)
@@ -25,7 +25,7 @@ const (
 type GatewayTransaction struct {
 	OrderID     string `gorm:"primaryKey;size:128" db:"order_id" json:"order_id"`
 	ProjectSlug string `gorm:"size:64;index" db:"project_slug" json:"project_slug"`
-	Gateway     string `gorm:"size:32;index;default:midtrans" db:"gateway" json:"gateway"`
+	Gateway     string `gorm:"size:32;index" db:"gateway" json:"gateway"` // any physical DEFAULT stays inert: every insert sets it explicitly.
 	GatewayTransactionPayment
 	ExternalOrderID string     `gorm:"size:128;index" db:"external_order_id" json:"external_order_id"`
 	InvoiceID       *uuid.UUID `gorm:"type:uuid;index" db:"invoice_id" json:"invoice_id"`
@@ -43,7 +43,7 @@ type GatewayTransaction struct {
 	CustomerEmail   string     `gorm:"size:255" db:"customer_email" json:"customer_email"`
 	CustomerPhone   string     `gorm:"size:64" db:"customer_phone" json:"customer_phone"`
 	Status          string     `gorm:"size:32;index;default:pending" db:"status" json:"status"`
-	SnapToken       string     `gorm:"size:255" db:"snap_token" json:"snap_token"`
+	ProviderToken   string     `gorm:"size:255" db:"provider_token" json:"provider_token"` // v17 rename of snap_token; holds any provider-issued token/id.
 	RedirectURL     string     `gorm:"size:1024" db:"redirect_url" json:"redirect_url"`
 	PaymentURL      string     `gorm:"size:1024" db:"payment_url" json:"payment_url"`
 	QRString        string     `gorm:"size:1024" db:"qr_string" json:"qr_string"`
@@ -51,7 +51,7 @@ type GatewayTransaction struct {
 	PayAmount       string     `gorm:"size:64" db:"pay_amount" json:"pay_amount"`
 	PayCurrency     string     `gorm:"size:32" db:"pay_currency" json:"pay_currency"`
 	ExpiresAt       string     `gorm:"size:64" db:"expires_at" json:"expires_at"`
-	MidtransTxnID   string     `gorm:"size:128" db:"midtrans_txn_id" json:"midtrans_txn_id"`
+	ProviderTxnID   string     `gorm:"size:128" db:"provider_txn_id" json:"provider_txn_id"` // v17 rename of midtrans_txn_id.
 	PaymentType     string     `gorm:"size:64" db:"payment_type" json:"payment_type"`
 	RawIntent       string     `db:"raw_intent" json:"-"`
 	RawNotification string     `db:"raw_notification" json:"-"`
@@ -60,7 +60,7 @@ type GatewayTransaction struct {
 	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
 }
 
-// GatewayEvent stores the raw Midtrans notification for audit.
+// GatewayEvent stores a raw provider notification for audit.
 type GatewayEvent struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey" db:"id" json:"id"`
 	OrderID   string    `gorm:"size:128;index" db:"order_id" json:"order_id"`
@@ -75,7 +75,7 @@ type WebhookDelivery struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" db:"id" json:"id"`
 	OrderID     string     `gorm:"size:128;index" db:"order_id" json:"order_id"`
 	ProjectSlug string     `gorm:"size:64;index" db:"project_slug" json:"project_slug"`
-	Gateway     string     `gorm:"size:32;index;default:midtrans" db:"gateway" json:"gateway"`
+	Gateway     string     `gorm:"size:32;index" db:"gateway" json:"gateway"` // any physical DEFAULT stays inert: every insert sets it explicitly.
 	TargetURL   string     `gorm:"size:1024" db:"target_url" json:"target_url"`
 	Payload     string     `db:"payload" json:"-"`
 	Signature   string     `gorm:"size:128" db:"signature" json:"-"`

@@ -43,7 +43,7 @@ func (q *SettingsQueries) UpdateSettings(s *models.Settings) error {
 			"currency":         s.Currency,
 			"tax_rate":         s.TaxRate,
 			"usd_to_idr":       s.UsdToIdr,
-			"midtrans_methods": s.MidtransMethods,
+			"provider_methods": s.ProviderMethods,
 			"invoice_prefix":   s.InvoicePrefix,
 			"language":         s.Language,
 		}).Error; err != nil {

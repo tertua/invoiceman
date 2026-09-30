@@ -108,7 +108,7 @@ func isDeadClaim(t models.GatewayTransaction) bool {
 	if t.Status != models.GatewayStatusFailed {
 		return false
 	}
-	return t.SnapToken == "" && t.RedirectURL == "" && t.PaymentURL == "" && t.Address == ""
+	return t.ProviderToken == "" && t.RedirectURL == "" && t.PaymentURL == "" && t.Address == ""
 }
 
 // isStaleClaim reports a processing claim older than publicClaimStale. The

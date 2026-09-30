@@ -75,7 +75,7 @@ func createRelayIntent(c fiber.Ctx) error {
 		if existing.InvoiceCurrency == "" { // pre-conversion rows
 			sameAmount = existing.AmountIDR == input.AmountIDR && existing.AmountDecimal == strings.TrimSpace(input.AmountDecimal)
 		}
-		if existing.Status == models.GatewayStatusPending && sameAmount && methodMatches && existing.SnapToken != "" {
+		if existing.Status == models.GatewayStatusPending && sameAmount && methodMatches && existing.ProviderToken != "" {
 			return utils.OK(c, fiber.StatusOK, intentResponse(existing))
 		}
 	}
@@ -166,7 +166,7 @@ func createRelayIntent(c fiber.Ctx) error {
 		CustomerEmail:   input.CustomerEmail,
 		CustomerPhone:   input.CustomerPhone,
 		Status:          models.GatewayStatusPending,
-		SnapToken:       created.Token,
+		ProviderToken:   created.Token,
 		RedirectURL:     created.RedirectURL,
 		PaymentURL:      created.PaymentURL,
 		Address:         created.Address,

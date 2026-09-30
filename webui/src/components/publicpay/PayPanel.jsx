@@ -79,7 +79,7 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh, onS
       // through the same openCheckout contract.
       const config = { ...gateway, ...res, checkout: gateway?.checkout };
       const mode = await openCheckout({
-        token: res.snap_token,
+        token: res.provider_token || res.snap_token,
         config,
         onClose: () => setPending(""),
         onError: () => setPending(""),

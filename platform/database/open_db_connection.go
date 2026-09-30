@@ -38,7 +38,7 @@ func OpenDBConnection() (*Queries, error) {
 }
 
 // SchemaVersion is the current schema revision; bump it by 1 whenever a model changes so the version guard below can detect newer databases.
-const SchemaVersion = 16
+const SchemaVersion = 17
 
 // Migrate creates or updates tables from models, then enforces the forward-only version guard (newer DB than binary is fatal).
 func Migrate() error {
@@ -85,9 +85,9 @@ func Migrate() error {
 		time.Now(),
 	).Error
 
-	// Personal-org backfill is idempotent and must finish before the version guard: any failure aborts startup.
-	if err := backfillOrganizations(db); err != nil {
-		return fmt.Errorf("organization backfill: %w", err)
+	// Idempotent startup data steps (org backfill + v17 provider column rename) must finish before the version guard: any failure aborts startup.
+	if err := runStartupDataSteps(db); err != nil {
+		return err
 	}
 
 	return checkSchemaVersion(db)

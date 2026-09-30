@@ -207,7 +207,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 		InvoiceAmount:   spec.InvoiceAmount,
 		UsdToIdr:        spec.UsdToIdr,
 		Status:          models.GatewayStatusPending,
-		SnapToken:       created.Token,
+		ProviderToken:   created.Token,
 		RedirectURL:     created.RedirectURL,
 		CreatedAt:       now,
 		UpdatedAt:       now,

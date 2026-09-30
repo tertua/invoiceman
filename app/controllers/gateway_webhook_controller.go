@@ -80,7 +80,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 
 	statusChanged := txn.Status != status
 	// Idempotent: same status + same gateway txn id needs no work unless no delivery ever succeeded (forward may have failed earlier).
-	if !statusChanged && txn.MidtransTxnID == notif.TransactionID {
+	if !statusChanged && txn.ProviderTxnID == notif.TransactionID {
 		if deliveries, derr := db.ListDeliveriesByOrder(txn.OrderID); derr == nil {
 			for _, d := range deliveries {
 				if d.Status == "delivered" {
@@ -91,7 +91,7 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 	}
 
 	txn.Status = status
-	txn.MidtransTxnID = notif.TransactionID
+	txn.ProviderTxnID = notif.TransactionID
 	txn.PaymentType = notif.PaymentType
 	if txn.PaymentMethod == "" {
 		txn.PaymentMethod = notif.PaymentMethod

@@ -89,7 +89,7 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 			ID: uuid.New(), CreatedAt: now, UserID: *t.UserID,
 			OrgID: invoice.OrgID, InvoiceID: invoice.ID, Amount: amount,
 			Method: method, PaidOn: &now,
-			TxnID: t.MidtransTxnID, GatewayOrderID: &orderID,
+			TxnID: t.ProviderTxnID, GatewayOrderID: &orderID,
 			Notes: method + " " + t.OrderID,
 		}).Error; err != nil {
 			return err

@@ -44,7 +44,7 @@ func qrisFixture(t *testing.T, app *fiber.App, email string) (cookies []*http.Co
 	resp.Body.Close()
 
 	resp = doRequest(t, app, "PATCH", "/api/settings",
-		`{"company_name":"QRIS Lab","currency":"IDR","tax_rate":0,"invoice_prefix":"INV-","midtrans_methods":"qris"}`, cookies)
+		`{"company_name":"QRIS Lab","currency":"IDR","tax_rate":0,"invoice_prefix":"INV-","provider_methods":"qris"}`, cookies)
 	require.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
 

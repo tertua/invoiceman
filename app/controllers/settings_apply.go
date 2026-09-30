@@ -14,7 +14,7 @@ func applySettingsInput(settings *models.Settings, input *models.SettingsInput) 
 	settings.Currency = input.Currency
 	settings.TaxRate = input.TaxRate
 	settings.UsdToIdr = input.UsdToIdr
-	settings.MidtransMethods = input.MidtransMethods
+	settings.ProviderMethods = input.ProviderMethods
 	settings.InvoicePrefix = input.InvoicePrefix
 	if input.Language == "en" || input.Language == "id" {
 		settings.Language = input.Language

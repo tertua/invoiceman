@@ -19,5 +19,5 @@ func (Gateway) ChargeCurrency() string { return gateway.FiatUSD }
 func (Gateway) RequiresDecimalAmount() bool { return true }
 
 // BrowserSDK reports that the stored token is a hosted payment-page id, not a
-// browser widget token, so payloads must not expose it as "snap_token".
+// browser widget token, so payloads must not expose it as "provider_token".
 func (Gateway) BrowserSDK() bool { return false }
