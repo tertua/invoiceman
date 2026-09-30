@@ -21,7 +21,7 @@ func DateOnly(t time.Time) time.Time {
 // UTC midnights: start is inclusive, next exclusive. The month comes from t's
 // own calendar (its location), so "this month" follows the server clock the
 // same way callers and tests spell out a date.
-func MonthBounds(t time.Time) (time.Time, time.Time) {
-	start := DateOnly(time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location()))
+func MonthBounds(t time.Time) (start, next time.Time) {
+	start = DateOnly(time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location()))
 	return start, start.AddDate(0, 1, 0)
 }
