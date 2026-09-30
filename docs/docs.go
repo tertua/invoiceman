@@ -1858,6 +1858,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/invoices/status-counts": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Get invoice counts per status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "get invoice counts per status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/invoices/{id}": {
             "get": {
                 "security": [
