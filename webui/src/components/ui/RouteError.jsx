@@ -9,7 +9,7 @@ export default function RouteError() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--bg)]">
       <div className="w-full max-w-md text-center">
-        <div className="mx-auto h-14 w-14 rounded-3xl bg-[var(--danger)]/12 text-[var(--danger)] flex items-center justify-center mb-5">
+        <div className="mx-auto h-14 w-14 rounded-3xl bg-[var(--danger)]/16 text-[var(--danger)] border border-[var(--danger)]/25 flex items-center justify-center mb-5">
           <AlertTriangle size={26} />
         </div>
         <h2 className="font-display text-xl font-semibold tracking-tight text-[var(--ink)]">
