@@ -1,11 +1,11 @@
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 
-export function EmptyState({ icon: Icon, title, description, action, className }) {
+export function EmptyState({ icon: Icon, title, description, action, tone = "accent", className }) {
   return (
-    <Card className={cn("flex flex-col items-center text-center py-12", className)}>
+    <Card radius="lg" className={cn("flex flex-col items-center text-center py-12", className)}>
       {Icon && (
-        <div className="h-14 w-14 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent-strong)] flex items-center justify-center mb-3">
+        <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center mb-3", tone === "neutral" ? "bg-[var(--surface-2)] text-[var(--ink-muted)] border border-[var(--border)]" : "bg-[var(--accent-soft)] text-[var(--accent-strong)]")}>
           <Icon size={22} />
         </div>
       )}

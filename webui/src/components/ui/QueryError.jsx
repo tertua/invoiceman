@@ -13,8 +13,7 @@ export function QueryError({ error, invalidate }) {
   const queryClient = useQueryClient();
   if (!error || error.status === 401) return null;
   return (
-    <EmptyState
-      icon={AlertTriangle}
+    <EmptyState icon={AlertTriangle} tone="neutral"
       title={t("common.loadFailed")}
       description={error.message}
       action={
