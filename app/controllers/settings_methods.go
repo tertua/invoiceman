@@ -8,6 +8,17 @@ import (
 	"github.com/tertua/tupay/platform/midtrans"
 )
 
+// methodAllowedFor reports whether a provider may offer a neutral method.
+// Today only the default provider is narrowed by the owner allowlist; every
+// other provider is unrestricted. Phase 3 replaces this with a per-provider
+// allowlist resolver.
+func methodAllowedFor(gw gateway.Gateway, method string, allow map[string]bool) bool {
+	if gw.Name() != gateway.DefaultProvider() {
+		return true
+	}
+	return methodAllowed(allow, method)
+}
+
 // normalizeMidtransMethods keeps the settings PATCH write consistent with the
 // routing below. Midtrans is locked to QRIS everywhere (code-first is the
 // source of truth: the owner's account only offers QRIS), so any input
@@ -30,10 +41,12 @@ func enabledMidtransMethods() []string {
 	return []string{gateway.MethodQRIS}
 }
 
-// applyEnabledMethods lets a Midtrans charge carry the method allowlist so
-// Snap only offers QRIS. Other providers ignore it.
+// applyEnabledMethods lets the built-in provider's charge carry the method
+// allowlist so its checkout only offers QRIS. The constant (not the env-driven
+// default) keeps the QRIS lock pinned to the account that is QRIS-only. Other
+// providers ignore it.
 func applyEnabledMethods(spec *chargeSpec, provider string) {
-	if provider != "midtrans" {
+	if provider != gateway.DefaultProviderName {
 		return
 	}
 	spec.EnabledMethods = enabledMidtransMethods()

@@ -64,6 +64,29 @@ type SandboxProvider interface {
 	Sandbox() bool
 }
 
+// ChargeCurrencyProvider is an optional capability: providers that only
+// accept one fiat report it so callers never switch on the provider name. An
+// empty string means the provider charges in the invoice currency.
+type ChargeCurrencyProvider interface {
+	ChargeCurrency() string
+}
+
+// DecimalAmountProvider is an optional capability: providers that bill with a
+// decimal amount (crypto, sub-unit fiat) require the caller to send one, so
+// callers never switch on the provider name.
+type DecimalAmountProvider interface {
+	RequiresDecimalAmount() bool
+}
+
+// BrowserSDKProvider is an optional capability: providers whose stored token
+// is meant to be consumed by an embedded browser checkout SDK report it, so
+// public payloads expose the token as "snap_token" only when a widget can use
+// it. A hosted payment-page id kept in the same column must never leak out as
+// a widget token (the pay panel would hand it to the wrong SDK).
+type BrowserSDKProvider interface {
+	BrowserSDK() bool
+}
+
 // MinAmountChecker is an optional capability: providers with live
 // per-currency minimums report them so endpoints can hide a method whose
 // charge could never succeed, instead of failing after the payer commits.

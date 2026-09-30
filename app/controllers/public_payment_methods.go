@@ -33,7 +33,7 @@ type publicChargeMethod struct {
 func availableChargeMethods(ctx context.Context, invoiceCurrency string, balance, usdToIdr decimal.Decimal, midtransAllow map[string]bool, payCurrency string) []publicChargeMethod {
 	out := make([]publicChargeMethod, 0)
 	for _, ref := range gateway.OfferedMethods() {
-		if ref.Provider.Name() == "midtrans" && !methodAllowed(midtransAllow, ref.ID) {
+		if !methodAllowedFor(ref.Provider, ref.ID, midtransAllow) {
 			continue
 		}
 		spec, err := buildCharge(ref.Provider, invoiceCurrency, balance, usdToIdr)

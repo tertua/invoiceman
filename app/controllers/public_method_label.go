@@ -14,9 +14,8 @@ import (
 // ("Crypto · USDT (BEP20)"), or the owner's own manual entry ("Cash").
 // Rows settle through gateway_transactions (method id + asset), so the
 // label prefers the transaction; rows written before that carry the
-// provider display name and fall back to a static map (Midtrans is
-// QRIS-only, see midtransMethodAllowlist). The label logic is pure so
-// tests need no database.
+// provider name and fall back to gateway.ProviderLegacyLabels(). The label
+// logic is pure so tests need no database.
 func publicPayMethodLabel(db database.Queries, p models.Payment) string {
 	if p.GatewayOrderID != nil && *p.GatewayOrderID != "" {
 		if txn, err := db.GetTransaction(*p.GatewayOrderID); err == nil {
@@ -33,11 +32,8 @@ func payMethodLabel(method string, txn *models.GatewayTransaction) string {
 		}
 		return gateway.MethodName(txn.PaymentMethod)
 	}
-	switch strings.ToLower(strings.TrimSpace(method)) {
-	case "midtrans":
-		return "QRIS"
-	case "nowpayments":
-		return "Crypto"
+	if label, ok := gateway.ProviderLegacyLabels()[strings.ToLower(strings.TrimSpace(method))]; ok {
+		return label
 	}
 	return method
 }

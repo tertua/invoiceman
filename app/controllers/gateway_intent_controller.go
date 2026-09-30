@@ -187,7 +187,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if !balance.GreaterThan(decimal.Zero) {
 		return utils.Fail(c, fiber.StatusBadRequest, "invoice is already paid", nil)
 	}
-	gw, err := gateway.Get("midtrans")
+	gw, err := gateway.Get(gateway.DefaultProvider())
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "payment gateway is not registered", nil)
 	}
@@ -216,7 +216,7 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	txn := &models.GatewayTransaction{
 		OrderID:         orderID,
 		ProjectSlug:     "local",
-		Gateway:         "midtrans",
+		Gateway:         gw.Name(),
 		ExternalOrderID: invoice.ID.String(),
 		InvoiceID:       &invoice.ID,
 		UserID:          &userID,

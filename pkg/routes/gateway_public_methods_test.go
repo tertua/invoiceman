@@ -77,6 +77,8 @@ func TestPublicPayMethodSelection(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	cryptoIntent := decodeBody(t, resp)
 	assert.Equal(t, "https://nowpayments.io/payment/?iid=pub", cryptoIntent["payment_url"])
+	// A hosted payment-page id is never exposed as a widget token: the
+	// snap_token key only appears for BrowserSDKProvider tokens.
 	assert.Empty(t, cryptoIntent["snap_token"])
 	resp.Body.Close()
 }
@@ -227,6 +229,7 @@ func TestPublicPayCryptoWidgetNoRedirect(t *testing.T) {
 	assert.Equal(t, "100", intent["pay_amount"])
 	assert.Equal(t, "usdttrc20", intent["pay_currency"])
 	assert.Empty(t, intent["payment_url"], "no redirect; the widget stays on page")
+	// NOWPayments has no browser SDK widget, so no snap_token key is exposed.
 	assert.Empty(t, intent["snap_token"])
 	resp.Body.Close()
 }

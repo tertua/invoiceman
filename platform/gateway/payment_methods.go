@@ -43,6 +43,28 @@ func DisplayName(name string) string {
 	}
 }
 
+// ChargeCurrencyOf returns the provider's preferred charge currency, or ""
+// when the provider charges in the invoice currency (or has no opinion).
+// Nil-safe: a nil gateway returns "".
+func ChargeCurrencyOf(g Gateway) string {
+	provider, ok := g.(ChargeCurrencyProvider)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(provider.ChargeCurrency())
+}
+
+// ProviderLegacyLabels maps a provider name to the neutral method label used
+// for historical payments rows written before the transactions table carried
+// the method id. It labels old data only; live labels come from the
+// transaction's method id. Keyed by registry name.
+func ProviderLegacyLabels() map[string]string {
+	return map[string]string{
+		"midtrans":    "QRIS",
+		"nowpayments": "Crypto",
+	}
+}
+
 // MethodRef pairs a provider-neutral method id with the ready provider that offers it.
 type MethodRef struct {
 	Provider Gateway
@@ -70,6 +92,19 @@ func OfferedMethods() []MethodRef {
 			out = append(out, MethodRef{Provider: g, ID: method})
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+		sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+// ExposesBrowserToken reports whether a stored provider token may be sent to
+// browsers under the payload key "snap_token". Only providers declaring the
+// BrowserSDKProvider capability qualify; unresolvable gateways and empty
+// tokens expose nothing. This keeps hosted payment-page ids (stored in the
+// same column) from being fed to an embedded checkout SDK.
+func ExposesBrowserToken(g Gateway, token string) bool {
+	if token == "" {
+		return false
+	}
+	sdk, ok := g.(BrowserSDKProvider)
+	return ok && sdk.BrowserSDK()
 }

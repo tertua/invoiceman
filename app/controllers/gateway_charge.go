@@ -21,19 +21,16 @@ type chargeSpec struct {
 }
 
 // buildCharge converts an invoice-currency balance into the currency the
-// routed provider charges, using the owner's manual IDR-per-USD rate. Midtrans
-// is IDR-only; NOWPayments invoices reject non-USD fiat (e.g. IDR) at the
-// hosted checkout, so they are always charged in USD. No realtime rates are
-// ever fetched.
+// routed provider charges, using the owner's manual IDR-per-USD rate. The
+// target comes from the provider's ChargeCurrencyProvider capability: a
+// provider that only accepts one fiat declares it, and providers without the
+// capability charge in the invoice currency. No realtime rates are ever fetched.
 // A per-invoice currency choice stays open for later, once the pay page grows a toggle.
 func buildCharge(gw gateway.Gateway, invoiceCurrency string, balance, usdToIdr decimal.Decimal) (chargeSpec, error) {
 	invoiceCurrency = strings.ToUpper(strings.TrimSpace(invoiceCurrency))
 	target := invoiceCurrency
-	switch gw.Name() {
-	case "midtrans":
-		target = gateway.FiatIDR
-	case "nowpayments":
-		target = gateway.FiatUSD
+	if declared := gateway.ChargeCurrencyOf(gw); declared != "" {
+		target = declared
 	}
 	converted, err := gateway.Convert(balance, invoiceCurrency, target, usdToIdr)
 	if err != nil {

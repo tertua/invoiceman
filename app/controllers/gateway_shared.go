@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/platform/gateway"
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
@@ -82,7 +83,7 @@ func intentResponse(t models.GatewayTransaction) fiber.Map {
 	}
 }
 
-// resolveGateway picks the provider: explicit request > project default > midtrans.
+// resolveGateway picks the provider: explicit request > project default > gateway.DefaultProvider().
 func resolveGateway(requested, projectDefault string) string {
 	if name := strings.ToLower(strings.TrimSpace(requested)); name != "" {
 		return name
@@ -90,5 +91,5 @@ func resolveGateway(requested, projectDefault string) string {
 	if name := strings.ToLower(strings.TrimSpace(projectDefault)); name != "" {
 		return name
 	}
-	return "midtrans"
+	return gateway.DefaultProvider()
 }

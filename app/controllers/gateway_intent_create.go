@@ -87,8 +87,8 @@ func createRelayIntent(c fiber.Ctx) error {
 		}
 		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
 	}
-	if gw.Name() == "nowpayments" && strings.TrimSpace(input.AmountDecimal) == "" {
-		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for nowpayments", nil)
+	if provider, ok := gw.(gateway.DecimalAmountProvider); ok && provider.RequiresDecimalAmount() && strings.TrimSpace(input.AmountDecimal) == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "amount_decimal is required for this payment method", nil)
 	}
 	usdToIdr := decimal.Zero
 	if project.OwnerUserID != nil {

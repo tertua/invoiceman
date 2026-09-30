@@ -59,7 +59,7 @@ func CreateProject(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	defaultGateway := resolveGateway(input.DefaultGateway, "midtrans")
+	defaultGateway := resolveGateway(input.DefaultGateway, gateway.DefaultProvider())
 	if _, err := gateway.Get(defaultGateway); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
 	}

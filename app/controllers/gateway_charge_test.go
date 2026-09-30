@@ -16,9 +16,17 @@ func (f fakeGateway) CreateTransaction(context.Context, *gateway.CreateTxRequest
 }
 func (f fakeGateway) ParseAndVerify([]byte) (*gateway.NotificationResult, error) { return nil, nil }
 
+// declaringGateway is a fake with the ChargeCurrencyProvider capability.
+type declaringGateway struct {
+	fakeGateway
+	currency string
+}
+
+func (g declaringGateway) ChargeCurrency() string { return g.currency }
+
 // buildCharge converts a USD invoice into IDR for the IDR-only provider.
 func TestBuildChargeConvertsForMidtrans(t *testing.T) {
-	spec, err := buildCharge(fakeGateway{name: "midtrans"}, "USD", decimal.RequireFromString("25.50"), decimal.RequireFromString("18000"))
+	spec, err := buildCharge(declaringGateway{fakeGateway{name: "midtrans"}, gateway.FiatIDR}, "USD", decimal.RequireFromString("25.50"), decimal.RequireFromString("18000"))
 	if err != nil {
 		t.Fatalf("buildCharge: %v", err)
 	}
@@ -38,7 +46,7 @@ func TestBuildChargeConvertsForMidtrans(t *testing.T) {
 
 // A USD invoice keeps USD for NOWPayments and needs no rate.
 func TestBuildChargeKeepsInvoiceCurrencyForCrypto(t *testing.T) {
-	spec, err := buildCharge(fakeGateway{name: "nowpayments"}, "USD", decimal.RequireFromString("25.50"), decimal.Zero)
+	spec, err := buildCharge(declaringGateway{fakeGateway{name: "nowpayments"}, gateway.FiatUSD}, "USD", decimal.RequireFromString("25.50"), decimal.Zero)
 	if err != nil {
 		t.Fatalf("buildCharge: %v", err)
 	}
@@ -53,7 +61,7 @@ func TestBuildChargeKeepsInvoiceCurrencyForCrypto(t *testing.T) {
 // An IDR invoice is converted to USD for NOWPayments with the manual rate:
 // the hosted checkout rejects IDR, so it must never be sent as-is.
 func TestBuildChargeConvertsIDRToUSDForCrypto(t *testing.T) {
-	spec, err := buildCharge(fakeGateway{name: "nowpayments"}, "IDR", decimal.RequireFromString("222000"), decimal.RequireFromString("18000"))
+	spec, err := buildCharge(declaringGateway{fakeGateway{name: "nowpayments"}, gateway.FiatUSD}, "IDR", decimal.RequireFromString("222000"), decimal.RequireFromString("18000"))
 	if err != nil {
 		t.Fatalf("buildCharge: %v", err)
 	}
@@ -72,12 +80,26 @@ func TestBuildChargeConvertsIDRToUSDForCrypto(t *testing.T) {
 	}
 }
 
+// A provider without the capability charges in the invoice currency.
+func TestBuildChargeUsesInvoiceCurrencyWithoutCapability(t *testing.T) {
+	spec, err := buildCharge(fakeGateway{name: "unknownpay"}, "EUR", decimal.RequireFromString("10.00"), decimal.Zero)
+	if err != nil {
+		t.Fatalf("buildCharge: %v", err)
+	}
+	if spec.Currency != "EUR" {
+		t.Fatalf("currency = %q, want EUR", spec.Currency)
+	}
+	if !spec.UsdToIdr.IsZero() {
+		t.Fatalf("UsdToIdr = %s, want 0", spec.UsdToIdr)
+	}
+}
+
 // Missing rate for a cross-currency charge is a hard error, never a silent guess.
 func TestBuildChargeRequiresRateForCrossCurrency(t *testing.T) {
-	if _, err := buildCharge(fakeGateway{name: "midtrans"}, "USD", decimal.RequireFromString("25"), decimal.Zero); err == nil {
+	if _, err := buildCharge(declaringGateway{fakeGateway{name: "midtrans"}, gateway.FiatIDR}, "USD", decimal.RequireFromString("25"), decimal.Zero); err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if _, err := buildCharge(fakeGateway{name: "nowpayments"}, "IDR", decimal.RequireFromString("222000"), decimal.Zero); err == nil {
+	if _, err := buildCharge(declaringGateway{fakeGateway{name: "nowpayments"}, gateway.FiatUSD}, "IDR", decimal.RequireFromString("222000"), decimal.Zero); err == nil {
 		t.Fatal("expected error for IDR crypto without rate, got nil")
 	}
 }

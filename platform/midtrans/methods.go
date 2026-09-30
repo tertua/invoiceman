@@ -23,6 +23,18 @@ func (Gateway) Methods() []string {
 	}
 }
 
+// ChargeCurrency reports that Midtrans only charges in IDR; callers convert
+// invoice amounts to IDR before creating a charge.
+func (Gateway) ChargeCurrency() string { return gateway.FiatIDR }
+
+// RequiresDecimalAmount reports that Midtrans bills whole rupiah, so no
+// decimal amount is needed in the request.
+func (Gateway) RequiresDecimalAmount() bool { return false }
+
+// BrowserSDK reports that the stored token is a Snap token, meant for the
+// Midtrans Snap browser SDK.
+func (Gateway) BrowserSDK() bool { return true }
+
 func StandardizePaymentType(raw string) string {
 	if method, ok := paymentTypes[strings.ToLower(strings.TrimSpace(raw))]; ok {
 		return method

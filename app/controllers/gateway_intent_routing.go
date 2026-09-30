@@ -11,7 +11,7 @@ import (
 //   - an explicit `gateway` pins that provider (legacy escape hatch);
 //   - an explicit `payment_method` routes to any configured provider that
 //     supports it, ignoring the project default (true multi-provider);
-//   - otherwise the project default, then "midtrans".
+//   - otherwise the project default, then gateway.DefaultProvider().
 func routeIntentGateway(input *models.IntentInput, projectDefault string) (gateway.Gateway, error) {
 	if requested := strings.TrimSpace(input.Gateway); requested != "" {
 		return gateway.Route(requested, input.PaymentMethod, nil)

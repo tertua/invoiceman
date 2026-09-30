@@ -106,7 +106,9 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 		if method == gateway.MethodQRIS {
 			req.DirectQRIS = true
 		}
-		if gw.Name() == "nowpayments" && payCurrency != "" {
+		// Set the payer's chosen asset whenever they picked one; providers
+		// that ignore it do so inside their own package.
+		if payCurrency != "" {
 			req.PayCurrency = strings.ToUpper(strings.TrimSpace(payCurrency))
 		}
 		created, err := gw.CreateTransaction(c.Context(), req)
@@ -204,15 +206,16 @@ func isDuplicateOrderError(err error) bool {
 }
 
 // routePublicGateway resolves the provider for a public charge: an explicit
-// method routes across configured providers, an empty method keeps Midtrans
-// for backward compatibility. The owner's Midtrans allowlist vetoes Midtrans
-// for disallowed methods while leaving other providers untouched.
+// method routes across configured providers, an empty method keeps the
+// default provider for backward compatibility. The default provider's
+// allowlist vetoes it for disallowed methods while leaving other providers
+// untouched.
 func routePublicGateway(method string, allow map[string]bool) (gateway.Gateway, error) {
 	if method == "" {
-		return gateway.Get("midtrans")
+		return gateway.Get(gateway.DefaultProvider())
 	}
 	return gateway.Route("", method, func(provider, m string) bool {
-		return provider != "midtrans" || methodAllowed(allow, m)
+		return provider != gateway.DefaultProvider() || methodAllowed(allow, m)
 	})
 }
 
@@ -242,7 +245,10 @@ func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
 		"pay_currency": t.PayCurrency,
 		"expires_at":   t.ExpiresAt,
 	}
-	if t.Gateway == "midtrans" {
+	// Expose the token as a widget token only when the provider declares it
+	// is one (BrowserSDKProvider): hosted payment-page ids stored in the same
+	// column would be handed to the wrong browser SDK otherwise.
+	if gw, err := gateway.Get(t.Gateway); err == nil && gateway.ExposesBrowserToken(gw, t.SnapToken) {
 		out["snap_token"] = t.SnapToken
 	}
 	return out
