@@ -1534,6 +1534,11 @@ paths:
   /gateway/config:
     get:
       description: Get public payment gateway browser configuration.
+      parameters:
+      - description: 'Provider name (default: configured default gateway)'
+        in: query
+        name: gateway
+        type: string
       produces:
       - application/json
       responses:
@@ -1569,7 +1574,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a relayed payment intent.
+      description: Create a relayed payment intent. Response keys snap_token and midtrans_txn_id
+        are DEPRECATED (use provider_token / provider_txn_id, same values); they are
+        kept until relay clients migrate.
       parameters:
       - description: Intent payload
         in: body
@@ -1595,7 +1602,9 @@ paths:
       - Gateway
   /gateway/intents/{order_id}:
     get:
-      description: Get a payment intent status.
+      description: Get a payment intent status. Response keys snap_token and midtrans_txn_id
+        are DEPRECATED (use provider_token / provider_txn_id, same values); they are
+        kept until relay clients migrate.
       parameters:
       - description: Global order ID
         in: path
@@ -2786,7 +2795,12 @@ paths:
       - Settings
   /settings/methods:
     get:
-      description: List selectable Midtrans payment methods.
+      description: List selectable payment methods for the settings UI.
+      parameters:
+      - description: Provider name (defaults to the built-in provider)
+        in: query
+        name: gateway
+        type: string
       produces:
       - application/json
       responses:
@@ -2797,7 +2811,7 @@ paths:
             type: object
       security:
       - SessionCookie: []
-      summary: list midtrans methods
+      summary: list payment methods
       tags:
       - Settings
   /webhooks/{gateway}:

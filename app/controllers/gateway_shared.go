@@ -60,6 +60,13 @@ func legacyLocalOrderID(invoiceNumber, suffix string) string {
 	return "INV-" + strings.ReplaceAll(invoiceNumber, " ", "") + "-" + suffix
 }
 
+// intentResponse is the relay / dashboard intent payload. The provider-neutral
+// keys (provider_token, provider_txn_id) are the future names; the legacy
+// keys (snap_token, midtrans_txn_id) carry the same values and stay until
+// relay clients migrate — the Phase 5 column rename was skipped, so these JSON
+// keys are the only remaining provider-named surface and they are kept for
+// backward compatibility, not because a provider is special. Deprecation is
+// documented in the route's @Description (gateway_intent_controller.go).
 func intentResponse(t models.GatewayTransaction) fiber.Map {
 	return fiber.Map{
 		"order_id":          t.OrderID,
@@ -74,10 +81,12 @@ func intentResponse(t models.GatewayTransaction) fiber.Map {
 		"invoice_amount":    t.InvoiceAmount,
 		"usd_to_idr":        t.UsdToIdr,
 		"status":            t.Status,
+		"provider_token":    t.SnapToken,
 		"snap_token":        t.SnapToken,
 		"redirect_url":      t.RedirectURL,
 		"payment_url":       t.PaymentURL,
 		"address":           t.Address,
+		"provider_txn_id":   t.MidtransTxnID,
 		"midtrans_txn_id":   t.MidtransTxnID,
 		"created_at":        t.CreatedAt,
 	}

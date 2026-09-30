@@ -42,11 +42,18 @@ func (Gateway) RequiresDecimalAmount() bool { return false }
 func (Gateway) BrowserSDK() bool { return true }
 
 // PayerConfig returns the browser-safe Midtrans settings the pay page needs:
-// the public client key and the environment flag. The server key is a secret
-// and is never exposed here.
+// the public client key, the environment flag, and the checkout mode the
+// browser must open. The server key is a secret and is never exposed here.
+//
+// "checkout": "snap" is a provider-declared value: the pay page dispatches on
+// it (webui/src/lib/payerCheckout.js) instead of on a provider name, so a
+// provider without a browser SDK simply omits the key and the page falls back
+// to its hosted redirect_url/payment_url. client_key stays for older cached
+// bundles that still gate on it.
 func (Gateway) PayerConfig() map[string]any {
 	cfg := FromEnv()
 	return map[string]any{
+		"checkout":      "snap",
 		"client_key":    cfg.ClientKey,
 		"is_production": cfg.IsProd,
 	}

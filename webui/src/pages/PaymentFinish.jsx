@@ -29,10 +29,10 @@ const STATE_META = {
   unknown: { icon: Clock, tone: "var(--ink-muted)", titleKey: "finish.title", descKey: "finish.unknownDesc" },
 };
 
-// Static thank-you page for the Midtrans Finish Redirect URL.
-// Register `{ORIGIN}/payment/finish` in the Midtrans dashboard; Midtrans appends
-// `?order_id=&status_code=&transaction_status=`. No backend call: the page
-// only reflects the redirect params, settlement truth stays on webhooks.
+// Static thank-you page for the browser checkout Finish Redirect URL.
+// Register `{ORIGIN}/payment/finish` in the provider dashboard; the widget
+// appends `?order_id=&status_code=&transaction_status=`. No backend call: the
+// page only reflects the redirect params, settlement truth stays on webhooks.
 export default function PaymentFinish() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [lang, setLang] = useState(() => detectLang(searchParams));

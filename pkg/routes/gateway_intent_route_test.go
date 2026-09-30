@@ -56,6 +56,7 @@ func TestInvoiceIntentSessionFlow(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	intent := decodeBody(t, resp)
 	assert.Equal(t, "snap-tok-local", intent["snap_token"])
+	assert.Equal(t, intent["snap_token"], intent["provider_token"], "provider_token aliases snap_token")
 	assert.Equal(t, "midtrans", intent["gateway"])
 	resp.Body.Close()
 }

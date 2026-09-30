@@ -1569,6 +1569,14 @@ const docTemplate = `{
                     "Gateway"
                 ],
                 "summary": "get gateway browser config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider name (default: configured default gateway)",
+                        "name": "gateway",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1612,7 +1620,7 @@ const docTemplate = `{
         },
         "/gateway/intents": {
             "post": {
-                "description": "Create a relayed payment intent.",
+                "description": "Create a relayed payment intent. Response keys snap_token and midtrans_txn_id are DEPRECATED (use provider_token / provider_txn_id, same values); they are kept until relay clients migrate.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1654,7 +1662,7 @@ const docTemplate = `{
         },
         "/gateway/intents/{order_id}": {
             "get": {
-                "description": "Get a payment intent status.",
+                "description": "Get a payment intent status. Response keys snap_token and midtrans_txn_id are DEPRECATED (use provider_token / provider_txn_id, same values); they are kept until relay clients migrate.",
                 "produces": [
                     "application/json"
                 ],
@@ -3521,14 +3529,22 @@ const docTemplate = `{
                         "SessionCookie": []
                     }
                 ],
-                "description": "List selectable Midtrans payment methods.",
+                "description": "List selectable payment methods for the settings UI.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Settings"
                 ],
-                "summary": "list midtrans methods",
+                "summary": "list payment methods",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider name (defaults to the built-in provider)",
+                        "name": "gateway",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

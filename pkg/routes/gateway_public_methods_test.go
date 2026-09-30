@@ -80,6 +80,7 @@ func TestPublicPayMethodSelection(t *testing.T) {
 	// A hosted payment-page id is never exposed as a widget token: the
 	// snap_token key only appears for BrowserSDKProvider tokens.
 	assert.Empty(t, cryptoIntent["snap_token"])
+	assert.Empty(t, cryptoIntent["provider_token"], "provider-neutral alias is exposed only with snap_token")
 	resp.Body.Close()
 }
 
@@ -164,6 +165,7 @@ func TestPublicPayMidtransMethodAllowlist(t *testing.T) {
 	qrisIntent := decodeBody(t, resp)
 	assert.Equal(t, "https://api.test/qris/allow/qr-code", qrisIntent["payment_url"])
 	assert.Empty(t, qrisIntent["snap_token"])
+	assert.Empty(t, qrisIntent["provider_token"], "provider_token aliases snap_token")
 	assert.Equal(t, "2026-09-25T10:30:00+07:00", qrisIntent["expires_at"])
 	resp.Body.Close()
 }
@@ -231,6 +233,7 @@ func TestPublicPayCryptoWidgetNoRedirect(t *testing.T) {
 	assert.Empty(t, intent["payment_url"], "no redirect; the widget stays on page")
 	// NOWPayments has no browser SDK widget, so no snap_token key is exposed.
 	assert.Empty(t, intent["snap_token"])
+	assert.Empty(t, intent["provider_token"], "provider-neutral alias is exposed only with snap_token")
 	resp.Body.Close()
 }
 

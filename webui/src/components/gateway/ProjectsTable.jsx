@@ -63,7 +63,7 @@ export function ProjectsTable({ projects, onCredentials }) {
             {projects.map((project) => (
               <tr key={project.slug} className="border-t border-[var(--border)] align-top">
                 <td className="px-4 py-4"><div className="font-medium text-[var(--ink)]">{project.name}</div><div className="mt-1 text-xs text-[var(--ink-muted)]">{project.slug}</div></td>
-                <td className="px-4 py-4"><code className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs">{project.default_gateway || "midtrans"}</code></td>
+                <td className="px-4 py-4"><code className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs">{project.default_gateway || t("gateway.noDefault")}</code></td>
                 <td className="max-w-[260px] truncate px-4 py-4 text-xs text-[var(--ink-muted)]" title={project.webhook_url}>{project.webhook_url}</td>
                 <td className="px-4 py-4"><StatusPill active={project.is_active} t={t} /></td>
                 <td className="px-4 py-4 text-right">

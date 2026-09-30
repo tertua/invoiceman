@@ -25,6 +25,9 @@ func TestGatewayConfigDefaultProvider(t *testing.T) {
 	assert.Equal(t, "ck-public-1", body["client_key"])
 	assert.Equal(t, true, body["is_production"])
 	assert.Equal(t, true, body["configured"])
+	// The provider declares which browser checkout to open, so the pay page
+	// dispatches on this value and never on a provider name.
+	assert.Equal(t, "snap", body["checkout"])
 
 	// Server credentials must never leak through the public config endpoint.
 	raw, _ := json.Marshal(body)
@@ -44,8 +47,10 @@ func TestGatewayConfigExplicitProvider(t *testing.T) {
 	body := decodeBody(t, resp)
 	assert.Equal(t, "nowpayments", body["gateway"])
 	assert.Equal(t, true, body["configured"])
-	// NOWPayments declares no payer config: no client_key is added.
+	// NOWPayments declares no payer config: no client_key is added, and it
+	// has no browser checkout to declare.
 	assert.NotContains(t, body, "client_key")
+	assert.NotContains(t, body, "checkout")
 	resp.Body.Close()
 
 	resp = doGatewayRequest(t, app, "GET", "/api/public/gateway/config?gateway=nope", "", nil, nil)
@@ -82,6 +87,7 @@ func TestPayerConfigHidesServerKey(t *testing.T) {
 
 	conf := provider.PayerConfig()
 	assert.Equal(t, "ck-visible", conf["client_key"])
+	assert.Equal(t, "snap", conf["checkout"], "the payer config declares the browser checkout mode")
 	assert.Contains(t, conf, "is_production")
 	for key := range conf {
 		assert.NotContains(t, key, "server")

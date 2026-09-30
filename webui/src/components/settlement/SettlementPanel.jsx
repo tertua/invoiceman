@@ -100,7 +100,7 @@ export function SettlementPanel() {
                 <tr key={tx.order_id} className="border-t border-[var(--border)]">
                   <td className="px-4 py-3 text-sm text-[var(--ink-muted)] tabular">{formatDate(tx.created_at)}</td>
                   <td className="px-4 py-3 max-w-[200px]">
-                    <code className="block truncate text-xs text-[var(--ink)]" title={[tx.order_id, tx.external_order_id, tx.midtrans_txn_id].filter(Boolean).join("\n")}>{tx.order_id}</code>
+                    <code className="block truncate text-xs text-[var(--ink)]" title={[tx.order_id, tx.external_order_id, tx.provider_txn_id || tx.midtrans_txn_id].filter(Boolean).join("\n")}>{tx.order_id}</code>
                   </td>
                   <td className="px-4 py-3 text-sm">{tx.gateway}</td>
                   <td className="px-4 py-3 text-sm text-[var(--ink-muted)]">{tx.payment_method || "—"}</td>

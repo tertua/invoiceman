@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPublicTransaction, newIntentKey } from "@/api/publicIntent";
-import { loadMidtransSnap } from "@/lib/midtrans";
+import { openCheckout } from "@/lib/payerCheckout";
 import { t } from "@/lib/i18n";
 import CryptoWidget from "./CryptoWidget";
 import QrisWidget from "./QrisWidget";
@@ -73,21 +73,19 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh, onS
     if (!keysRef.current[method]) keysRef.current[method] = newIntentKey(0);
     try {
       const res = await createPublicTransaction(token, method, undefined, keysRef.current[method]);
-      if (res.snap_token && gateway?.client_key) {
-        const snap = await loadMidtransSnap(gateway.is_production);
-        snap.pay(res.snap_token, {
-          onClose: () => setPending(""),
-          onError: () => setPending(""),
-          onSuccess: () => onRefresh(),
-        });
-        return;
-      }
-      const hosted = res.redirect_url || res.payment_url;
-      if (hosted) {
-        window.location.href = hosted;
-        return;
-      }
-      setPending("");
+      // The panel dispatches on the backend-declared checkout, never on a
+      // provider name. A Snap config pays in-page; anything else (hosted
+      // checkout, or a response that carries no browser token) redirects
+      // through the same openCheckout contract.
+      const config = { ...gateway, ...res, checkout: gateway?.checkout };
+      const mode = await openCheckout({
+        token: res.snap_token,
+        config,
+        onClose: () => setPending(""),
+        onError: () => setPending(""),
+        onSuccess: () => onRefresh(),
+      });
+      if (mode !== "snap") setPending("");
     } catch (e) {
       setError(e.message || t(lang, "public.notPayable"));
       setPending("");

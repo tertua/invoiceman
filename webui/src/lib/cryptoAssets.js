@@ -1,4 +1,4 @@
-// Crypto asset list for the NowPayments widget. Codes must match the BE
+// Crypto asset list for the crypto widget. Codes must match the backend
 // allowlist in platform/nowpayments/assets.go; labels are display-only.
 export const CRYPTO_ASSETS = [
   { code: "usdttrc20", ticker: "USDT", network: "TRC20" },

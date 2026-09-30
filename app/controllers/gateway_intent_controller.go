@@ -18,7 +18,7 @@ import (
 
 // CreateIntent creates a Midtrans Snap transaction.
 // Project identity is taken from the API key (GatewayAuth), never from the body.
-// @Description Create a relayed payment intent.
+// @Description Create a relayed payment intent. Response keys snap_token and midtrans_txn_id are DEPRECATED (use provider_token / provider_txn_id, same values); they are kept until relay clients migrate.
 // @Summary create payment intent
 // @Tags Gateway
 // @Accept json
@@ -35,7 +35,7 @@ func CreateIntent(c fiber.Ctx) error {
 }
 
 // GetIntent returns one intent owned by the calling project.
-// @Description Get a payment intent status.
+// @Description Get a payment intent status. Response keys snap_token and midtrans_txn_id are DEPRECATED (use provider_token / provider_txn_id, same values); they are kept until relay clients migrate.
 // @Summary get payment intent
 // @Tags Gateway
 // @Produce json

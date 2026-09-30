@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { createPublicTransaction, newIntentKey, qrDownloadUrl } from "@/api/publicIntent";
-import { loadMidtransSnap } from "@/lib/midtrans";
+import { openCheckout } from "@/lib/payerCheckout";
 import { downloadImage } from "@/lib/download";
 import { t } from "@/lib/i18n";
 import { formatMoney } from "@/lib/utils";
@@ -46,7 +46,6 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
   const [saving, setSaving] = useState(false);
   const [qrSrc, setQrSrc] = useState("");
   const keysRef = useRef({});
-  const clientKey = gateway?.client_key;
   const isProd = gateway?.is_production;
 
   function qrFileName(disposition) {
@@ -118,10 +117,15 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
         setPending(false);
         return;
       }
-      if (res.snap_token && clientKey) {
+      if (res.snap_token) {
         setPending(false);
-        const snap = await loadMidtransSnap(isProd);
-        snap.pay(res.snap_token, {
+        // Core API unavailable: fall back to the provider-declared browser
+        // checkout (openCheckout dispatches on config.checkout, never on a
+        // provider name). Success/close/error keep the same no-op semantics
+        // as before, so the widget never traps the payer.
+        await openCheckout({
+          token: res.snap_token,
+          config: { ...gateway, ...res, is_production: isProd, checkout: gateway?.checkout },
           onClose: () => {},
           onError: () => {},
           onSuccess: () => onPaid?.(),
@@ -139,7 +143,7 @@ export default function QrisWidget({ token, lang, amount, currency, gateway, onE
     return () => {
       cancelled = true;
     };
-  }, [token, lang, clientKey, isProd, onError, onPaid, nonce]);
+  }, [token, lang, gateway, isProd, onError, onPaid, nonce]);
 
   // Render the stored EMVCo payload locally (same lib as CryptoWidget) so the code does not depend on the provider's image host; an intent without a payload keeps the hosted image.
   useEffect(() => {

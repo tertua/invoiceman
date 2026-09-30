@@ -2,17 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { finishState } from "./paymentFinish.js";
 
-test("midtrans success statuses resolve to success", () => {
+test("success statuses resolve to success", () => {
   assert.equal(finishState("settlement"), "success");
   assert.equal(finishState("capture"), "success");
 });
 
-test("midtrans in-flight statuses resolve to pending", () => {
+test("in-flight statuses resolve to pending", () => {
   assert.equal(finishState("pending"), "pending");
   assert.equal(finishState("challenge"), "pending");
 });
 
-test("midtrans terminal failure statuses resolve to failed", () => {
+test("terminal failure statuses resolve to failed", () => {
   assert.equal(finishState("deny"), "failed");
   assert.equal(finishState("cancel"), "failed");
   assert.equal(finishState("expire"), "failed");

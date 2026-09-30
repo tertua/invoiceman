@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Check,
   Copy,
@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { GatewayDeliveries } from "@/components/gateway/GatewayDeliveries";
+import { GatewaySelect } from "@/components/gateway/GatewaySelect";
 import { ProjectsTable } from "@/components/gateway/ProjectsTable";
 import { Input } from "@/components/ui/Input";
 import { useLang } from "@/context/LangContext";
@@ -95,17 +96,23 @@ function CreateProjectForm({ onCreated }) {
   const { t } = useLang();
   const create = useCreateGatewayProject();
   const { data: gateways = [] } = useGatewayStatus();
-  const options = gateways.length ? gateways : [{ name: "midtrans", configured: true }, { name: "nowpayments", configured: false }];
-  const [form, setForm] = useState({ slug: "", name: "", webhook_url: "", default_gateway: "midtrans" });
+  const options = useMemo(() => {
+    const configured = gateways.filter((gw) => gw.configured !== false);
+    return (configured.length ? configured : gateways).map((gw) => gw.name);
+  }, [gateways]);
+  const fallback = options[0] || "";
+  const [form, setForm] = useState({ slug: "", name: "", webhook_url: "", default_gateway: "" });
   const [error, setError] = useState("");
+  const chosen = options.includes(form.default_gateway) ? form.default_gateway : fallback;
+  const setDefaultGateway = (event) => setForm((current) => ({ ...current, default_gateway: event.target.value }));
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
   async function submit(event) {
     event.preventDefault();
     setError("");
     try {
-      const project = await create.mutateAsync(form);
-      setForm({ slug: "", name: "", webhook_url: "", default_gateway: "midtrans" });
+      const project = await create.mutateAsync({ ...form, default_gateway: chosen });
+      setForm({ slug: "", name: "", webhook_url: "", default_gateway: "" });
       onCreated(project);
       toast.success(t("gateway.created"));
     } catch (err) {
@@ -123,21 +130,10 @@ function CreateProjectForm({ onCreated }) {
         <Input value={form.slug} onChange={set("slug")} placeholder={t("gateway.slugPlaceholder")} required />
         <Input value={form.name} onChange={set("name")} placeholder={t("gateway.namePlaceholder")} required />
         <Input value={form.webhook_url} onChange={set("webhook_url")} placeholder={t("gateway.webhookPlaceholder")} type="url" required />
-        <select
-          value={form.default_gateway}
-          onChange={set("default_gateway")}
-          className="h-10 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none transition-colors focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
-          aria-label={t("gateway.gateway")}
-        >
-          {options.map((gw) => (
-            <option key={gw.name} value={gw.name}>
-              {gw.name}{gw.configured === false ? ` (${t("gateway.notConfigured")})` : ""}
-            </option>
-          ))}
-        </select>
+        <GatewaySelect value={chosen} options={options} onChange={setDefaultGateway} lang={t} />
         {error && <p className="text-sm text-[var(--danger)] md:col-span-2">{error}</p>}
         <div className="md:col-span-2">
-          <Button type="submit" variant="accent" disabled={create.isPending}>
+          <Button type="submit" variant="accent" disabled={create.isPending || !chosen}>
             {create.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
             {t("gateway.addProject")}
           </Button>
