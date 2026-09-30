@@ -10,7 +10,7 @@ import (
 // Settings struct to describe per-org business settings; user_id remains the audit creator.
 type Settings struct {
 	OrgID       uuid.UUID `gorm:"type:uuid;primaryKey" db:"org_id" json:"org_id" validate:"required,uuid"`
-	UserID      uuid.UUID `gorm:"type:uuid" db:"user_id" json:"user_id" validate:"required,uuid"`
+	UserID      uuid.UUID `gorm:"type:uuid;not null" db:"user_id" json:"user_id" validate:"required,uuid"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 	CompanyName string    `db:"company_name" json:"company_name" validate:"lte=255"`
 	Email       string    `db:"email" json:"email" validate:"omitempty,email,lte=255"`
