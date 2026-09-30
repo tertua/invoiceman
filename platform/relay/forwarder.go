@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 )
 
@@ -15,11 +16,10 @@ type ForwardResult struct {
 	Body       string
 }
 
-// Forward POSTs payload with relay signature headers; callers persist the result for audit and retry.
+// Forward POSTs payload with relay signature headers; callers persist the result for audit and retry (WEBHOOK_FORWARD_TIMEOUT_SECONDS).
 func Forward(ctx context.Context, targetURL, projectSlug, eventID string, payload []byte, secret string) (*ForwardResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, constants.WebhookForwardTimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.WebhookForwardTimeout())
 	defer cancel()
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err

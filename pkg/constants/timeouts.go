@@ -22,28 +22,16 @@ func RelayUserAgent() string {
 	return fmt.Sprintf("Tupay-Relay/%s", Version)
 }
 
-// HTTP client timeouts for external API calls.
+// HTTP client timeouts for external API calls. The per-request context
+// timeout is now driven by config (see pkg/configs GatewayConfig); these
+// client-level values are only a coarse ceiling that the context deadline
+// (always tighter) enforces in practice.
 const (
-	// GatewayAPITimeout is the default timeout for gateway API operations
-	// (charge creation, status checks).
-	GatewayAPITimeout = 15 * time.Second
+	// DefaultClientTimeout is the ceiling for the shared gateway client.
+	DefaultClientTimeout = 15 * time.Second
 
-	// GatewayPaymentTimeout is the timeout for payment creation operations
-	// that may involve additional processing (crypto payments, invoice creation).
-	GatewayPaymentTimeout = 25 * time.Second
-
-	// QRFetchTimeout is the timeout for fetching QR code images.
-	QRFetchTimeout = 10 * time.Second
-
-	// WebhookForwardTimeout is the timeout for forwarding webhooks to
-	// downstream services.
-	WebhookForwardTimeout = 10 * time.Second
-
-	// CaptchaVerifyTimeout bounds Cloudflare Turnstile verification.
-	CaptchaVerifyTimeout = 3 * time.Second
-
-	// GeminiAPITimeout bounds AI text generation calls.
-	GeminiAPITimeout = 45 * time.Second
+	// PaymentClientTimeout is the ceiling for the slower payment client.
+	PaymentClientTimeout = 25 * time.Second
 )
 
 // Response size limits for external API responses.
@@ -59,9 +47,11 @@ const (
 )
 
 // DefaultHTTPClient is a pre-configured HTTP client with reasonable defaults
-// for gateway API calls. Use this instead of http.DefaultClient.
+// for gateway API calls. Use this instead of http.DefaultClient. The Timeout
+// is only a ceiling; callers set a tighter per-request context deadline from
+// config (GATEWAY_API_TIMEOUT_SECONDS and friends).
 var DefaultHTTPClient = &http.Client{
-	Timeout: GatewayAPITimeout,
+	Timeout: DefaultClientTimeout,
 	Transport: &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
@@ -70,9 +60,10 @@ var DefaultHTTPClient = &http.Client{
 }
 
 // PaymentHTTPClient is configured with a longer timeout for payment operations
-// that may take more time (crypto payments, invoice generation).
+// that may take more time (crypto payments, invoice generation). Timeout is a
+// ceiling; per-request config (GATEWAY_PAYMENT_TIMEOUT_SECONDS) is tighter.
 var PaymentHTTPClient = &http.Client{
-	Timeout: GatewayPaymentTimeout,
+	Timeout: PaymentClientTimeout,
 	Transport: &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,

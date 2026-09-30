@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/platform/gateway"
 )
@@ -68,7 +69,7 @@ func minAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo string)
 // {"min_amount": <number>}. Unknown charge currencies answer 404.
 func fetchMinAmount(ctx context.Context, cfg Config, currencyFrom, currencyTo string) (decimal.Decimal, error) {
 	endpoint := cfg.BaseURL() + "/min-amount?currency_from=" + url.QueryEscape(currencyFrom) + "&currency_to=" + url.QueryEscape(currencyTo)
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.APITimeout())
 	defer cancel()
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
 	if err != nil {

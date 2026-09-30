@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/platform/gateway"
 )
@@ -76,7 +77,7 @@ func CreateQRISCharge(ctx context.Context, cfg Config, orderID string, amountIDR
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.APITimeout())
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.CoreURL(), bytes.NewReader(body))

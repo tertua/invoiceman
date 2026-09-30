@@ -79,7 +79,7 @@ func CreateSnapTransaction(ctx context.Context, cfg Config, orderID string, amou
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.APITimeout())
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.SnapURL(), bytes.NewReader(body))

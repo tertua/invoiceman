@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
@@ -67,11 +68,10 @@ type geminiResponse struct {
 
 func NewGeminiClient() *GeminiClient {
 	cfg := configs.Get().AI
-	return &GeminiClient{
-		APIKey:     cfg.GeminiKey,
-		Model:      cfg.GeminiModel,
-		HTTPClient: &http.Client{Timeout: constants.GeminiAPITimeout},
-	}
+	// +5s buffer over AI_TIMEOUT_SECONDS so the route middleware returns its
+	// 504 envelope before this client gives up.
+	httpClient := &http.Client{Timeout: time.Duration(cfg.TimeoutSec+5) * time.Second}
+	return &GeminiClient{APIKey: cfg.GeminiKey, Model: cfg.GeminiModel, HTTPClient: httpClient}
 }
 
 func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, error) {

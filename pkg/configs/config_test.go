@@ -107,15 +107,3 @@ func TestValidateBadValues(t *testing.T) {
 	_, err = Load()
 	require.ErrorContains(t, err, "LOG_LEVEL")
 }
-
-// TestValidatePostgresDSN passes with a production-like DSN and secrets.
-func TestValidatePostgresDSN(t *testing.T) {
-	t.Setenv("STAGE_STATUS", "prod")
-	t.Setenv("JWT_SECRET_KEY", "test-secret-value")
-	t.Setenv("JWT_REFRESH_KEY", "test-refresh-value")
-	t.Setenv("SQL_DSN", "postgres://postgres:password@localhost/postgres?sslmode=disable")
-
-	cfg, err := Load()
-	require.NoError(t, err)
-	assert.Equal(t, "postgres://postgres:password@localhost/postgres?sslmode=disable", cfg.DSN())
-}

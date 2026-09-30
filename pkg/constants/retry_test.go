@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/tertua/tupay/pkg/configs"
 )
 
 func TestParseRetryAfterSeconds(t *testing.T) {
@@ -42,13 +44,13 @@ func TestRetryDelayHonorsHeaderExactly(t *testing.T) {
 
 func TestRetryDelayCapsHeader(t *testing.T) {
 	d := RetryDelayWithHeader(http.Header{"Retry-After": {"120"}}, 1)
-	if d != RetryAfterCap {
-		t.Errorf("expected cap %v, got %v", RetryAfterCap, d)
+	if d != configs.Get().Gateway.RetryMax() {
+		t.Errorf("expected cap %v, got %v", configs.Get().Gateway.RetryMax(), d)
 	}
 }
 
 func TestRetryDelayFallbackJittered(t *testing.T) {
-	base := 2 * NowpaymentsRetryBase
+	base := 2 * configs.Get().Gateway.RetryBase()
 	d := RetryDelayWithHeader(http.Header{}, 2)
 	if d < base || d > base+base/2 {
 		t.Errorf("fallback out of [%v, %v]: %v", base, base+base/2, d)

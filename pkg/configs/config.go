@@ -7,11 +7,10 @@ package configs
 // Parsing is plain stdlib so zero-config dev stays intact.
 
 import (
-	"fmt"
-	"net/netip"
+	"errors"
 	"os"
-	"strconv"
 	"strings"
+	"time"
 )
 
 // Config is the full backend configuration.
@@ -40,6 +39,11 @@ type Config struct {
 	Idempotency IdempotencyConfig
 
 	Outbox OutboxConfig
+
+	// Gateway holds the provider-call timeouts, retry policy and polling
+	// cadence that used to be hardcoded constants. Defaults reproduce the old
+	// constants exactly, so unsetting them changes nothing at runtime.
+	Gateway GatewayConfig
 
 	// Cache holds aggregate-cache settings. The cache is dual-backend by
 	// design: Redis when REDIS_HOST is set, process-local memory otherwise.
@@ -149,8 +153,70 @@ type IdempotencyConfig struct {
 
 // OutboxConfig holds the background worker settings.
 type OutboxConfig struct {
-	PollSeconds int // OUTBOX_POLL_SECONDS
-	Batch       int // OUTBOX_BATCH
+	PollSeconds       int // OUTBOX_POLL_SECONDS
+	Batch             int // OUTBOX_BATCH
+	MaxAttempts       int // OUTBOX_MAX_ATTEMPTS
+	MaxBackoffMinutes int // OUTBOX_MAX_BACKOFF_MINUTES
+}
+
+// GatewayConfig holds provider-call timeouts, retry policy and polling cadence.
+// Each field has an accessor that converts to time.Duration so call sites stay
+// import-light (they read configs, not time).
+type GatewayConfig struct {
+	ReconcileMinutes         int // GATEWAY_RECONCILE_MINUTES
+	APITimeoutSec            int // GATEWAY_API_TIMEOUT_SECONDS
+	PaymentTimeoutSec        int // GATEWAY_PAYMENT_TIMEOUT_SECONDS
+	QRFetchTimeoutSec        int // QR_FETCH_TIMEOUT_SECONDS
+	WebhookForwardTimeoutSec int // WEBHOOK_FORWARD_TIMEOUT_SECONDS
+	MaxAttempts              int // GATEWAY_MAX_ATTEMPTS
+	RetryBaseSec             int // GATEWAY_RETRY_BASE_SECONDS
+	RetryMaxSec              int // GATEWAY_RETRY_MAX_SECONDS
+	WebhookRetryMinutes      int // WEBHOOK_RETRY_MINUTES
+}
+
+// APITimeout is the per-request timeout for gateway API operations.
+func (g GatewayConfig) APITimeout() time.Duration {
+	return time.Duration(g.APITimeoutSec) * time.Second
+}
+
+// PaymentTimeout bounds payment-creation calls that may take longer.
+func (g GatewayConfig) PaymentTimeout() time.Duration {
+	return time.Duration(g.PaymentTimeoutSec) * time.Second
+}
+
+// QRFetchTimeout bounds QR image fetches.
+func (g GatewayConfig) QRFetchTimeout() time.Duration {
+	return time.Duration(g.QRFetchTimeoutSec) * time.Second
+}
+
+// WebhookForwardTimeout bounds forwarding webhooks downstream.
+func (g GatewayConfig) WebhookForwardTimeout() time.Duration {
+	return time.Duration(g.WebhookForwardTimeoutSec) * time.Second
+}
+
+// RetryBase is the linear backoff base before jitter.
+func (g GatewayConfig) RetryBase() time.Duration {
+	return time.Duration(g.RetryBaseSec) * time.Second
+}
+
+// RetryMax is the backoff ceiling and the Retry-After cap (one knob).
+func (g GatewayConfig) RetryMax() time.Duration {
+	return time.Duration(g.RetryMaxSec) * time.Second
+}
+
+// ReconcileAge spaces provider status polls per stale transaction.
+func (g GatewayConfig) ReconcileAge() time.Duration {
+	return time.Duration(g.ReconcileMinutes) * time.Minute
+}
+
+// WebhookRetry is the manual retry delay for relay deliveries.
+func (g GatewayConfig) WebhookRetry() time.Duration {
+	return time.Duration(g.WebhookRetryMinutes) * time.Minute
+}
+
+// MaxBackoff is the outbox exponential-backoff ceiling.
+func (o OutboxConfig) MaxBackoff() time.Duration {
+	return time.Duration(o.MaxBackoffMinutes) * time.Minute
 }
 
 // CacheConfig holds the dashboard/report aggregate cache settings.
@@ -164,6 +230,12 @@ type CacheConfig struct {
 // CaptchaConfig holds bot protection settings.
 type CaptchaConfig struct {
 	TurnstileSecret string // TURNSTILE_SECRET: empty = verification skipped
+	TimeoutSec      int    // CAPTCHA_TIMEOUT_SECONDS
+}
+
+// Timeout bounds Cloudflare Turnstile verification.
+func (c CaptchaConfig) Timeout() time.Duration {
+	return time.Duration(c.TimeoutSec) * time.Second
 }
 
 // DebugConfig holds the localhost-only diagnostics listener.
@@ -219,45 +291,57 @@ func (c Config) IsDev() bool { return c.Stage == "dev" }
 // It always returns the defaults-applied Config; err is non-nil when
 // validation fails (main.go treats that as fatal).
 func Load() (Config, error) {
+	// intEnv collects every bad integer env value instead of swallowing it:
+	// a set-but-invalid value (0, negative, non-numeric) is a startup error
+	// naming the key and the raw value (D2).
+	var issues []string
+	intEnv := func(name string, fallback int) int {
+		v, err := envInt(name, fallback)
+		if err != nil {
+			issues = append(issues, err.Error())
+			return fallback
+		}
+		return v
+	}
 	cfg := Config{
 		Stage:   envOr("STAGE_STATUS", "dev"),
 		AppName: envOr("APP_NAME", "TuPay"),
 		Server: ServerConfig{
 			Host:           envOr("SERVER_HOST", "0.0.0.0"),
 			Port:           envOr("SERVER_PORT", "5000"),
-			ReadTimeoutSec: envInt("SERVER_READ_TIMEOUT", 60),
+			ReadTimeoutSec: intEnv("SERVER_READ_TIMEOUT", 60),
 			TrustedProxies: envList("TRUSTED_PROXIES"),
 			ProxyHeader:    envOr("PROXY_HEADER", "X-Forwarded-For"),
 		},
 		CORS: CORSConfig{Origins: envList("CORS_ORIGINS")},
 		JWT: JWTConfig{
 			Secret:        strings.TrimSpace(os.Getenv("JWT_SECRET_KEY")),
-			AccessMinutes: envInt("JWT_SECRET_KEY_EXPIRE_MINUTES_COUNT", 15),
+			AccessMinutes: intEnv("JWT_SECRET_KEY_EXPIRE_MINUTES_COUNT", 15),
 			RefreshKey:    strings.TrimSpace(os.Getenv("JWT_REFRESH_KEY")),
-			RefreshHours:  envInt("JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT", 720),
+			RefreshHours:  intEnv("JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT", 720),
 		},
 		DB: DBConfig{
 			DSN:            strings.TrimSpace(os.Getenv("SQL_DSN")),
 			SQLitePath:     envOr("SQLITE_PATH", "./data/db/tupay.db"),
-			MaxConn:        envInt("DB_MAX_CONNECTIONS", 100),
-			MaxIdle:        envInt("DB_MAX_IDLE_CONNECTIONS", 10),
-			MaxLifetimeSec: envInt("DB_MAX_LIFETIME_CONNECTIONS", 2),
+			MaxConn:        intEnv("DB_MAX_CONNECTIONS", 100),
+			MaxIdle:        intEnv("DB_MAX_IDLE_CONNECTIONS", 10),
+			MaxLifetimeSec: intEnv("DB_MAX_LIFETIME_CONNECTIONS", 2),
 		},
 		Redis: RedisConfig{
 			Host:     strings.TrimSpace(os.Getenv("REDIS_HOST")),
 			Port:     envOr("REDIS_PORT", "6379"),
 			Password: os.Getenv("REDIS_PASSWORD"),
-			DBNumber: envInt("REDIS_DB_NUMBER", 0),
+			DBNumber: envIntAllowZero("REDIS_DB_NUMBER", 0, &issues),
 		},
 		RateLimit: RateLimitConfig{
-			General: envInt("RATE_LIMIT_GENERAL", 100),
-			Auth:    envInt("RATE_LIMIT_AUTH", 10),
-			Public:  envInt("RATE_LIMIT_PUBLIC", 30),
-			Webhook: envInt("RATE_LIMIT_WEBHOOK", 60),
-			Gateway: envInt("RATE_LIMIT_GATEWAY", 120),
+			General: intEnv("RATE_LIMIT_GENERAL", 100),
+			Auth:    intEnv("RATE_LIMIT_AUTH", 10),
+			Public:  intEnv("RATE_LIMIT_PUBLIC", 30),
+			Webhook: intEnv("RATE_LIMIT_WEBHOOK", 60),
+			Gateway: intEnv("RATE_LIMIT_GATEWAY", 120),
 		},
 		AI: AIConfig{
-			TimeoutSec:  envInt("AI_TIMEOUT_SECONDS", 30),
+			TimeoutSec:  intEnv("AI_TIMEOUT_SECONDS", 30),
 			GeminiKey:   strings.TrimSpace(os.Getenv("GEMINI_API_KEY")),
 			GeminiModel: envOr("GEMINI_MODEL", "gemini-2.0-flash"),
 		},
@@ -292,17 +376,31 @@ func Load() (Config, error) {
 			PublicURL: envOr("TUPAY_PUBLIC_URL", envOr("INVOICEMAN_PUBLIC_URL", "http://localhost:5000")),
 		},
 		Idempotency: IdempotencyConfig{
-			TTLHours: envInt("IDEMPOTENCY_TTL_HOURS", 24),
+			TTLHours: intEnv("IDEMPOTENCY_TTL_HOURS", 24),
 		},
 		Outbox: OutboxConfig{
-			PollSeconds: envInt("OUTBOX_POLL_SECONDS", 10),
-			Batch:       envInt("OUTBOX_BATCH", 20),
+			PollSeconds:       intEnv("OUTBOX_POLL_SECONDS", 10),
+			Batch:             intEnv("OUTBOX_BATCH", 20),
+			MaxAttempts:       intEnv("OUTBOX_MAX_ATTEMPTS", 10),
+			MaxBackoffMinutes: intEnv("OUTBOX_MAX_BACKOFF_MINUTES", 120),
+		},
+		Gateway: GatewayConfig{
+			ReconcileMinutes:         intEnv("GATEWAY_RECONCILE_MINUTES", 15),
+			APITimeoutSec:            intEnv("GATEWAY_API_TIMEOUT_SECONDS", 15),
+			PaymentTimeoutSec:        intEnv("GATEWAY_PAYMENT_TIMEOUT_SECONDS", 25),
+			QRFetchTimeoutSec:        intEnv("QR_FETCH_TIMEOUT_SECONDS", 10),
+			WebhookForwardTimeoutSec: intEnv("WEBHOOK_FORWARD_TIMEOUT_SECONDS", 10),
+			MaxAttempts:              intEnv("GATEWAY_MAX_ATTEMPTS", 3),
+			RetryBaseSec:             intEnv("GATEWAY_RETRY_BASE_SECONDS", 1),
+			RetryMaxSec:              intEnv("GATEWAY_RETRY_MAX_SECONDS", 30),
+			WebhookRetryMinutes:      intEnv("WEBHOOK_RETRY_MINUTES", 5),
 		},
 		Cache: CacheConfig{
-			AggTTLSeconds: envInt("CACHE_AGG_TTL_SECONDS", 60),
+			AggTTLSeconds: intEnv("CACHE_AGG_TTL_SECONDS", 60),
 		},
 		Captcha: CaptchaConfig{
 			TurnstileSecret: strings.TrimSpace(os.Getenv("TURNSTILE_SECRET")),
+			TimeoutSec:      intEnv("CAPTCHA_TIMEOUT_SECONDS", 3),
 		},
 		Debug: DebugConfig{
 			Port: strings.TrimSpace(os.Getenv("DEBUG_PORT")),
@@ -323,6 +421,9 @@ func Load() (Config, error) {
 			Enabled: envBool("METRICS_ENABLED", true),
 		},
 	}
+	if len(issues) > 0 {
+		return cfg, errors.New(strings.Join(issues, "; "))
+	}
 	if err := cfg.Validate(); err != nil {
 		return cfg, err
 	}
@@ -337,126 +438,8 @@ func Get() Config {
 	return cfg
 }
 
-// Validate fail-fasts on configuration that would break or insecurely run
-// the server. Dev stays permissive; prod requires real secrets.
-func (c Config) Validate() error {
-	if c.Stage != "dev" && c.Stage != "prod" {
-		return fmt.Errorf("invalid STAGE_STATUS %q: must be \"dev\" or \"prod\"", c.Stage)
-	}
-	if c.Stage == "prod" {
-		if c.JWT.Secret == "" || c.JWT.Secret == "secret" {
-			return fmt.Errorf("JWT_SECRET_KEY must be set to a non-default value in prod")
-		}
-		if c.JWT.RefreshKey == "" || c.JWT.RefreshKey == "refresh" {
-			return fmt.Errorf("JWT_REFRESH_KEY must be set to a non-default value in prod")
-		}
-	}
-	if c.DSN() != "" && !strings.HasPrefix(c.DSN(), "postgres://") && !strings.HasPrefix(c.DSN(), "postgresql://") {
-		return fmt.Errorf("unsupported SQL_DSN: leave it empty for SQLite or use a postgres://... DSN")
-	}
-	if port, err := strconv.Atoi(c.Server.Port); err != nil || port < 1 || port > 65535 {
-		return fmt.Errorf("invalid SERVER_PORT %q: must be 1-65535", c.Server.Port)
-	}
-	if c.Server.ReadTimeoutSec <= 0 {
-		return fmt.Errorf("invalid SERVER_READ_TIMEOUT %q: must be > 0", os.Getenv("SERVER_READ_TIMEOUT"))
-	}
-	for _, p := range c.Server.TrustedProxies {
-		if _, err := netip.ParsePrefix(p); err != nil {
-			if _, err := netip.ParseAddr(p); err != nil {
-				return fmt.Errorf("invalid TRUSTED_PROXIES entry %q: must be an IP or CIDR", p)
-			}
-		}
-	}
-	// Note: ProxyHeader needs no validation — envOr substitutes the
-	// X-Forwarded-For default for blank values, so it is never empty.
-	if c.JWT.AccessMinutes <= 0 || c.JWT.RefreshHours <= 0 {
-		return fmt.Errorf("invalid JWT lifetimes: access minutes and refresh hours must be > 0")
-	}
-	for name, v := range map[string]int{
-		"DB_MAX_CONNECTIONS": c.DB.MaxConn, "DB_MAX_IDLE_CONNECTIONS": c.DB.MaxIdle,
-		"DB_MAX_LIFETIME_CONNECTIONS": c.DB.MaxLifetimeSec,
-		"RATE_LIMIT_GENERAL":          c.RateLimit.General, "RATE_LIMIT_AUTH": c.RateLimit.Auth,
-		"RATE_LIMIT_PUBLIC": c.RateLimit.Public, "RATE_LIMIT_WEBHOOK": c.RateLimit.Webhook,
-		"RATE_LIMIT_GATEWAY": c.RateLimit.Gateway, "AI_TIMEOUT_SECONDS": c.AI.TimeoutSec,
-		"IDEMPOTENCY_TTL_HOURS": c.Idempotency.TTLHours,
-		"OUTBOX_POLL_SECONDS":   c.Outbox.PollSeconds, "OUTBOX_BATCH": c.Outbox.Batch,
-		"CACHE_AGG_TTL_SECONDS": c.Cache.AggTTLSeconds,
-	} {
-		if v <= 0 {
-			return fmt.Errorf("invalid %s: must be > 0", name)
-		}
-	}
-	if c.Redis.Enabled() {
-		if port, err := strconv.Atoi(c.Redis.Port); err != nil || port < 1 || port > 65535 {
-			return fmt.Errorf("invalid REDIS_PORT %q: must be 1-65535", c.Redis.Port)
-		}
-		if c.Redis.DBNumber < 0 {
-			return fmt.Errorf("invalid REDIS_DB_NUMBER: must be >= 0")
-		}
-	}
-	if c.Debug.Port != "" {
-		if port, err := strconv.Atoi(c.Debug.Port); err != nil || port < 1 || port > 65535 {
-			return fmt.Errorf("invalid DEBUG_PORT %q: must be 1-65535", c.Debug.Port)
-		}
-	}
-	if c.Storage.Backend != "local" && c.Storage.Backend != "s3" {
-		return fmt.Errorf("invalid STORAGE_BACKEND %q: must be \"local\" or \"s3\"", c.Storage.Backend)
-	}
-	if c.Storage.Backend == "s3" {
-		if c.Storage.S3Endpoint == "" || c.Storage.S3Bucket == "" {
-			return fmt.Errorf("S3_ENDPOINT and S3_BUCKET are required when STORAGE_BACKEND=s3")
-		}
-		if c.Storage.S3AccessKey == "" || c.Storage.S3SecretKey == "" {
-			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required when STORAGE_BACKEND=s3")
-		}
-	}
-	if c.Mail.SMTPHost != "" {
-		if port, err := strconv.Atoi(c.Mail.SMTPPort); err != nil || port < 1 || port > 65535 {
-			return fmt.Errorf("invalid SMTP_PORT %q: must be 1-65535", c.Mail.SMTPPort)
-		}
-	}
-	switch c.Log.Level {
-	case "debug", "info", "warn", "error":
-	default:
-		return fmt.Errorf("invalid LOG_LEVEL %q: must be debug|info|warn|error", c.Log.Level)
-	}
-	return nil
-}
-
 // DSN returns the database DSN (empty = SQLite).
 func (c Config) DSN() string { return c.DB.DSN }
 
 // ListenAddr returns host:port for the Fiber listener.
 func (c Config) ListenAddr() string { return c.Server.Host + ":" + c.Server.Port }
-
-func envOr(name, fallback string) string {
-	if v := strings.TrimSpace(os.Getenv(name)); v != "" {
-		return v
-	}
-	return fallback
-}
-
-func envInt(name string, fallback int) int {
-	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(name))); err == nil && v > 0 {
-		return v
-	}
-	return fallback
-}
-
-func envBool(name string, fallback bool) bool {
-	raw := strings.TrimSpace(os.Getenv(name))
-	if raw == "" {
-		return fallback
-	}
-	return strings.EqualFold(raw, "true")
-}
-
-func envList(name string) []string {
-	var out []string
-	for _, o := range strings.Split(strings.TrimSpace(os.Getenv(name)), ",") {
-		if o = strings.TrimSpace(o); o != "" {
-			out = append(out, o)
-		}
-	}
-	return out
-}

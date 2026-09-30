@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/platform/gateway"
 )
@@ -22,8 +23,7 @@ type Invoice struct {
 	InvoiceURL string
 }
 
-// CreateInvoice creates a NOWPayments hosted invoice for req. AmountDecimal
-// with Currency is preferred; AmountMinor follows the relay minor-unit convention.
+// CreateInvoice creates a NOWPayments hosted invoice: AmountDecimal wins, else AmountMinor.
 func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest) (*Invoice, error) {
 	if cfg.APIKey == "" {
 		return nil, gateway.ErrNotConfigured
@@ -46,7 +46,7 @@ func CreateInvoice(ctx context.Context, cfg Config, req *gateway.CreateTxRequest
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.APITimeout())
 	defer cancel()
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.BaseURL()+"/invoice", bytes.NewReader(body))

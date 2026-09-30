@@ -93,6 +93,10 @@ func run() int {
 
 	// Structured logging: text in dev, JSON in prod.
 	logger.Init(cfg.Stage, cfg.Log.Level)
+	// Surface non-fatal config smells (e.g. captcha off in prod) in the log.
+	for _, w := range cfg.Warnings() {
+		logger.L().Warn(w)
+	}
 
 	// Docker HEALTHCHECK (scratch image has no wget/curl): exit 0 when
 	// /healthz answers 200, exit 1 otherwise.
@@ -110,11 +114,8 @@ func run() int {
 		return stats.Open, stats.Idle, stats.InUse, stats.Backend, true
 	})
 
-	// Define Fiber config.
-	fiberConfig := configs.FiberConfig()
-
-	// Define a new Fiber app with config.
-	app := fiber.New(fiberConfig)
+	fiberConfig := configs.FiberConfig() // Fiber config.
+	app := fiber.New(fiberConfig)        // New Fiber app with config.
 
 	// Middlewares.
 	middleware.FiberMiddleware(app)      // Register Fiber's middleware for app.
@@ -136,8 +137,7 @@ func run() int {
 	worker.Start(context.Background())
 	defer worker.Stop()
 
-	// Localhost-only diagnostics (pprof). Off unless DEBUG_PORT is set;
-	// never exposed publicly.
+	// Localhost-only pprof; off unless DEBUG_PORT is set, never public.
 	startDebugListener(cfg.Debug.Port)
 
 	// Routes.

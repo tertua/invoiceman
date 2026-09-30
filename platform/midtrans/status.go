@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/platform/gateway"
 )
@@ -67,7 +68,7 @@ func FetchStatus(ctx context.Context, cfg Config, orderID string) (*TxStatus, er
 	}
 	base := cfg.StatusURL()
 
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.APITimeout())
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/v2/"+orderID+"/status", http.NoBody)

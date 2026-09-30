@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/platform/gateway"
 )
@@ -50,7 +51,7 @@ func CreateDirectPayment(ctx context.Context, cfg Config, req *DirectPaymentRequ
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayPaymentTimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.PaymentTimeout())
 	defer cancel()
 	raw, status, err := postWithRetry(ctx, cfg, "/payment", body)
 	if err != nil {
@@ -116,7 +117,7 @@ func postWithRetry(ctx context.Context, cfg Config, path string, body []byte) (r
 		if err != nil {
 			return nil, 0, err
 		}
-		if status != http.StatusTooManyRequests || attempt == constants.NowpaymentsMaxAttempts {
+		if status != http.StatusTooManyRequests || attempt == configs.Get().Gateway.MaxAttempts {
 			return raw, status, nil
 		}
 		select {

@@ -29,30 +29,9 @@ import (
 	"github.com/tertua/tupay/platform/relay"
 )
 
-// Retry policy: 1m, 2m, 4m, ... capped at 2h, dead after maxAttempts.
-const (
-	maxAttempts  = 10
-	maxBackoff   = 2 * time.Hour
-	drainTimeout = 5 * time.Second
-)
-
-// Backoff returns the delay before attempt n (1-based).
-func Backoff(n int) time.Duration {
-	d := time.Minute << (n - 1)
-	if d <= 0 || d > maxBackoff {
-		return maxBackoff
-	}
-	return d
-}
-
-// nextRetryAt returns nil when attempts are exhausted (row goes dead).
-func nextRetryAt(attempt int, now time.Time) *time.Time {
-	if attempt >= maxAttempts {
-		return nil
-	}
-	at := now.Add(Backoff(attempt))
-	return &at
-}
+// Retry policy lives in policy.go, driven by OUTBOX_MAX_ATTEMPTS and
+// OUTBOX_MAX_BACKOFF_MINUTES (defaults: dead after 10, capped at 2h).
+const drainTimeout = 5 * time.Second
 
 // SendMail delivers one email. It is a variable (not a direct mail call)
 // so tests can capture sends without an SMTP server.

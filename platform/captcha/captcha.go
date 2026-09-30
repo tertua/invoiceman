@@ -38,8 +38,8 @@ type verifyResponse struct {
 	ErrorCodes []string `json:"error-codes"`
 }
 
-// Verify checks token with the provider (3s timeout). A nil error means
-// the client solved the challenge; ErrNotConfigured means verification is
+// Verify checks token with the provider (CAPTCHA_TIMEOUT_SECONDS). A nil error
+// means the client solved the challenge; ErrNotConfigured means verification is
 // disabled; anything else (including transport errors) fails closed.
 func Verify(ctx context.Context, token, remoteIP string) error {
 	secret := strings.TrimSpace(configs.Get().Captcha.TurnstileSecret)
@@ -58,7 +58,7 @@ func Verify(ctx context.Context, token, remoteIP string) error {
 		form.Set("remoteip", remoteIP)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, constants.CaptchaVerifyTimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Captcha.Timeout())
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, verifyURL, strings.NewReader(form.Encode()))
 	if err != nil {

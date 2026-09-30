@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
@@ -57,7 +58,7 @@ func GetPublicQrImage(c fiber.Ctx) error {
 	if err != nil || (qrURL.Scheme != "http" && qrURL.Scheme != "https") || qrURL.Host == "" {
 		return utils.Fail(c, fiber.StatusBadGateway, "failed to load qr image", nil)
 	}
-	ctx, cancel := context.WithTimeout(c.Context(), constants.QRFetchTimeout)
+	ctx, cancel := context.WithTimeout(c.Context(), configs.Get().Gateway.QRFetchTimeout())
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, qrURL.String(), http.NoBody)
 	if err != nil {

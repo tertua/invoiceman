@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/platform/gateway"
 )
@@ -50,7 +51,7 @@ func paymentNotification(confirmed *payment) *gateway.NotificationResult {
 
 // fetchPaymentStatus returns the live payment via GET /v1/payment/{id}.
 func fetchPaymentStatus(ctx context.Context, cfg Config, paymentID string) (*payment, error) {
-	ctx, cancel := context.WithTimeout(ctx, constants.GatewayAPITimeout)
+	ctx, cancel := context.WithTimeout(ctx, configs.Get().Gateway.APITimeout())
 	defer cancel()
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.BaseURL()+"/payment/"+paymentID, http.NoBody)

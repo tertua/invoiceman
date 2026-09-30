@@ -28,10 +28,9 @@ import (
 	"github.com/tertua/tupay/platform/nowpayments"
 )
 
-// reconcileAge spaces provider polls per transaction: the UpdatedAt touch on
-// every attempt (success or failure) is the backoff, so no extra state is
+// Poll spacing (GATEWAY_RECONCILE_MINUTES, default 15m): the UpdatedAt touch
+// on every attempt (success or failure) is the backoff, so no extra state is
 // needed and several replicas naturally converge.
-const reconcileAge = 15 * time.Minute
 
 // txStatus is one provider's answer in relay terms. GrossAmount is expressed
 // in Currency; a zero gross (NOWPayments prices outside IDR carry no minor
@@ -93,7 +92,7 @@ func (w *Worker) reconcileGateway(ctx context.Context) {
 		logger.L().Warn("outbox reconcile tick skipped, database unavailable", "err", err)
 		return
 	}
-	rows, err := db.StalePendingTransactions(time.Now().Add(-reconcileAge), w.batch)
+	rows, err := db.StalePendingTransactions(time.Now().Add(-configs.Get().Gateway.ReconcileAge()), w.batch)
 	if err != nil {
 		logger.L().Warn("outbox reconcile tick failed", "err", err)
 		return

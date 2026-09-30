@@ -6,17 +6,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tertua/tupay/pkg/configs"
 )
 
-// Retry policy for provider 429 answers. postWithRetry honors the
-// Retry-After header (seconds or HTTP-date) capped below, falling back to
-// linear backoff with jitter so concurrent callers do not wake in lockstep.
+// Retry policy for provider 429 answers. Attempts, backoff base and the
+// Retry-After cap now come from config (see pkg/configs GatewayConfig:
+// GATEWAY_MAX_ATTEMPTS, GATEWAY_RETRY_BASE_SECONDS, GATEWAY_RETRY_MAX_SECONDS).
+// The max backoff and the Retry-After cap share one knob
+// (GATEWAY_RETRY_MAX_SECONDS) since both were 30s.
 const (
-	NowpaymentsMaxAttempts = 3
-	NowpaymentsRetryBase   = time.Second
-	NowpaymentsRetryMax    = 30 * time.Second
-	RetryAfterCap          = 30 * time.Second
-
 	MaxRelayResponseSize = 64 << 10
 	MaxRelayBodyLog      = 4000
 )
@@ -56,16 +55,19 @@ func ParseRetryAfter(header http.Header) (time.Duration, bool) {
 // RetryDelayWithHeader returns the wait before the next attempt: the
 // Retry-After request when present (capped, honored exactly), otherwise
 // linear backoff with jitter so concurrent callers do not wake in lockstep.
+// The cap and backoff base/max come from config (GATEWAY_RETRY_MAX_SECONDS
+// and GATEWAY_RETRY_BASE_SECONDS).
 func RetryDelayWithHeader(header http.Header, attempt int) time.Duration {
+	gw := configs.Get().Gateway
 	if d, ok := ParseRetryAfter(header); ok {
-		if d > RetryAfterCap {
-			return RetryAfterCap
+		if ceiling := gw.RetryMax(); d > ceiling {
+			return ceiling
 		}
 		return d
 	}
-	d := time.Duration(attempt) * NowpaymentsRetryBase
-	if d > NowpaymentsRetryMax {
-		d = NowpaymentsRetryMax
+	d := time.Duration(attempt) * gw.RetryBase()
+	if ceiling := gw.RetryMax(); d > ceiling {
+		d = ceiling
 	}
 	return d + time.Duration(rand.Int64N(int64(d)/2+1)) // #nosec G404 -- backoff jitter, not security-sensitive
 }

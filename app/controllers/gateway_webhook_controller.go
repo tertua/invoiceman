@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/pkg/logger"
 	"github.com/tertua/tupay/pkg/utils"
@@ -261,8 +262,8 @@ func RetryDelivery(c fiber.Ctx) error {
 	delivery.Attempt++
 	delivery.Signature = signature
 	delivery.UpdatedAt = time.Now()
+	retryAt := time.Now().Add(configs.Get().Gateway.WebhookRetry())
 	if ferr != nil {
-		retryAt := time.Now().Add(5 * time.Minute)
 		delivery.Status = "failed"
 		delivery.RespBody = constants.TruncateLog(ferr.Error())
 		delivery.NextRetryAt = &retryAt
@@ -277,7 +278,6 @@ func RetryDelivery(c fiber.Ctx) error {
 		delivery.Status = "delivered"
 		delivery.NextRetryAt = nil
 	} else {
-		retryAt := time.Now().Add(5 * time.Minute)
 		delivery.Status = "failed"
 		delivery.NextRetryAt = &retryAt
 	}
