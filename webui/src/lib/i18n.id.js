@@ -2,8 +2,10 @@
 // Missing keys fall back to `en` at lookup time (see `i18n.js`).
 import { settingsId } from "./i18n.id.settings.js";
 import { gatewayId } from "./i18n.id.gateway.js";
+import { uiId } from "./i18n.id.ui.js";
 export const id = {
     ...settingsId,
+    ...uiId,
     /* ============================ common ============================ */
     "app.tagline": "Manajer Faktur & Penagihan AI",
     "common.loading": "Memuat...",

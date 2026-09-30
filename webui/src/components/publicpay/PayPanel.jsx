@@ -19,7 +19,7 @@ import MethodPicker from "./MethodPicker";
 // End dev path
 const SWAP_DELAY_MS = 300;
 
-export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
+export default function PayPanel({ token, methods, lang, gateway, onRefresh, onStepChange }) {
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
   const [crypto, setCrypto] = useState(false);
@@ -29,25 +29,34 @@ export default function PayPanel({ token, methods, lang, gateway, onRefresh }) {
 
   useEffect(() => () => clearTimeout(swapTimer.current), []);
 
+  // Report the panel phase up so the page's step indicator mirrors it; the
+  // panel owns the swap state, the page only renders.
+  useEffect(() => {
+    onStepChange?.(crypto || qris ? "pay" : pending ? "pay" : "choose");
+  }, [crypto, qris, pending, onStepChange]);
+
   const finish = useCallback(() => {
     setCrypto(false);
     setQris(false);
     setPending("");
     setError("");
+    onStepChange?.("done");
     onRefresh();
-  }, [onRefresh]);
+  }, [onRefresh, onStepChange]);
 
   const fail = useCallback((message) => {
     setCrypto(false);
     setQris(false);
     setPending("");
     setError(message);
-  }, []);
+    onStepChange?.("choose");
+  }, [onStepChange]);
   const back = useCallback(() => {
     setCrypto(false);
     setQris(false);
     setPending("");
-  }, []);
+    onStepChange?.("choose");
+  }, [onStepChange]);
 
   async function pay(method) {
     if (pending) return;

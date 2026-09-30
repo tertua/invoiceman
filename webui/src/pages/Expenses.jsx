@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ExpensesIllo } from "@/components/ui/EmptyIllustrations";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -123,7 +124,7 @@ export default function Expenses() {
         <QueryError error={error} />
       ) : expenses.length === 0 ? (
         <EmptyState
-          icon={Receipt}
+          illustration={<ExpensesIllo />}
           title={category !== "all" ? t("expenses.noneInCategory") : t("expenses.noneYet")}
           description={t("expenses.emptyDesc")}
           action={

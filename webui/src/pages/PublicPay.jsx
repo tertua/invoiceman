@@ -6,9 +6,12 @@ import { InvoicePdfDownload } from "@/components/invoice/InvoicePdfDownload";
 import PublicShell from "@/components/publicpay/PublicShell";
 import PayPanel from "@/components/publicpay/PayPanel";
 import InvoiceHead from "@/components/publicpay/InvoiceHead";
+import InvoiceBreakdown, { Row } from "@/components/publicpay/InvoiceBreakdown";
+import StepIndicator from "@/components/publicpay/StepIndicator";
 import { PublicErrorCard } from "@/components/publicpay/PublicErrorCard";
 import { publicPayApi } from "@/api/publicPay";
 import { t } from "@/lib/i18n";
+import { resolvePayStep } from "@/lib/payStep";
 import { formatMoney, formatDate, setLocale } from "@/lib/utils";
 
 const LANG_STORAGE_KEY = "arr-lang";
@@ -22,15 +25,6 @@ function detectLang(searchParams) {
   }
   if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("id")) return "id";
   return "en";
-}
-
-function Row({ label, value, bold }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-sm text-[var(--ink-muted)]">{label}</span>
-      <span className={`text-sm tabular ${bold ? "font-semibold text-[var(--ink)]" : "text-[var(--ink)]"}`}>{value}</span>
-    </div>
-  );
 }
 
 // Dev path — public pay page (orchestrator scaffold)
@@ -47,6 +41,7 @@ export default function PublicPay() {
   const [lang, setLang] = useState(() => detectLang(searchParams));
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
+  const [panelStep, setPanelStep] = useState("choose");
 
   const refresh = useCallback(() => {
     publicPayApi.get(token).then(setData).catch(() => {});
@@ -129,36 +124,17 @@ export default function PublicPay() {
   const { invoice, branding, can_pay, methods = [] } = data;
   const cur = invoice.currency || "IDR";
   const isPaid = invoice.effective_status === "paid", isPending = invoice.effective_status === "pending";
+  const step = resolvePayStep({ isPaid, canPay: can_pay, panelStep });
 
   return (
     <PublicShell branding={branding} lang={lang} onLang={changeLang}>
       <Card padding="lg" className="w-full max-w-[520px]">
+        <div className="mb-4 flex justify-center">
+          <StepIndicator current={step} lang={lang} />
+        </div>
         <InvoiceHead invoice={invoice} isPaid={isPaid} isPending={isPending} lang={lang} />
 
-        <div className="mt-4 space-y-2">
-          {(invoice.items || []).map((it, i) => (
-            <div key={i} className="flex items-start justify-between gap-3 text-sm">
-              <div className="min-w-0 flex-1">
-                <div className="text-[var(--ink)]">{it.description || "—"}</div>
-                <div className="text-xs text-[var(--ink-muted)]">{Number(it.quantity)} × {formatMoney(it.rate, cur)}</div>
-              </div>
-              <div className="tabular text-[var(--ink)] font-medium">{formatMoney(it.amount, cur)}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-1.5">
-          <Row label={t(lang, "common.subtotal")} value={formatMoney(invoice.subtotal, cur)} />
-          {Number(invoice.discount) > 0 && <Row label={t(lang, "common.discount")} value={`− ${formatMoney(invoice.discount, cur)}`} />}
-          <Row label={t(lang, "invDetail.taxLine", { n: Number(invoice.tax_rate) })} value={formatMoney(invoice.tax_amount, cur)} />
-          <Row label={t(lang, "invDetail.due")} value={formatDate(invoice.due_date)} />
-          <div className="flex items-center justify-between pt-2 border-t border-[var(--ink)]">
-            <span className="font-display font-semibold">{t(lang, "common.total")}</span>
-            <span className="font-display text-xl font-semibold tabular text-[var(--accent-strong)]">
-              {formatMoney(invoice.total, cur)}
-            </span>
-          </div>
-        </div>
+        <InvoiceBreakdown invoice={invoice} cur={cur} lang={lang} />
 
         {isPaid ? (
           <div className="mt-6 rounded-2xl border border-[var(--success)]/25 bg-[var(--success)]/8 p-4">
@@ -181,7 +157,7 @@ export default function PublicPay() {
             </div>
           </div>
         ) : can_pay ? (
-          <PayPanel token={token} methods={methods} lang={lang} gateway={data.gateway} onRefresh={refresh} />
+          <PayPanel token={token} methods={methods} lang={lang} gateway={data.gateway} onRefresh={refresh} onStepChange={setPanelStep} />
         ) : (
           <div className="mt-6 text-center text-sm text-[var(--ink-muted)]">{t(lang, "public.notPayable")}</div>
         )}

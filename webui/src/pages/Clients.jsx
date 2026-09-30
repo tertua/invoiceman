@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Users, Search, ArrowRight } from "lucide-react";
+import { Plus, Search, ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ClientsIllo } from "@/components/ui/EmptyIllustrations";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
@@ -63,7 +64,7 @@ export default function Clients() {
         <QueryError error={error} />
       ) : clients.length === 0 ? (
         <EmptyState
-          icon={Users}
+          illustration={<ClientsIllo />}
           title={search ? t("clients.noMatching") : t("clients.noneYet")}
           description={search ? t("clients.tryDifferent") : t("clients.addFirst")}
           action={

@@ -14,6 +14,8 @@ import {
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { WelcomeIllo } from "@/components/ui/EmptyIllustrations";
+import { AgingReceivablesCard } from "@/components/dashboard/AgingReceivablesCard";
 import { QueryError } from "@/components/ui/QueryError";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
@@ -27,6 +29,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useOrgMe } from "@/hooks/useOrgs";
 import { loadAiSummary, saveAiSummary } from "@/lib/aiCache";
 import { formatMoney, formatDate } from "@/lib/utils";
+import { revenueSpark, monthOverMonthDelta } from "@/lib/dashboardSeries";
 const DashboardCharts = lazy(() => import("@/components/dashboard/DashboardCharts").then((module) => ({ default: module.DashboardCharts })));
 
 // Logo palette
@@ -52,6 +55,7 @@ export default function Dashboard() {
     return (
       <EmptyState
         icon={Plus}
+        illustration={<WelcomeIllo />}
         title={t("dash.welcomeTitle")}
         description={t("dash.welcomeDesc")}
         action={
@@ -66,6 +70,9 @@ export default function Dashboard() {
   const collected = Number(stats.totalRevenue) || 0;
   const owed = Number(stats.outstanding) || 0;
   const collectionRate = collected + owed > 0 ? Math.round((collected / (collected + owed)) * 100) : 0;
+  const spark = revenueSpark(revenueSeries);
+  const delta = monthOverMonthDelta(revenueSeries);
+  const money = (n) => formatMoney(n, currency);
 
   return (
     <div className="space-y-6">
@@ -82,10 +89,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard label={t("dash.totalRevenue")} value={formatMoney(stats.totalRevenue)} icon={Wallet} accent />
-        <StatCard label={t("dash.outstanding")} value={formatMoney(stats.outstanding)} icon={Clock} />
-        <StatCard label={t("dash.paidThisMonth")} value={formatMoney(stats.paidThisMonth)} icon={TrendingUp} />
-        <StatCard label={t("dash.overdue")} value={stats.overdueCount} suffix={stats.overdueTotal ? formatMoney(stats.overdueTotal) : null} icon={AlertTriangle} />
+        <StatCard label={t("dash.totalRevenue")} value={formatMoney(stats.totalRevenue)} icon={Wallet} accent data={spark} chart="line" delta={delta} animateValue valueNumber={Number(stats.totalRevenue) || 0} renderValue={money} />
+        <StatCard label={t("dash.outstanding")} value={formatMoney(stats.outstanding)} icon={Clock} animateValue valueNumber={Number(stats.outstanding) || 0} renderValue={money} />
+        <StatCard label={t("dash.paidThisMonth")} value={formatMoney(stats.paidThisMonth)} icon={TrendingUp} data={spark} chart="line" animateValue valueNumber={Number(stats.paidThisMonth) || 0} renderValue={money} />
+        <StatCard label={t("dash.overdue")} value={stats.overdueCount} suffix={stats.overdueTotal ? formatMoney(stats.overdueTotal) : null} icon={AlertTriangle} animateValue valueNumber={Number(stats.overdueCount) || 0} renderValue={(n) => Math.round(n)} />
       </div>
 
       <AISummaryCard stats={stats} />
@@ -98,7 +105,10 @@ export default function Dashboard() {
           collections={<CollectionsCard rate={collectionRate} collected={stats.totalRevenue} outstanding={stats.outstanding} />}
         />
       </Suspense>
-      <TopClientsCard reports={reports} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <AgingReceivablesCard aging={reports?.aging} />
+        <TopClientsCard reports={reports} />
+      </div>
 
       <RecentInvoices invoices={recentInvoices} onOpen={(id) => nav(`/invoices/${id}`)} />
     </div>

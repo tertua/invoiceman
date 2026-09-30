@@ -13,14 +13,14 @@ export function InvoicePreview({ invoice, settings }) {
           {s.logo_url ? (
             <img src={s.logo_url} alt="" className="h-12 w-12 object-contain mb-2 rounded" />
           ) : null}
-          <div className="font-display text-lg font-semibold text-[var(--ink)]">
+          <div className="font-serif text-lg font-semibold text-[var(--ink)]">
             {s.company_name || "Your Company"}
           </div>
           {s.address && <div className="text-xs text-[var(--ink-muted)] max-w-[220px]">{s.address}</div>}
           {s.email && <div className="text-xs text-[var(--ink-muted)]">{s.email}</div>}
         </div>
         <div className="text-right">
-          <div className="font-display text-2xl font-bold tracking-wide text-[var(--accent-strong)]">
+          <div className="font-serif text-2xl font-bold tracking-wide text-[var(--accent-strong)]">
             {t("common.invoice").toUpperCase()}
           </div>
           <div className="text-sm text-[var(--ink-muted)] mt-1 tabular">{invoice.invoice_number}</div>
