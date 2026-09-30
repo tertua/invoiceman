@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { CommandPalette } from "./CommandPalette";
@@ -48,7 +48,7 @@ export function AppShell() {
       <Sidebar />
       <main className="flex-1 px-6 md:px-8 py-6 max-w-[1600px] mx-auto w-full">
         <Topbar onOpenPalette={openPalette} />
-        <AnimatePresence mode="wait">
+        <MotionConfig reducedMotion="user"><AnimatePresence mode="wait">
           <motion.div
             key={`${location.pathname}:${currency}`}
             initial={{ opacity: 0, y: 8 }}
@@ -58,7 +58,7 @@ export function AppShell() {
           >
             <Outlet />
           </motion.div>
-        </AnimatePresence>
+        </AnimatePresence></MotionConfig>
       </main>
       <CommandPalette open={paletteOpen} onClose={closePalette} />
     </div>
