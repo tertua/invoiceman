@@ -33,11 +33,11 @@ TuPay adalah aplikasi manajemen invoice berbasis web dengan integrasi payment ga
 tupay/
 ├── main.go                    # Entry point: startup, registry, worker
 ├── app/
-│   ├── controllers/           # HTTP handlers (58 file, split per domain)
-│   ├── models/                # Domain entities (33 file)
-│   └── queries/               # Database access layer (26 file, zero raw SQL)
+│   ├── controllers/           # HTTP handlers (65 file, split per domain)
+│   ├── models/                # Domain entities (38 file)
+│   └── queries/               # Database access layer (32 file, zero raw SQL)
 ├── pkg/
-│   ├── routes/                # Route definitions + 68 flow test files
+│   ├── routes/                # Route definitions + 48 test files (flow/gateway/security)
 │   ├── middleware/            # Auth, CSRF, rate limit, idempotency, timeout
 │   ├── configs/               # Environment config loader & validator
 │   ├── utils/                 # JWT, pagination, response envelope, validator
@@ -51,7 +51,6 @@ tupay/
 │   ├── nowpayments/           # NOWPayments crypto implementation
 │   ├── cache/                 # Redis/in-memory (sessions, aggregates)
 │   ├── storage/               # File upload (local/MinIO/S3)
-│   ├── queue/                 # Background job queue (Redis-backed)
 │   ├── mail/                  # Email templates + mailer
 │   ├── outbox/                # Worker: mail/webhook delivery, reconcile
 │   ├── relay/                 # Webhook signing + forward
@@ -68,11 +67,11 @@ tupay/
 │       ├── adminRoutes.jsx    # Admin routes (role guard)
 │       ├── pages/             # Route pages (Dashboard, Invoices, dll)
 │       ├── components/        # UI components (domain + reusable)
-│       ├── api/               # Axios client per domain (20 files)
-│       ├── hooks/             # React Query hooks (16 files)
+│       ├── api/               # Axios client per domain (23 files)
+│       ├── hooks/             # React Query hooks (20 files)
 │       ├── context/           # React Context (Auth, Theme, Lang)
-│       ├── lib/               # Utils (i18n, chart, payment, format)
-│       └── i18n/              # Translations (en/id split by domain)
+│       ├── routes/            # publicRoutes.jsx (product public routes split)
+│       └── lib/               # Utils + i18n (i18n.en/id.js, chart, payment, format)
 ├── docs/
 │   ├── swagger.json/.yaml     # OpenAPI spec (generated)
 │   ├── docs.go                # Swagger embed (generated)
@@ -358,11 +357,20 @@ npm --prefix webui run check:bundles:strict  # CI enforcement
 
 **CI Checks** (GitHub Actions)
 - Lint: golangci-lint, eslint
-- Test: unit + flow tests (68 files di `pkg/routes/`)
+- Test: unit + flow tests (48 file test di `pkg/routes/`)
 - Dialect check: SQLite + PostgreSQL compatibility
 - Version check: `VERSION` sync, `CHANGELOG.md` no stub sections
 - File size: baseline enforcement (`scripts/file-size-baseline.json`)
 - Fixtures: no raw JSON inline (`check:fixtures`)
+
+### Backups
+
+```bash
+make db.backup                      # snapshot DB → data/backups/ (SQLite: VACUUM INTO; PostgreSQL: pg_dump when SQL_DSN is set)
+make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backend first)
+```
+
+`db.restore` confirms interactively; `CONFIRM=yes` skips the prompt and `FORCE=yes` overrides the PostgreSQL connection guard.
 
 ### Production Deploy
 

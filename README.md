@@ -1,95 +1,69 @@
-# TuPay
+<!--
+  Banner promo: tambahkan di sini nanti, contoh:
+  <p align="center"><img src="docs/assets/banner.png" alt="TuPay" width="100%"></p>
+-->
 
-Invoice management API + multi-page app (MPA): invoices, clients, payments with shareable public pay links (QRIS via Midtrans, crypto via NOWPayments), a gateway relay for third-party integrations, expenses, dashboards, reports, and AI-assisted text (Gemini, English/Indonesian).
+<h1 align="center">TuPay</h1>
+<p align="center"><em>Invoicing &amp; payments, minus the busywork.</em></p>
 
-- Backend: Go (Fiber), GORM over SQLite/PostgreSQL, optional Redis.
-- Frontend: React + Vite MPA in `webui/` — product app (`index.html` → `src/main.jsx`) and admin console (`admin.html` → `src/admin.jsx`, served under `/admin`).
-- API docs: Swagger UI at http://127.0.0.1:5000/swagger/index.html (regenerate with `make swag` after changing annotations).
+<p align="center">
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue.svg"></a>
+  <a href="VERSION"><img alt="Version" src="https://img.shields.io/badge/version-1.1.0-blue.svg"></a>
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8.svg?logo=go&amp;logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&amp;logoColor=white">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF.svg?logo=vite&amp;logoColor=white">
+</p>
+<p align="center">
+  <a href="https://github.com/tertua/tupay/actions/workflows/web-check.yml"><img alt="Web check" src="https://github.com/tertua/tupay/actions/workflows/web-check.yml/badge.svg"></a>
+  <a href="https://github.com/tertua/tupay/actions/workflows/dialect-check.yml"><img alt="Dialect check" src="https://github.com/tertua/tupay/actions/workflows/dialect-check.yml/badge.svg"></a>
+  <img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
+</p>
+
+**TuPay** is an invoice management platform for small teams: create invoices, share public payment links, collect online payments, manage clients and expenses, and follow it all from a dashboard with reports — with AI-assisted text in English and Indonesian.
+
+## Features
+
+- **Invoices** — create, send, and track status; download ready-to-share PDFs.
+- **Public pay links** — a shareable link and hosted pay page for each invoice.
+- **Online payments** — QRIS and crypto methods, switched on once a provider is configured.
+- **Clients & expenses** — keep client records and log business expenses.
+- **Dashboard & reports** — key metrics and charts, plus a separate admin console.
+- **Gateway relay** — API-key-authenticated integration for third-party services.
+- **AI-assisted text** — invoice descriptions, payment reminders, and expense notes.
+
+## Tech stack
+
+- **Backend** — Go (Fiber), GORM over SQLite or PostgreSQL, optional Redis.
+- **Frontend** — React + Vite multi-page app (product app + admin console), TanStack Query, Tailwind CSS.
+- **API** — Swagger UI at `/swagger/index.html`.
 
 ## Quick start
 
-Docker (Postgres + Redis + API):
+Prerequisites: Docker (easiest), or Go + Node for local development.
 
-1. Copy `.env.example` to `.env` and adjust as needed.
-2. Run: `make docker.run`
-3. Open Swagger: http://127.0.0.1:5000/swagger/index.html
-
-Local dev (no external services):
-
-1. `make dev-be` — builds to `/tmp/opencode/tupay`, serves `:5000`. Rebuild + restart after BE changes.
-2. `make dev-fe` — Vite dev on `:5173`, proxies `/api` and `/uploads` to the BE. Hot-reloads; no restart needed.
-3. Health: `curl localhost:5000/healthz`
-
-## Configuration
-
-`.env` is loaded automatically. The dev defaults need zero external services:
-
-- Empty `SQL_DSN` selects an auto-created SQLite file (`SQLITE_PATH`, under `data/`).
-- Empty `REDIS_HOST` selects in-memory session/cache stores.
-- Local state lives in gitignored `data/` and survives BE restarts — except sessions: with in-memory sessions every BE restart invalidates all logins (expect 401s until re-login).
-
-Payments are configured via env (`MIDTRANS_*`, `NOWPAYMENTS_*`); the public pay page and gateway relay stay inert until keys are set. Optional `GEMINI_API_KEY` enables the AI text endpoints; optional `TURNSTILE_SECRET` enables CAPTCHA (see below).
-
-## API conventions
-
-- Versioned routes live under `/api/v1`, legacy routes under `/api`; `/api/v1` is registered first.
-- Successes carry data fields directly (`utils.OK`); errors use the `error.message`/`details` shape (`utils.Fail`).
-- Session-cookie mutations require `X-CSRF-Token`; money-moving mutations require an `Idempotency-Key`. Gateway routes authenticate by API key.
-- Money crosses the API as decimal strings; dates use `YYYY-MM-DD`.
-
-## Docker
-
-The image contains only the binary — never bake secrets in. Inject at run time:
-
-`docker run --env-file .env apiserver`
-
-There are two deploy modes:
-
-- **Split (default, `Dockerfile`)**: API-only. Build the FE (`make webui.check`) then host it separately (nginx/Cloudflare). Because the FE calls `/api/v1` relatively, the FE host must proxy `/api` and `/uploads` to the BE — for a different origin, set `CORS_ORIGINS` and use HTTPS (the `Secure` session cookie does not work over plain HTTP/IP). One BE can serve many FEs.
-- **Single container (`Dockerfile.dev`)**: FE embedded into the image, `/api/*` same-origin — no CORS, proxy, or second domain.
-
-  ```bash
-  docker build -f Dockerfile.dev -t tupay:dev .
-  docker run --rm -p 5000:5000 --env-file .env tupay:dev
-  ```
-
-Compose can use `image:` + `env_file: .env`; no env is needed at build time.
-
-## Turnstile (CAPTCHA)
-
-Optional, active only when the secret is set. There are **two different** keys:
-
-| Key | For | Goes in |
-|---|---|---|
-| Secret key | Server-side token verification | Runtime env `TURNSTILE_SECRET` (`.env`) |
-| Site key | Rendering the widget in the browser | Build-time `VITE_TURNSTILE_SITE_KEY` |
-
-`VITE_*` is baked into the bundle by Vite at `npm run build`, so the site key is not a runtime env. For the embed image, pass it as a build arg:
+Docker:
 
 ```bash
-docker build -f Dockerfile.dev \
-  --build-arg VITE_TURNSTILE_SITE_KEY=<site-key> -t tupay:dev .
+cp .env.example .env
+make docker.run
 ```
 
-Both keys must come from the same Cloudflare pair. When unused, leave them empty: the widget is not rendered and the server skips verification.
+Open Swagger: http://127.0.0.1:5000/swagger/index.html
 
-## Commands
+Local dev (no external services required):
 
-- `make dev-be` / `make dev-fe` — local API / Vite dev (see Quick start).
-- `make run` — `swag init`, build, then start the API.
-- `make test` — clean, gocritic, gosec, golangci-lint, then coverage tests. `make build` depends on it, so it is not a quick binary.
-- `go test ./...` — default suite, no external services; focus a route flow with `go test ./pkg/routes -run TestName -v`.
-- `make webui.check` — FE lint, tests, chart/bundle checks, and build.
-- `make db.backup` — snapshot the database to `data/backups/`: SQLite via `VACUUM INTO` (safe while running), PostgreSQL via `pg_dump` when `SQL_DSN` is set (needs `postgresql-client`).
-- `make db.restore FILE=<path|latest>` — replace the database from a snapshot; stop the backend first, confirms interactively (`CONFIRM=yes` to skip, `FORCE=yes` overrides the PostgreSQL connection guard).
-- `make docker.run` / `make docker.stop` — Docker Postgres + Redis + API.
+```bash
+make dev-be   # API on :5000
+make dev-fe   # Vite dev server on :5173
+```
 
-`VERSION` is canonical (see `VERSION`); changes are noted in `webui/CHANGELOG.md`.
+## Documentation
 
-## Frontend bundle boundaries
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — system design, data flow, security, deploy.
+- [`CODE_STYLE.md`](CODE_STYLE.md) — conventions, patterns, CI gates.
+- [`docs/MODULE_MAP.md`](docs/MODULE_MAP.md) — domain ownership and request path.
+- [`docs/API_DOCS.md`](docs/API_DOCS.md) — API conventions.
 
-The MPA lazy-loads routes and keeps heavy dependencies out of the initial bundle:
+## License
 
-- `@react-pdf/renderer` may only be imported by `webui/src/components/invoice/InvoiceDocument.jsx` and `InvoicePdfDownloadContent.jsx`.
-- `recharts` is reserved for the full chart pages: Dashboard, ClientDetail, and Reports. Small dashboard sparklines use SVG.
-- Run `npm --prefix webui run check:bundles` for an advisory report or `make webui.check` for strict lint, build, and bundle-budget checks.
+GPL-3.0 — see [LICENSE](LICENSE).
