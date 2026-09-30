@@ -29,7 +29,7 @@ export function Topbar({ onOpenPalette }) {
         <button
           type="button"
           onClick={onOpenPalette}
-          className="hidden lg:flex items-center gap-3 h-11 w-[360px] rounded-full bg-[var(--surface)] border border-[var(--border)] pl-5 pr-1.5 shadow-card transition-shadow hover:shadow-hover text-left"
+          className="hidden lg:flex items-center gap-3 h-11 w-[280px] xl:w-[360px] rounded-full bg-[var(--surface)] border border-[var(--border)] pl-5 pr-1.5 shadow-card transition-shadow hover:shadow-hover text-left"
         >
           <Search size={16} className="text-[var(--ink-muted)] shrink-0" />
           <span className="flex-1 text-sm text-[var(--ink-muted)] truncate">
