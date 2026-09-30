@@ -50,6 +50,12 @@ Panduan style code untuk TuPay berdasarkan observasi codebase existing. Dokument
 - Lowercase, single word atau compound tanpa underscore
 - `package middleware`, `package gateway`, `package nowpayments`
 
+**Provider packages** (`platform/<provider>`)
+- One package per payment provider: `platform/midtrans`, `platform/nowpayments`, future `platform/xendit`. Each exports `const GatewayName` plus a `Gateway` type implementing `platform/gateway.Gateway`.
+- Behavior is declared through the optional capability interfaces in `platform/gateway/contracts.go` (`Methods`, `Configured`, `Sandbox`, `ChargeCurrency`, `RequiresDecimalAmount`, `BrowserSDK`, `PayerConfig`, `DefaultMethods`, `MinAmountChecker`) — implement only what the provider needs; callers type-assert.
+- Config is read from `configs.Get().Provider("<name>")` using the `<PROVIDER>_<KEY>` env convention; never add a provider struct to `pkg/configs`.
+- Controllers, models, and queries must **never** import a provider package — they talk to the `platform/gateway` registry only. CI: `scripts/check-no-provider-imports.mjs` (`make check.imports`).
+
 ### JavaScript Frontend
 
 **Files**

@@ -31,7 +31,8 @@ TuPay adalah aplikasi manajemen invoice berbasis web dengan integrasi payment ga
 
 ```
 tupay/
-├── main.go                    # Entry point: startup, registry, worker
+├── main.go                    # Entry point: startup, gateway registry, worker
+├── bootstrap.go               # Startup helpers (healthcheck, pprof, version)
 ├── app/
 │   ├── controllers/           # HTTP handlers (65 file, split per domain)
 │   ├── models/                # Domain entities (38 file)
@@ -46,7 +47,7 @@ tupay/
 │   └── constants/             # App constants & version
 ├── platform/
 │   ├── database/              # GORM setup, migrations, version guard
-│   ├── gateway/               # Payment provider abstraction + registry
+│   ├── gateway/               # Payment provider abstraction + registry + capabilities
 │   ├── midtrans/              # Midtrans Snap + Core API implementation
 │   ├── nowpayments/           # NOWPayments crypto implementation
 │   ├── cache/                 # Redis/in-memory (sessions, aggregates)
@@ -118,8 +119,9 @@ tupay/
 - Timeout per request (AI/gateway intent routes)
 
 **Platform** (`platform/`)
-- Gateway abstraction: `Gateway` interface + registry + routing
-- Providers: Midtrans (Snap + Core QRIS), NOWPayments (crypto)
+- Gateway abstraction: `gateway.Gateway` interface + registry + routing
+- Gateway capabilities: optional interfaces in `platform/gateway/contracts.go` (see the capability table below)
+- Providers: Midtrans (Snap + Core QRIS), NOWPayments (crypto) — each one package under `platform/<provider>`
 - Cache: Redis/memory sessions, dashboard aggregates dengan singleflight
 - Storage: local/S3 untuk logo (public) & receipt (private)
 - Outbox worker: async mail, webhook delivery, stale intent reconcile
@@ -205,8 +207,8 @@ GatewayAuth middleware (verify API key → project identity)
 Gateway Controller
   ├─ Idempotency (required Idempotency-Key)
   ├─ Intent create: claim slot → route provider → charge
-  ├─ Provider routing: preferred → fallback auto via capability
-  └─ Response (Snap token / crypto address / QRIS string)
+  ├─ Provider routing: preferred → deterministic registry search via capability
+  └─ Response (provider token / crypto address / QRIS string)
   ↓
 Downstream service (webhook forward via relay signing)
 ```
@@ -221,7 +223,7 @@ Public page /pay/:token
 User picks method (QRIS / crypto asset)
   ↓ POST /public/intents (idempotency via asset)
 Gateway charge
-  ├─ Midtrans: Snap token / Core QRIS
+  ├─ Midtrans: hosted checkout token / Core QRIS
   └─ NOWPayments: crypto address + ExpiresAt
   ↓
 User pays via provider
@@ -262,10 +264,42 @@ Outbox Worker (10s poll, batch 20)
 - Sandbox mode: `NOWPAYMENTS_SANDBOX=true` → `https://api-sandbox.nowpayments.io`
 
 **Gateway Abstraction**
-- Interface: `Gateway` (Name, CreateTransaction, ParseAndVerify)
-- Capabilities: `PaymentMethodProvider`, `ConfiguredProvider`, `SandboxProvider`, `MinAmountChecker`
-- Routing: preferred provider → fallback auto (sorted by name, first configured+support method)
-- Status normalization: provider-specific → unified constants
+- Interface: `gateway.Gateway` (`Name`, `CreateTransaction`, `ParseAndVerify`) — implemented once per provider
+- Registry: `gateway.Register` / `gateway.Get` / `gateway.Names`; providers register in `main.go` (one line each)
+- Default provider: `gateway.DefaultProvider()` returns `GATEWAY_DEFAULT_PROVIDER` when set, else `gateway.DefaultProviderName` (`"midtrans"`), so no controller hardcodes a provider
+- Routing: preferred provider → deterministic search over the registry in name order (first configured + supporting the method); `supports` via `PaymentMethodProvider`
+- Status normalization: provider-specific → unified `Status*` constants
+- Controllers reach providers only through the registry — never by importing a provider package (enforced by `scripts/check-no-provider-imports.mjs`)
+
+**Gateway capabilities** (optional interfaces in `platform/gateway/contracts.go`; a provider implements only what it needs, callers type-assert):
+
+| Capability | Method | Meaning |
+|---|---|---|
+| `PaymentMethodProvider` | `Methods() []string` | the neutral method ids this provider offers |
+| `ConfiguredProvider` | `Configured() bool` | credentials present; unusable providers are skipped in routing/status |
+| `SandboxProvider` | `Sandbox() bool` | running against a test environment |
+| `MinAmountChecker` | `MinAmount(ctx, currencyFrom, payCurrency)` | live per-currency minimum, so a doomed charge is hidden up front |
+| `ChargeCurrencyProvider` | `ChargeCurrency() string` | the single fiat the provider charges (empty = invoice currency) |
+| `DecimalAmountProvider` | `RequiresDecimalAmount() bool` | the provider bills a decimal amount (crypto/sub-unit fiat) |
+| `BrowserSDKProvider` | `BrowserSDK() bool` | the stored token is consumable by an embedded browser checkout SDK |
+| `PayerConfigProvider` | `PayerConfig() map[string]any` | public browser config (client key, env flag) — never server secrets |
+| `DefaultMethodsProvider` | `DefaultMethods() []string` | the provider-side method narrowing (counterpart of the owner allowlist) |
+
+**Provider configuration & browser config**
+- Env convention: `<PROVIDER>_<KEY>` (upper-snake of the registry name), e.g. `MIDTRANS_SERVER_KEY`, `NOWPAYMENTS_IPN_SECRET`. Read via `configs.Provider("<name>")` + `ProviderString`/`ProviderBool`/`ProviderInt` — adding a provider needs no `pkg/configs` edit.
+- Browser config: `GET /gateway/config?gateway=<name>` returns the gateway name, `configured`, and the provider's `PayerConfig` map; an unknown `?gateway=` answers 400, an empty one defaults to `gateway.DefaultProvider()`.
+
+### How to add a provider
+
+Adding provider X touches only these files (nothing under `app/controllers/*`, `app/models/*`, `pkg/configs/config.go`, `pkg/routes/*`, the frontend, or the database schema):
+
+1. `platform/xendit/gateway.go` — `const GatewayName = "xendit"`; `type Gateway struct{}`; implement `Name()`, `CreateTransaction()`, `ParseAndVerify()`.
+2. `platform/xendit/methods.go` — the optional capabilities X actually needs (e.g. `Methods()`, `Configured()`, `Sandbox()`, `ChargeCurrency()`, `PayerConfig()`, `DefaultMethods()`, `RequiresDecimalAmount()`).
+3. `platform/xendit/config.go` — read `configs.Get().Provider("xendit")` (`XENDIT_API_KEY`, `XENDIT_CALLBACK_TOKEN`, …).
+4. Split provider logic per the ≤400-line budget (`create.go`, `verify.go`, `status.go`) with `*_test.go` beside each.
+5. `main.go` — one line: `gateway.Register(xendit.Gateway{})` (headroom exists after the `bootstrap.go` split).
+6. `webui/src/lib/<x>.js` — **only if** X needs a browser SDK; otherwise nothing (`payerCheckout.js` falls back to `redirect_url`/`payment_url`).
+7. `docs/MODULE_MAP.md` (gateway row) + this file's provider list + `.env.example`.
 
 ### AI (Gemini)
 
@@ -308,7 +342,7 @@ Outbox Worker (10s poll, batch 20)
 - `SQL_DSN`: empty → SQLite (`SQLITE_PATH`), `postgres://...` → PostgreSQL
 - `REDIS_HOST`: empty → in-memory sessions/cache
 - `STAGE_STATUS`: `dev` (no graceful shutdown) / `prod` (graceful)
-- Gateway keys: `MIDTRANS_*`, `NOWPAYMENTS_*`
+- Gateway keys: `<PROVIDER>_<KEY>` convention (`MIDTRANS_*`, `NOWPAYMENTS_*`), read generically via `configs.Provider()`; `GATEWAY_DEFAULT_PROVIDER` overrides the built-in default provider
 - Optional: `GEMINI_API_KEY`, `TURNSTILE_SECRET`, `S3_*`
 
 **Runtime Config** (`pkg/configs/`)
@@ -362,6 +396,8 @@ bun run --cwd=webui check:bundles:strict  # CI enforcement
 - Version check: `VERSION` sync, `CHANGELOG.md` no stub sections
 - File size: baseline enforcement (`scripts/file-size-baseline.json`)
 - Fixtures: no raw JSON inline (`check:fixtures`)
+- Provider imports: no `app/` file imports a provider package (`scripts/check-no-provider-imports.mjs`, `make check.imports`)
+- Module map: `docs/MODULE_MAP.md` owner files exist both directions (`scripts/check-module-map.mjs`)
 
 ### Backups
 
@@ -494,7 +530,7 @@ make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backe
 1. **Dual-database support**: SQLite (dev simplicity) + PostgreSQL (production scale)
 2. **Optional Redis**: in-memory fallback untuk single-instance dev
 3. **MPA over SPA**: 2 entry points (product + admin), independent deploys
-4. **Payment gateway abstraction**: add provider = implement interface + register
+4. **Payment gateway abstraction**: add provider = new package under `platform/` implementing `gateway.Gateway` + optional capabilities, one `gateway.Register` in `main.go`, and `<PROVIDER>_<KEY>` env vars via `configs.Provider()`. No controller, model, config-struct, or frontend branch changes — enforced by `scripts/check-no-provider-imports.mjs` (`make check.imports` + CI).
 5. **Transparent session refresh**: frontend tidak perlu token handling
 6. **Outbox pattern**: reliable async delivery dengan retry
 7. **File size limits**: enforced baseline, prevent runaway files

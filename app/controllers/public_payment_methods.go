@@ -23,7 +23,8 @@ type publicChargeMethod struct {
 // invoice balance, one entry per method, sorted by id. Providers whose
 // currency cannot be reached with the configured rate are skipped, so the
 // payer never sees a method that would fail at intent creation. The owner's
-// Midtrans allowlist narrows the Midtrans methods; nil allows them all.
+// per-provider allowlist (gateway_allowlist.go) narrows the default provider's
+// methods; a nil allowlist allows them all.
 // Providers reporting a live minimum (gateway.MinAmountChecker, cached
 // hourly) also hide a method whose charge sits below it — but only for the
 // payer's chosen crypto asset: the minimum is per asset, so an asset-agnostic

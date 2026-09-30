@@ -25,7 +25,7 @@ type publicIntentRequest struct {
 
 // createPublicGatewayIntent opens (or reuses) the gateway intent for an
 // invoice's outstanding balance. method is the provider-neutral choice from
-// the public page; an empty method keeps the legacy Midtrans default. The
+// the public page; an empty method keeps the default provider's behavior. The
 // charge is converted to the provider's currency with the owner's manual rate
 // when they differ.
 func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.PaymentLink, invoice models.Invoice, balance decimal.Decimal, method, payCurrency string) error {
@@ -201,7 +201,7 @@ func publicRetryOrderID(ctx context.Context, db database.Queries, base string, i
 }
 
 // isDuplicateOrderError reports a provider-side duplicate order id rejection
-// (Midtrans refuses to recharge an order id it already holds).
+// (the provider refuses to recharge an order id it already holds).
 func isDuplicateOrderError(err error) bool {
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "already used") || strings.Contains(msg, "order_id")

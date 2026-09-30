@@ -16,7 +16,7 @@ import (
 	"github.com/tertua/tupay/platform/gateway"
 )
 
-// CreateIntent creates a Midtrans Snap transaction.
+// CreateIntent creates a payment intent through the routed provider.
 // Project identity is taken from the API key (GatewayAuth), never from the body.
 // @Description Create a relayed payment intent. Response keys snap_token and midtrans_txn_id are DEPRECATED (use provider_token / provider_txn_id, same values); they are kept until relay clients migrate.
 // @Summary create payment intent
