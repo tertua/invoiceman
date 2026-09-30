@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
@@ -38,14 +39,14 @@ type invoiceSpec struct {
 	Items         []invoiceLine `json:"items"`
 }
 
-// newInvoice returns a sent IDR invoice with one line and stable dates.
+// newInvoice returns a sent IDR invoice with one line; Due is always ~30 days out so the default fixture never flips to overdue during a run.
 // Tests override only the fields they exercise.
 func newInvoice() invoiceSpec {
 	return invoiceSpec{
 		Status:   models.InvoiceStatusSent,
 		Currency: "IDR",
 		Issue:    "2026-09-01",
-		Due:      "2026-09-30",
+		Due:      time.Now().UTC().AddDate(0, 0, 30).Format("2006-01-02"),
 		Items:    []invoiceLine{{Description: "Service", Quantity: 1, Rate: "100000"}},
 	}
 }
