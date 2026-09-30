@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpensesIllo } from "@/components/ui/EmptyIllustrations";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useExpenses, useExpenseMutations } from "@/hooks/useExpenses";
@@ -117,9 +117,7 @@ export default function Expenses() {
       )}
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
-        </div>
+        <TableSkeleton rows={5} gridClassName="grid-cols-[1.4fr_1fr_1fr_0.8fr_auto]" columns={["w-32", "w-20", "w-24", "w-20", "w-8"]} />
       ) : error ? (
         <QueryError error={error} />
       ) : expenses.length === 0 ? (

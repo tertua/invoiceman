@@ -147,7 +147,7 @@ export default function AdminGateway() {
   const { t } = useLang();
   const { data: projects = [], isLoading, error } = useGatewayProjects();
   const [credentials, setCredentials] = useState(null);
-  if (isLoading) return <AdminTableSkeleton />;
+  if (isLoading) return <AdminTableSkeleton columns={5} minWidthClassName="min-w-[900px]" />;
   if (error) return <QueryError error={error} />;
   return (
     <div>

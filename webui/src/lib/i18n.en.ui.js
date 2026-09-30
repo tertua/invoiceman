@@ -12,6 +12,13 @@ export const uiEn = {
     "dash.receivablesAging": "Receivables aging",
     "dash.receivablesAgingDesc": "Outstanding balance by days overdue",
     "invoices.statusCountsFailed": "Couldn't load counts",
+    /* optimistic mutation toasts — only hooks whose callers have no error UI */
+    "invoices.statusFailed": "Couldn't update invoice status",
+    "invoices.deleteFailed": "Couldn't delete invoice",
+    "payments.voidFailed": "Couldn't void payment",
+    "clients.deleteFailed": "Couldn't delete client",
+    "expenses.deleteFailed": "Couldn't delete expense",
+    "items.deleteFailed": "Couldn't delete item",
     "public.stepChoose": "Choose method",
     "public.stepPay": "Pay",
     "public.stepDone": "Done",

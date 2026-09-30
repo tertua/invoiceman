@@ -10,6 +10,13 @@ export const uiId = {
     "dash.receivablesAging": "Umur piutang",
     "dash.receivablesAgingDesc": "Saldo terutang per hari keterlambatan",
     "invoices.statusCountsFailed": "Gagal memuat jumlah",
+    /* optimistic mutation toasts — only hooks whose callers have no error UI */
+    "invoices.statusFailed": "Gagal memperbarui status faktur",
+    "invoices.deleteFailed": "Gagal menghapus faktur",
+    "payments.voidFailed": "Gagal membatalkan pembayaran",
+    "clients.deleteFailed": "Gagal menghapus klien",
+    "expenses.deleteFailed": "Gagal menghapus pengeluaran",
+    "items.deleteFailed": "Gagal menghapus item",
     "public.stepChoose": "Pilih metode",
     "public.stepPay": "Bayar",
     "public.stepDone": "Selesai",

@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/api/invoices";
 
 export const invoicesKey = (params) => ["invoices", params || {}];
@@ -20,46 +20,11 @@ export function useInvoice(id) {
   });
 }
 
-function invalidateAll(qc) {
-  qc.invalidateQueries({ queryKey: ["invoices"] });
-  qc.invalidateQueries({ queryKey: ["dashboard"] });
-  qc.invalidateQueries({ queryKey: ["clients"] });
-}
-
-export function useCreateInvoice() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (payload) => invoicesApi.create(payload),
-    onSuccess: () => invalidateAll(qc),
-  });
-}
-
-export function useUpdateInvoice() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }) => invoicesApi.update(id, payload),
-    onSuccess: (inv) => {
-      invalidateAll(qc);
-      if (inv?.id) qc.invalidateQueries({ queryKey: invoiceKey(inv.id) });
-    },
-  });
-}
-
-export function useSetInvoiceStatus() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, status }) => invoicesApi.setStatus(id, status),
-    onSuccess: (inv) => {
-      invalidateAll(qc);
-      if (inv?.id) qc.invalidateQueries({ queryKey: invoiceKey(inv.id) });
-    },
-  });
-}
-
-export function useDeleteInvoice() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => invoicesApi.remove(id),
-    onSuccess: () => invalidateAll(qc),
-  });
-}
+// Mutation hooks live in useInvoiceMutations.js (file-size split); re-exported
+// here so callers keep importing from "@/hooks/useInvoices".
+export {
+  useCreateInvoice,
+  useUpdateInvoice,
+  useSetInvoiceStatus,
+  useDeleteInvoice,
+} from "./useInvoiceMutations";

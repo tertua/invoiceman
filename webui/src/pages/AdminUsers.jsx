@@ -85,7 +85,7 @@ export default function AdminUsers() {
   const { data: users, isLoading, error } = useAdminUsers();
 
   if (isLoading) {
-    return <AdminTableSkeleton rows={4} />;
+    return <AdminTableSkeleton rows={4} columns={5} minWidthClassName="min-w-[700px]" />;
   }
 
   if (error) {

@@ -3,7 +3,7 @@ import { Plus, Wallet, CreditCard } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
@@ -46,7 +46,7 @@ export default function Payments() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+        <TableSkeleton rows={5} gridClassName="grid-cols-[1fr_1.4fr_1fr_1fr_auto]" columns={["w-20", "w-32", "w-16", "w-20", "w-8"]} />
       ) : error ? (
         <QueryError error={error} />
       ) : payments.length === 0 ? (

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InvoicesIllo } from "@/components/ui/EmptyIllustrations";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { InvoiceTable } from "@/components/invoice/InvoiceTable";
 import { InvoiceStatusTabs } from "@/components/invoice/InvoiceStatusTabs";
@@ -87,11 +87,7 @@ export default function Invoices() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 rounded-2xl" />
-          ))}
-        </div>
+        <TableSkeleton rows={6} gridClassName="grid-cols-[1.4fr_1.6fr_1fr_1fr_0.9fr_auto]" columns={["w-24", "w-32", "w-16", "w-16", "w-20", "w-16"]} />
       ) : error ? (
         <QueryError error={error} />
       ) : invoices.length === 0 ? (
