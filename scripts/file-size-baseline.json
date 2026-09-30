@@ -76,7 +76,7 @@
  "pkg/middleware/csrf.go": 107,
  "pkg/middleware/fiber_middleware.go": 64,
  "pkg/middleware/gateway_middleware.go": 39,
- "pkg/middleware/idempotency.go": 185,
+ "pkg/middleware/idempotency.go": 151,
  "pkg/middleware/jwt_middleware.go": 32,
  "pkg/middleware/rate_limit.go": 165,
  "pkg/middleware/role_middleware.go": 37,

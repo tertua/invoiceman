@@ -2,13 +2,14 @@ import { settingsApi } from "@/api/settings";
 import { configApi } from "@/api/config";
 import { dashboardApi } from "@/api/dashboard";
 import { reportsApi } from "@/api/reports";
+import { pruneUnscopedAiCaches } from "@/lib/aiCache";
 
 // Runs inside the login button's minimum-delay window so the wait does
-// real work: prune orphaned anon AI caches, then warm the queries the
-// dashboard mounts with. Failures are swallowed — the dashboard refetches
-// on mount anyway.
+// real work: prune AI caches that predate org scoping, then warm the queries
+// the dashboard mounts with. Failures are swallowed — the dashboard
+// refetches on mount anyway.
 export async function warmSessionAfterLogin(queryClient) {
-  pruneAnonAiCaches();
+  pruneUnscopedAiCaches();
   try {
     const settings = await queryClient.fetchQuery({
       queryKey: ["settings"],
@@ -32,23 +33,5 @@ export async function warmSessionAfterLogin(queryClient) {
     ]);
   } catch {
     /* unauthenticated or offline — pages fetch on mount */
-  }
-}
-
-function pruneAnonAiCaches() {
-  try {
-    const doomed = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (
-        k?.startsWith("tupay:ai-summary:anon") ||
-        k?.startsWith("tupay:ai-reminder:anon")
-      ) {
-        doomed.push(k);
-      }
-    }
-    doomed.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* private mode — nothing to prune */
   }
 }

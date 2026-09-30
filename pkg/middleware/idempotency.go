@@ -29,39 +29,6 @@ const (
 	idempotencyPollStep = 100 * time.Millisecond
 )
 
-// IdempotencyScope extracts the dedup scope for a request
-// (e.g. "user:<id>", "project:<slug>", "pay:<token>").
-type IdempotencyScope func(c fiber.Ctx) (string, error)
-
-// SessionIdempotencyScope scopes keys to the authenticated session user.
-// AuthRequired must run before this middleware.
-func SessionIdempotencyScope(c fiber.Ctx) (string, error) {
-	userID, err := utils.CurrentUserID(c)
-	if err != nil {
-		return "", err
-	}
-	return "user:" + userID.String(), nil
-}
-
-// GatewayIdempotencyScope scopes keys to the calling service project.
-// GatewayAuth must run before this middleware.
-func GatewayIdempotencyScope(c fiber.Ctx) (string, error) {
-	project, err := utils.CurrentServiceProject(c)
-	if err != nil {
-		return "", err
-	}
-	return "project:" + project.Slug, nil
-}
-
-// PublicPayIdempotencyScope scopes keys to the public payment token.
-func PublicPayIdempotencyScope(c fiber.Ctx) (string, error) {
-	token := strings.TrimSpace(c.Params("token"))
-	if token == "" {
-		return "", fiber.NewError(fiber.StatusBadRequest, "payment token is required")
-	}
-	return "pay:" + token, nil
-}
-
 // Idempotency dedups mutating requests by the Idempotency-Key header.
 func Idempotency(scope IdempotencyScope) fiber.Handler {
 	return func(c fiber.Ctx) error {

@@ -27,7 +27,54 @@ func backfillOrganizations(db *gorm.DB) error {
 			return err
 		}
 	}
+	if err := stampOwnerlessProjects(db); err != nil {
+		return err
+	}
 	return rebuildSettingsPK(db)
+}
+
+// systemOrgName labels the shared tenant that adopts relay projects which predate orgs and never had an owner to inherit one from.
+const systemOrgName = "Relay (system)"
+
+// stampOwnerlessProjects adopts relay projects the per-user pass left unstamped.
+// A project with no owner_user_id has no user to derive a tenant from, but it
+// still holds a live API key: the intent path reads settings by project.OrgID,
+// so a NULL org would silently fall through to the nil tenant. They share one
+// system org (created once, reused) that an admin can reassign later.
+func stampOwnerlessProjects(db *gorm.DB) error {
+	var pending []models.GatewayProject
+	if err := db.Where("org_id IS NULL OR org_id = ?", uuid.Nil).Find(&pending).Error; err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return nil
+	}
+	orgID, err := systemOrgID(db)
+	if err != nil {
+		return err
+	}
+	for _, project := range pending {
+		if err := db.Model(&models.GatewayProject{}).Where("slug = ?", project.Slug).
+			UpdateColumn("org_id", orgID).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// systemOrgID returns the shared system org, creating it on first use; a later run reuses the existing row instead of minting another.
+func systemOrgID(db *gorm.DB) (uuid.UUID, error) {
+	var org models.Organization
+	if err := db.Where("name = ?", systemOrgName).First(&org).Error; err == nil {
+		return org.ID, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, err
+	}
+	org = models.Organization{ID: uuid.New(), Name: systemOrgName}
+	if err := db.Create(&org).Error; err != nil {
+		return uuid.Nil, err
+	}
+	return org.ID, nil
 }
 
 // ownerOrgFor resolves the user's owner membership, creating a personal org + owner membership when they have none yet.

@@ -58,3 +58,46 @@ func TestInvoiceCreateIdempotency(t *testing.T) {
 	require.Equal(t, 201, resp.StatusCode)
 	resp.Body.Close()
 }
+
+// TestInvoiceIdempotencyIsPerOrg pins the dedup scope to the active org: the
+// same key and body in another org must execute there (not replay the first
+// org's response), or a switch would silently skip the write and hand back
+// the other tenant's invoice.
+func TestInvoiceIdempotencyIsPerOrg(t *testing.T) {
+	t.Setenv("RATE_LIMIT_AUTH", "100")
+	app := newTestApp()
+
+	owner := registerUser(t, app, "idem-org-owner@example.com", "secret123")
+	joiner := registerUser(t, app, "idem-org-joiner@example.com", "secret123")
+	personalOrg := myOrgID(t, app, joiner)
+
+	// A draft needs no client, so one body is valid in both orgs.
+	spec := newInvoice()
+	spec.Status = "draft"
+	key := "invoice-create-cross-org-1"
+
+	resp := doRequestWithHeaders(t, app, "POST", "/api/invoices", spec.body(t), joiner,
+		map[string]string{"Idempotency-Key": key})
+	status, first, _ := readBody(t, resp)
+	require.Equal(t, 201, status)
+	firstID := first["invoice"].(map[string]interface{})["id"].(string)
+
+	// Joining the owner's org switches the session's active org.
+	inviteAndAccept(t, app, owner, joiner)
+	ownerOrg := myOrgID(t, app, owner)
+	require.NotEqual(t, personalOrg, ownerOrg)
+	assert.Equal(t, ownerOrg, myOrgID(t, app, joiner))
+
+	// The same key + body in the new org must create a fresh invoice there.
+	resp = doRequestWithHeaders(t, app, "POST", "/api/invoices", spec.body(t), joiner,
+		map[string]string{"Idempotency-Key": key})
+	status, second, headers := readBody(t, resp)
+	require.Equal(t, 201, status)
+	assert.Empty(t, headers.Get("Idempotent-Replayed"))
+	assert.NotEqual(t, firstID, second["invoice"].(map[string]interface{})["id"])
+
+	// Each org holds exactly its own invoice.
+	resp = doRequest(t, app, "GET", "/api/invoices", "", owner)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Len(t, decodeBody(t, resp)["invoices"], 1, "owner org")
+}

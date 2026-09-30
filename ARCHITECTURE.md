@@ -112,7 +112,7 @@ tupay/
 **Middleware** (`pkg/middleware/`)
 - `AuthRequired`: JWT cookie/Bearer dengan transparent refresh
 - `RequireCSRF`: Double-submit token untuk session mutations
-- `Idempotency`: Dedup via `Idempotency-Key` header (payment mutations)
+- `Idempotency`: Dedup via `Idempotency-Key` header (payment mutations); scope is per user **and** active org, so a key replayed after an org switch executes instead of returning the other tenant's response
 - `GatewayAuth`: API key untuk service relay
 - Rate limiting per IP (auth/public) atau API key (gateway)
 - Timeout per request (AI/gateway intent routes)
