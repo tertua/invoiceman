@@ -22,7 +22,7 @@ var redisStorage fiber.Storage
 // rateLimitStorage returns nil (fiber in-memory store) when REDIS_HOST is
 // empty, otherwise a Redis-backed fiber.Storage so limits are shared across
 // replicas. Nil is a valid Storage for limiter.New (uses process memory).
-func rateLimitStorage() fiber.Storage {
+var rateLimitStorage = func() fiber.Storage {
 	if !configs.Get().Redis.Enabled() {
 		return nil
 	}
@@ -43,6 +43,7 @@ func limitReached(c fiber.Ctx) error {
 	return utils.Fail(c, fiber.StatusTooManyRequests, "rate limit exceeded, try again later", nil)
 }
 
+// newLimiter namespaces keys per class because all limiters share one storage; bare IP keys would merge every counter.
 func newLimiter(maxRequests int, keyGen func(fiber.Ctx) string) fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:          maxRequests,
@@ -55,30 +56,22 @@ func newLimiter(maxRequests int, keyGen func(fiber.Ctx) string) fiber.Handler {
 
 // GeneralLimiter guards authenticated /api traffic.
 func GeneralLimiter() fiber.Handler {
-	return newLimiter(configs.Get().RateLimit.General, func(c fiber.Ctx) string {
-		return c.IP()
-	})
+	return newLimiter(configs.Get().RateLimit.General, func(c fiber.Ctx) string { return "gen:" + c.IP() })
 }
 
 // AuthLimiter guards brute-forceable auth endpoints.
 func AuthLimiter() fiber.Handler {
-	return newLimiter(configs.Get().RateLimit.Auth, func(c fiber.Ctx) string {
-		return c.IP()
-	})
+	return newLimiter(configs.Get().RateLimit.Auth, func(c fiber.Ctx) string { return "auth:" + c.IP() })
 }
 
 // PublicPayLimiter guards the public payment pages.
 func PublicPayLimiter() fiber.Handler {
-	return newLimiter(configs.Get().RateLimit.Public, func(c fiber.Ctx) string {
-		return c.IP()
-	})
+	return newLimiter(configs.Get().RateLimit.Public, func(c fiber.Ctx) string { return "pub:" + c.IP() })
 }
 
 // WebhookLimiter guards provider webhooks.
 func WebhookLimiter() fiber.Handler {
-	return newLimiter(configs.Get().RateLimit.Webhook, func(c fiber.Ctx) string {
-		return c.IP()
-	})
+	return newLimiter(configs.Get().RateLimit.Webhook, func(c fiber.Ctx) string { return "wh:" + c.IP() })
 }
 
 // GatewayLimiter guards the service relay (per API key, IP fallback).
@@ -88,7 +81,7 @@ func GatewayLimiter() fiber.Handler {
 		if key := relay.ExtractKey(c.Get("Authorization"), c.Get("X-Api-Key")); key != "" {
 			return "gw:" + relay.HashKey(key)
 		}
-		return c.IP()
+		return "gw:" + c.IP()
 	})
 }
 
