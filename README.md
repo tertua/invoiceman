@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue.svg"></a>
-  <a href="VERSION"><img alt="Version" src="https://img.shields.io/badge/version-1.1.0-blue.svg"></a>
+  <a href="VERSION"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0-blue.svg"></a>
   <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8.svg?logo=go&amp;logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&amp;logoColor=white">
   <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF.svg?logo=vite&amp;logoColor=white">

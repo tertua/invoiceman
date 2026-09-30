@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.0.0] - 2026-09-30
+
+### Added
+- Organizations: accounts can now be grouped into organizations with
+  memberships and email invites, and every org-owned record (invoices,
+  clients, expenses, settings) is scoped to its organization — data from
+  one org is never visible to another.
+- Invoice approval: an org can require approval per role, so invoices
+  raised by members are held until an approver releases them; the
+  organization settings tab manages members, invites and that policy.
+- The gateway now guards project deletion: a project that still has live
+  keys or traffic must be confirmed before it can be removed.
+- Outbox worker health is exposed for operators (pending/failed counts),
+  making stuck delivery jobs visible instead of silent.
+
+### Fixed
+- Rate-limit counters no longer leak between limit classes — each class
+  (auth, API, public) now keeps its own keys, so a hit on one no longer
+  shortens the window of another.
+- PostgreSQL automigrate keeps `settings.user_id` NOT NULL, so a fresh
+  Postgres install no longer drifts from the SQLite schema.
+
 ## [v1.1.0] - 2026-09-28
 
 ### Added

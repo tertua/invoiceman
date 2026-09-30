@@ -84,7 +84,7 @@ tupay/
 ├── Dockerfile                 # API-only image (split deploy)
 ├── Dockerfile.dev             # API+FE embed (single container)
 ├── .env.example               # Config template
-├── VERSION                    # Canonical version (1.1.0)
+├── VERSION                    # Canonical version (2.0.0)
 └── AGENTS.md                  # Repository guide & conventions
 ```
 
