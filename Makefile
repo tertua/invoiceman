@@ -30,7 +30,7 @@ check.imports:
 	node scripts/check-no-provider-imports.mjs
 
 build: test
-	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) main.go
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) .
 
 run: swag build
 	$(BUILD_DIR)/$(APP_NAME)
