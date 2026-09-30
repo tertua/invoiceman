@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.1.0] - 2026-09-30
+
+### Changed
+- The frontend is now built with Bun instead of npm: local dev, CI,
+  the all-in-one Docker image and Dependabot all use `bun`, and the
+  lockfile is `webui/bun.lock`. Frontend tests still run on Node's
+  built-in runner (`node --test`) via `bun run test` — never `bun test`.
+
 ## [v2.0.0] - 2026-09-30
 
 ### Added
