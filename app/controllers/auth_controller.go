@@ -207,7 +207,7 @@ func Me(c fiber.Ctx) error {
 	}
 
 	user.PasswordHash = ""
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user), "org": orgPayload(db, userID)})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user), "org": orgPayload(db, userID, activeOrgHint(c))})
 }
 
 // UpdateProfile updates the current user display name.

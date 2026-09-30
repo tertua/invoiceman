@@ -133,11 +133,12 @@ func Register(c fiber.Ctx) error {
 	// An invite joins the inviting org (no personal org is provisioned); a token-less register creates or reuses the personal tenant.
 	var orgID uuid.UUID
 	if invite != nil {
+		// Claim before joining: single-use holds under concurrent redemption, and a lost race joins nothing.
+		if err := db.MarkAccepted(invite.ID, user.ID); err != nil {
+			return utils.Fail(c, fiber.StatusBadRequest, inviteErrorMessage(err), nil)
+		}
 		orgID = invite.OrgID
 		if err := db.CreateIfAbsent(orgID, user.ID, models.RoleStaff); err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
-		}
-		if err := db.MarkAccepted(invite.ID, user.ID); err != nil {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
 		}
 	} else {

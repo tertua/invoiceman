@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/app/queries"
 	"github.com/tertua/tupay/platform/database"
 )
 
@@ -45,6 +46,7 @@ func TestOrgInviteFlow(t *testing.T) {
 	// No personal tenant was provisioned: one membership, and it is the inviting org.
 	joined := meOrg(t, app, joiner)
 	assert.Equal(t, ownerOrg, joined["id"])
+	assert.Equal(t, "staff", joined["role"])
 	require.Len(t, joined["memberships"].([]interface{}), 1)
 
 	// Redeeming the token again fails and leaves that single membership alone.
@@ -61,12 +63,16 @@ func TestOrgInviteFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
 	assert.GreaterOrEqual(t, len(meOrg(t, app, existing)["memberships"].([]interface{})), 2)
+	// The accept switched the session's active org: /auth/me must report the joined org's staff role, not the oldest membership's owner role.
+	assert.Equal(t, ownerOrg, meOrg(t, app, existing)["id"])
+	assert.Equal(t, "staff", meOrg(t, app, existing)["role"])
 
 	// Activate moves the session between the two memberships and back.
 	resp = doRequest(t, app, "POST", "/api/orgs/"+personalOrg+"/activate", "", existing)
 	require.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
 	assert.Equal(t, personalOrg, myOrgID(t, app, existing))
+	assert.Equal(t, "owner", meOrg(t, app, existing)["role"])
 	resp = doRequest(t, app, "POST", "/api/orgs/"+ownerOrg+"/activate", "", existing)
 	require.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
@@ -101,4 +107,21 @@ func TestOrgInviteFlow(t *testing.T) {
 		registerUser(t, app, "invite-expired@example.com", "secret123"))
 	require.Equal(t, 400, resp.StatusCode)
 	assert.Equal(t, "invite expired", envelopeMessage(t, resp))
+}
+
+// TestInviteClaimSingleUse pins the claim primitive behind the accept flow: the second claim of one token is refused at the query layer too, so the fix does not depend on the controller's pre-read check.
+func TestInviteClaimSingleUse(t *testing.T) {
+	t.Setenv("RATE_LIMIT_AUTH", "100")
+	app := newTestApp()
+
+	owner := registerUser(t, app, "claim-owner@example.com", "secret123")
+	token := inviteToken(t, app, owner)
+
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	var invite models.OrgInvite
+	require.NoError(t, db.OrgInviteQueries.Where("token = ?", token).First(&invite).Error)
+
+	require.NoError(t, db.MarkAccepted(invite.ID, uuid.New()))
+	require.ErrorIs(t, db.MarkAccepted(invite.ID, uuid.New()), queries.ErrInviteAccepted)
 }

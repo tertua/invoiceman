@@ -27,6 +27,7 @@ export function useAcceptInvite() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (token) => orgsApi.accept({ token }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orgs"] }),
+    // A join swaps membership, role and data scope at once: clear everything (same as the activate swap) so stale per-org queries never leak.
+    onSuccess: () => qc.clear(),
   });
 }

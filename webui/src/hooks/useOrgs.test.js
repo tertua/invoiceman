@@ -80,9 +80,15 @@ test("useActivateOrg activates the org and clears the query cache", async () => 
   }
 });
 
-test("useAcceptInvite accepts the token and revalidates org queries", async () => {
+test("useAcceptInvite accepts the token and clears the whole query cache", async () => {
   const qc = new QueryClient();
   qc.setQueryData(orgsKey("members"), [{ id: "m1" }]);
+  qc.setQueryData(["invoices"], [{ id: "i1" }]);
+  let clears = 0;
+  qc.clear = () => {
+    clears += 1;
+    QueryClient.prototype.clear.call(qc);
+  };
   const original = orgsApi.accept;
   let payload;
   orgsApi.accept = async (body) => ((payload = body), body);
@@ -90,8 +96,9 @@ test("useAcceptInvite accepts the token and revalidates org queries", async () =
     const mutation = renderHook(qc, useAcceptInvite);
     assert.deepEqual(await mutation.mutateAsync("invite-token"), { token: "invite-token" });
     assert.deepEqual(payload, { token: "invite-token" });
-    const query = qc.getQueryCache().find({ queryKey: orgsKey("members") });
-    assert.equal(query.state.isInvalidated, true);
+    // A join changes org scope: every cached query (orgs or not) must go, not just the orgs subtree.
+    assert.equal(clears, 1);
+    assert.equal(qc.getQueryCache().getAll().length, 0);
   } finally {
     orgsApi.accept = original;
   }

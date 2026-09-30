@@ -59,11 +59,11 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
 
-	if err := rejectLockedInvoice(*db, orgID, id, existing); err != nil {
-		if errors.Is(err, ErrPendingPayment) || errors.Is(err, ErrInvoicePaid) {
-			return failInvoiceRule(c, err)
+	if err := guardInvoiceRewrite(c, *db, orgID, id, existing, input.Status); err != nil {
+		if errors.Is(err, errPaymentsLoad) {
+			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
 		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice payments", nil)
+		return failInvoiceRule(c, err)
 	}
 
 	invoice, items, err := buildInvoice(orgID, userID, input)
@@ -76,13 +76,8 @@ func UpdateInvoice(c fiber.Ctx) error {
 		items[i].InvoiceID = existing.ID
 	}
 
-	if invoice.ClientID != nil {
-		if _, err := db.GetClient(orgID, *invoice.ClientID); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
-			}
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
-		}
+	if status, message, ok := orgClientStatus(*db, orgID, invoice.ClientID); ok {
+		return utils.Fail(c, status, message, nil)
 	}
 
 	if err := db.UpdateInvoice(orgID, invoice, items); err != nil {

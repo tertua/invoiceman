@@ -63,16 +63,23 @@ func (q *OrgInviteQueries) GetValidByToken(token string) (models.OrgInvite, erro
 	return invite, nil
 }
 
-// MarkAccepted flags the invite as used; a repeat call reports success without changing the row (idempotent).
+// MarkAccepted claims the invite for userID; a repeat or concurrent claim answers ErrInviteAccepted so single-use holds even when two redemptions race.
 func (q *OrgInviteQueries) MarkAccepted(id, userID uuid.UUID) error {
 	invite := models.OrgInvite{}
 	if err := q.Where("id = ?", id).First(&invite).Error; err != nil {
 		return notFound(err)
 	}
 	if invite.AcceptedBy != nil {
-		return nil
+		return ErrInviteAccepted
 	}
-	return q.Model(&models.OrgInvite{}).Where("id = ? AND accepted_by IS NULL", id).Update("accepted_by", userID).Error
+	res := q.Model(&models.OrgInvite{}).Where("id = ? AND accepted_by IS NULL", id).Update("accepted_by", userID)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrInviteAccepted
+	}
+	return nil
 }
 
 // Revoke stamps revoked_at on one invite of the org; a miss returns sql.ErrNoRows so callers can 404.

@@ -62,3 +62,54 @@ func TestOrgRoleFlow(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "Owner Co", decodeBody(t, resp)["settings"].(map[string]interface{})["company_name"])
 }
+
+// TestOrgRoleInvoiceWriteGuards closes the audit gaps the route-level guards cannot see: staff may not mint a non-draft, rewrite a non-draft, promote a draft through the full update, or reach the owner-only logo/online-send routes.
+func TestOrgRoleInvoiceWriteGuards(t *testing.T) {
+	t.Setenv("RATE_LIMIT_AUTH", "100")
+	app := newTestApp()
+
+	owner := registerUser(t, app, "guard-owner@example.com", "secret123")
+	staff := registerUser(t, app, "guard-staff@example.com", "secret123")
+	inviteAndAccept(t, app, owner, staff)
+	clientID := createClient(t, app, owner, "Guard Client")
+
+	sent := newInvoice()
+	sent.ClientID = clientID
+
+	// Creating straight into sent is owner-only (permission matrix: staff start at draft).
+	resp := doRequest(t, app, "POST", "/api/invoices", sent.body(t), staff)
+	require.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
+
+	// Staff may still draft with a client attached.
+	draft := newInvoice()
+	draft.Status = "draft"
+	draft.ClientID = clientID
+	staffDraft := createInvoiceID(t, app, staff, draft)
+
+	// The full update cannot promote that draft to sent either.
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+staffDraft, sent.body(t), staff)
+	require.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
+
+	// Submit moves it to pending; from there any rewrite by staff is refused, even with the status left alone.
+	resp = doRequest(t, app, "POST", "/api/invoices/"+staffDraft+"/submit", "", staff)
+	require.Equal(t, 200, resp.StatusCode)
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+staffDraft, draft.body(t), staff)
+	require.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
+
+	// The owner keeps the same move: draft through the full update lands as sent.
+	resp = doRequest(t, app, "PATCH", "/api/invoices/"+createInvoiceID(t, app, owner, draft), sent.body(t), owner)
+	require.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, "sent", decodeBody(t, resp)["invoice"].(map[string]interface{})["status"])
+
+	// Owner-only routes stay owner-only: logo upload and the online pay-link email.
+	resp = multipartFile(t, app, "POST", "/api/settings/logo", "logo", "logo.png", "image/png", tinyPNG, staff)
+	require.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
+	resp = doRequest(t, app, "POST", "/api/payments/online/send",
+		`{"invoiceId":"`+staffDraft+`","email":"client@example.com"}`, staff)
+	require.Equal(t, 403, resp.StatusCode)
+	assert.Equal(t, "org.ownerRequired", envelopeMessage(t, resp))
+}

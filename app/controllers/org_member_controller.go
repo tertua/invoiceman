@@ -229,6 +229,13 @@ func AcceptOrgInvite(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
+	// Claim before joining: single-use must hold under concurrent redemptions (the loser gets 400 without a membership).
+	if err := db.MarkAccepted(invite.ID, userID); err != nil {
+		if status, message, ok := inviteTokenStatus(err); ok {
+			return utils.Fail(c, status, message, nil)
+		}
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update invite", nil)
+	}
 	orgID := invite.OrgID
 	role, err := db.GetRole(orgID, userID)
 	if err != nil {
@@ -239,9 +246,6 @@ func AcceptOrgInvite(c fiber.Ctx) error {
 			return utils.Fail(c, fiber.StatusInternalServerError, "failed to join organization", nil)
 		}
 		role = models.RoleStaff
-	}
-	if err := db.MarkAccepted(invite.ID, userID); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update invite", nil)
 	}
 	if err := persistActiveOrg(c, userID, orgID); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)

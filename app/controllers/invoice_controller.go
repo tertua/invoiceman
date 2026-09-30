@@ -1,9 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
-
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
@@ -34,6 +31,9 @@ func CreateInvoice(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
+	if err := guardInvoiceCreate(c, input.Status); err != nil {
+		return failInvoiceRule(c, err)
+	}
 
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -45,13 +45,8 @@ func CreateInvoice(c fiber.Ctx) error {
 		return failInvoiceRule(c, err)
 	}
 
-	if invoice.ClientID != nil {
-		if _, err := db.GetClient(orgID, *invoice.ClientID); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
-			}
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
-		}
+	if status, message, ok := orgClientStatus(*db, orgID, invoice.ClientID); ok {
+		return utils.Fail(c, status, message, nil)
 	}
 
 	if err := db.CreateInvoice(orgID, invoice, items); err != nil {

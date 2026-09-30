@@ -70,7 +70,7 @@ func PrivateRoutesAt(a *fiber.App, prefix string) {
 	route.Post("/payments", middleware.RequireOrgRole("owner"), middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreatePayment)
 	route.Delete("/payments/:id", middleware.RequireOrgRole("owner"), middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.VoidPayment)
 	route.Post("/payments/online", middleware.RequireOrgRole("owner"), middleware.Idempotency(middleware.SessionIdempotencyScope), controllers.CreateOnlineLink)
-	route.Post("/payments/online/send", controllers.SendOnlineLink)
+	route.Post("/payments/online/send", middleware.RequireOrgRole("owner"), controllers.SendOnlineLink)
 
 	// Reports routes:
 	route.Get("/reports", controllers.GetReports)
