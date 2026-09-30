@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
 	"gorm.io/gorm"
 )
 
@@ -46,7 +47,9 @@ type ExpenseTotals struct {
 	ThisMonth decimal.Decimal
 }
 
-// GetExpenseTotals returns all-time and current-month sums; month bounds are computed in Go for portability.
+// GetExpenseTotals returns all-time and current-month sums. Bounds come from
+// utils.MonthBounds: expense_date is date-only (UTC midnight), so a local-zone
+// bound would read differently in SQLite (text) than in PostgreSQL (instants).
 func (q *ExpenseQueries) GetExpenseTotals(orgID uuid.UUID, category string) (ExpenseTotals, error) {
 	totals := ExpenseTotals{}
 	tx := q.Model(&models.Expense{}).Where("org_id = ?", orgID)
@@ -56,9 +59,7 @@ func (q *ExpenseQueries) GetExpenseTotals(orgID uuid.UUID, category string) (Exp
 	if err := tx.Select("COALESCE(SUM(amount), 0) AS total").Scan(&totals).Error; err != nil {
 		return totals, err
 	}
-	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	nextMonth := monthStart.AddDate(0, 1, 0)
+	monthStart, nextMonth := utils.MonthBounds(time.Now())
 	monthTx := q.Model(&models.Expense{}).Where("org_id = ? AND expense_date >= ? AND expense_date < ?", orgID, monthStart, nextMonth)
 	if category != "" && category != "all" {
 		monthTx = monthTx.Where("category = ?", category)

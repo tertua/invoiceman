@@ -538,3 +538,4 @@ make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backe
 8. **Flow test fixtures**: centralized builders, no raw JSON inline
 9. **Branching flow**: dev → main → master, ff-only, no merge commits
 10. **Split/embed deploy**: API-only image OR single container, runtime choice
+11. **Date-only SQL bounds in UTC**: date-only columns (`issue_date`, `due_date`, `paid_on`, `expense_date`) store UTC midnights, and every range filter over them is built with `utils.DateOnly` / `utils.MonthBounds` (UTC midnights). SQLite compares text, so the zone offset decides equal-date ties, while PostgreSQL compares instants — a local-zone bound makes the two dialects disagree. "This month" still follows the server's local calendar; only the window itself is forced to UTC.

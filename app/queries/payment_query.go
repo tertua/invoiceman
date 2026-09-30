@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
 	"gorm.io/gorm"
 )
 
@@ -48,6 +49,8 @@ type PaymentTotals struct {
 }
 
 // GetPaymentTotals returns all-time and current-month sums over the org's non-voided payments.
+// Bounds come from utils.MonthBounds: paid_on is date-only (UTC midnight), so a
+// local-zone bound would read differently in SQLite (text) than in PostgreSQL.
 func (q *PaymentQueries) GetPaymentTotals(orgID uuid.UUID) (PaymentTotals, error) {
 	totals := PaymentTotals{}
 	base := q.Table("payments").
@@ -56,9 +59,7 @@ func (q *PaymentQueries) GetPaymentTotals(orgID uuid.UUID) (PaymentTotals, error
 	if err := base.Select("COALESCE(SUM(payments.amount), 0)").Scan(&totals.Total).Error; err != nil {
 		return totals, err
 	}
-	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	nextMonth := monthStart.AddDate(0, 1, 0)
+	monthStart, nextMonth := utils.MonthBounds(time.Now())
 	monthTx := q.Table("payments").
 		Joins("JOIN invoices ON invoices.id = payments.invoice_id").
 		Where("payments.org_id = ? AND invoices.org_id = ? AND payments.voided_at IS NULL", orgID, orgID).

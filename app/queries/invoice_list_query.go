@@ -74,8 +74,10 @@ func (q *InvoiceQueries) filteredInvoices(orgID uuid.UUID, status, search string
 		tx = tx.Where("invoices.status = ? OR (invoices.total > 0 AND COALESCE(pay.paid, 0) >= invoices.total)",
 			models.InvoiceStatusPaid)
 	case models.InvoiceEffectiveOverdue:
+		// due_date is date-only (UTC midnight); compare in UTC so SQLite (text
+		// compare) and PostgreSQL (instant compare) resolve "overdue" the same.
 		tx = tx.Where("invoices.status = ? AND invoices.due_date IS NOT NULL AND invoices.due_date < ?",
-			models.InvoiceStatusSent, time.Now())
+			models.InvoiceStatusSent, time.Now().UTC())
 	}
 
 	if search != "" {

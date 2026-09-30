@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/tertua/tupay/app/models"
+	"github.com/tertua/tupay/pkg/utils"
 )
 
 // SettlementStatusRow aggregates one transaction status for the admin settlement summary.
@@ -84,11 +85,14 @@ func (q *GatewayQueries) SaveTransactionAndSettleInvoice(t *models.GatewayTransa
 			amount = gross
 		}
 		now := time.Now()
+		// paid_on is date-only (UTC midnight); a local-zone timestamp would read
+		// differently in SQLite (text) than in PostgreSQL (instants).
+		paidOn := utils.DateOnly(now)
 		orderID := t.OrderID
 		if err := tx.Create(&models.Payment{
 			ID: uuid.New(), CreatedAt: now, UserID: *t.UserID,
 			OrgID: invoice.OrgID, InvoiceID: invoice.ID, Amount: amount,
-			Method: method, PaidOn: &now,
+			Method: method, PaidOn: &paidOn,
 			TxnID: t.ProviderTxnID, GatewayOrderID: &orderID,
 			Notes: method + " " + t.OrderID,
 		}).Error; err != nil {
