@@ -100,7 +100,7 @@ func createRelayIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
-	applyEnabledMethods(&spec, gw.Name())
+	applyEnabledMethods(&spec, gw)
 	method := normalizedPaymentMethod(input.PaymentMethod)
 	claimID := relayClaimID(project.Slug, input.ExternalOrderID, method, invoiceCurrency, balance)
 	now := time.Now()

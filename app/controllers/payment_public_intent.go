@@ -34,7 +34,9 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
-	gw, err := routePublicGateway(method, midtransMethodAllowlist())
+	gw, err := routePublicGateway(method, func(provider, m string) bool {
+		return methodAllowedFor(provider, providerAllowlist(settings, provider), m)
+	})
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "unsupported payment method", nil)
 	}
@@ -42,7 +44,7 @@ func createPublicGatewayIntent(c fiber.Ctx, db database.Queries, link models.Pay
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "currency conversion is not configured", nil)
 	}
-	applyEnabledMethods(&spec, gw.Name())
+	applyEnabledMethods(&spec, gw)
 	base := localOrderID(invoice.InvoiceNumber, publicIntentSuffix(link.Token, method, payCurrency))
 	if method == "" {
 		// Legacy default method: keep the pre-rename INV- intent reused
@@ -207,16 +209,14 @@ func isDuplicateOrderError(err error) bool {
 
 // routePublicGateway resolves the provider for a public charge: an explicit
 // method routes across configured providers, an empty method keeps the
-// default provider for backward compatibility. The default provider's
-// allowlist vetoes it for disallowed methods while leaving other providers
-// untouched.
-func routePublicGateway(method string, allow map[string]bool) (gateway.Gateway, error) {
+// default provider for backward compatibility. The allow closure applies the
+// owner's per-provider method allowlist so a vetoed provider is skipped for
+// that method while other providers stay untouched.
+func routePublicGateway(method string, allow func(provider, method string) bool) (gateway.Gateway, error) {
 	if method == "" {
 		return gateway.Get(gateway.DefaultProvider())
 	}
-	return gateway.Route("", method, func(provider, m string) bool {
-		return provider != gateway.DefaultProvider() || methodAllowed(allow, m)
-	})
+	return gateway.Route("", method, allow)
 }
 
 // publicIntentSuffix keeps distinct methods from colliding on one order id,

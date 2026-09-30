@@ -9,6 +9,7 @@ import (
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/database"
+	"github.com/tertua/tupay/platform/gateway"
 	"github.com/tertua/tupay/platform/storage"
 )
 
@@ -69,7 +70,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	if input.UsdToIdr.IsNegative() {
 		return utils.Fail(c, fiber.StatusBadRequest, "usd_to_idr cannot be negative", nil)
 	}
-	input.MidtransMethods = normalizeMidtransMethods(input.MidtransMethods)
+	input.MidtransMethods = normalizeProviderMethods(gateway.DefaultProviderName, input.MidtransMethods)
 	applySettingsInput(&settings, input)
 	if err := db.UpdateSettings(&settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update settings", nil)

@@ -27,6 +27,12 @@ func (Gateway) Methods() []string {
 // invoice amounts to IDR before creating a charge.
 func (Gateway) ChargeCurrency() string { return gateway.FiatIDR }
 
+// DefaultMethods narrows a Midtrans charge to QRIS only: the owner's account
+// offers QRIS exclusively, so the checkout must never present another method.
+// Declared here (not enforced by the controller) so the narrowing travels with
+// the provider.
+func (Gateway) DefaultMethods() []string { return []string{gateway.MethodQRIS} }
+
 // RequiresDecimalAmount reports that Midtrans bills whole rupiah, so no
 // decimal amount is needed in the request.
 func (Gateway) RequiresDecimalAmount() bool { return false }

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
+	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/platform/gateway"
 )
 
@@ -30,10 +31,10 @@ type publicChargeMethod struct {
 // it once picked. Any minimum-fetch failure keeps the method visible (fail-open)
 // and lets intent creation return the authoritative error.
 // Later: group and order this list per audience (IDR methods first for domestic payers) while keeping publicChargeMethod unchanged.
-func availableChargeMethods(ctx context.Context, invoiceCurrency string, balance, usdToIdr decimal.Decimal, midtransAllow map[string]bool, payCurrency string) []publicChargeMethod {
+func availableChargeMethods(ctx context.Context, invoiceCurrency string, balance, usdToIdr decimal.Decimal, settings models.Settings, payCurrency string) []publicChargeMethod {
 	out := make([]publicChargeMethod, 0)
 	for _, ref := range gateway.OfferedMethods() {
-		if !methodAllowedFor(ref.Provider, ref.ID, midtransAllow) {
+		if !methodAllowedFor(ref.Provider.Name(), providerAllowlist(settings, ref.Provider.Name()), ref.ID) {
 			continue
 		}
 		spec, err := buildCharge(ref.Provider, invoiceCurrency, balance, usdToIdr)
@@ -76,14 +77,4 @@ func belowLiveMinimum(ctx context.Context, gw gateway.Gateway, method string, sp
 		return false
 	}
 	return charge.LessThan(limit)
-}
-
-// methodAllowed reports whether method passes the Midtrans allowlist. A nil
-// allowlist means the owner never restricted methods, so everything is
-// allowed; an empty method (default Snap) is always allowed.
-func methodAllowed(allow map[string]bool, method string) bool {
-	if allow == nil || method == "" {
-		return true
-	}
-	return allow[method]
 }

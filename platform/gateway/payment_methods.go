@@ -92,7 +92,7 @@ func OfferedMethods() []MethodRef {
 			out = append(out, MethodRef{Provider: g, ID: method})
 		}
 	}
-		sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
 

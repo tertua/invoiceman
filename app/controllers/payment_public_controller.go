@@ -60,7 +60,7 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 			"logo_url":     settings.LogoURL,
 		},
 		"gateway": payerConfigFor(gateway.DefaultProvider()),
-		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, midtransMethodAllowlist(), payCurrency),
+		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, settings, payCurrency),
 		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
 	}, nil
 }

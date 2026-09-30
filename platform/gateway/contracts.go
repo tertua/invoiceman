@@ -95,6 +95,14 @@ type PayerConfigProvider interface {
 	PayerConfig() map[string]any
 }
 
+// DefaultMethodsProvider is an optional capability: providers that only offer
+// a fixed set of methods report it so callers narrow a charge's selectable
+// methods without hardcoding a provider name. It is the provider-side
+// counterpart of the owner allowlist, not a per-owner setting.
+type DefaultMethodsProvider interface {
+	DefaultMethods() []string
+}
+
 // MinAmountChecker is an optional capability: providers with live
 // per-currency minimums report them so endpoints can hide a method whose
 // charge could never succeed, instead of failing after the payer commits.
