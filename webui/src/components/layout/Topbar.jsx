@@ -15,7 +15,7 @@ export function Topbar({ onOpenPalette }) {
     typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform);
 
   return (
-    <header className="flex items-start justify-between gap-6 mb-8">
+    <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6 mb-6">
       <div>
         <h1 className="font-display text-[clamp(28px,3vw,38px)] font-semibold leading-tight text-[var(--ink)]">
           {t("topbar.hello", { name: firstName })}
@@ -25,7 +25,7 @@ export function Topbar({ onOpenPalette }) {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
         <button
           type="button"
           onClick={onOpenPalette}
