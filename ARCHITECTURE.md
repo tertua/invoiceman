@@ -348,11 +348,11 @@ go test ./pkg/routes -run TestName -v  # Focus test
 
 **Frontend**
 ```bash
-npm --prefix webui run lint
-npm --prefix webui test          # Node.js native test runner
-npm --prefix webui run check:charts      # Recharts data validation
-npm --prefix webui run check:bundles     # Bundle size advisory
-npm --prefix webui run check:bundles:strict  # CI enforcement
+bun run --cwd=webui lint
+bun run --cwd=webui test          # Node.js native test runner (via bun run)
+bun run --cwd=webui check:charts      # Recharts data validation
+bun run --cwd=webui check:bundles     # Bundle size advisory
+bun run --cwd=webui check:bundles:strict  # CI enforcement
 ```
 
 **CI Checks** (GitHub Actions)

@@ -488,10 +488,11 @@ Swagger annotation multi-line (ubah → jalankan `swag init` / `make swag`, `doc
 
 Checks yang **wajib pass**:
 - `make test` (gocritic, gosec, golangci-lint, coverage)
-- `npm --prefix webui run lint` dan `npm --prefix webui test`
-- `npm --prefix webui run check:charts` (recharts data validation)
-- `npm --prefix webui run check:bundles:strict` (bundle size)
-- `npm --prefix webui run check:size` (file size baseline)
+- `bun run --cwd=webui lint` and `bun run --cwd=webui test`
+  - Frontend tests **must** run via `bun run --cwd=webui test` (= `node --test`), **never** `bun test`: the suite uses `node:test` mock APIs (`stub.reset()`) that bun's test runner lacks, so it would fail.
+- `bun run --cwd=webui check:charts` (recharts data validation)
+- `bun run --cwd=webui check:bundles:strict` (bundle size)
+- `bun run --cwd=webui check:size` (file size baseline)
 - `node scripts/check-fixtures.mjs` (no raw JSON inline)
 - `node scripts/sync-version.mjs --check` (VERSION sync)
 - `make check-flow` (branching flow validation)

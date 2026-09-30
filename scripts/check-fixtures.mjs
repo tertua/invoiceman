@@ -8,7 +8,7 @@
 // This check fails when a *_test.go file (other than the fixture itself) posts
 // a raw JSON literal to /api/invoices instead of using the builder.
 //
-// Usage: npm run check:fixtures (wired into CI + make webui.check)
+// Usage: bun run check:fixtures (wired into CI + make webui.check)
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -31,7 +31,7 @@ for (const file of files) {
 
 if (violations.length) {
   for (const message of violations) console.error(message);
-  console.error("\nBuild the payload with the invoiceSpec fixture, then re-run: npm run check:fixtures");
+  console.error("\nBuild the payload with the invoiceSpec fixture, then re-run: bun run check:fixtures");
   process.exit(1);
 }
 console.log("fixtures OK: flow tests build invoices through the shared builder.");

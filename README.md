@@ -34,12 +34,12 @@
 ## Tech stack
 
 - **Backend** — Go (Fiber), GORM over SQLite or PostgreSQL, optional Redis.
-- **Frontend** — React + Vite multi-page app (product app + admin console), TanStack Query, Tailwind CSS.
+- **Frontend** — React + Vite multi-page app (product app + admin console), TanStack Query, Tailwind CSS. Built with [Bun](https://bun.sh).
 - **API** — Swagger UI at `/swagger/index.html`.
 
 ## Quick start
 
-Prerequisites: Docker (easiest), or Go + Node for local development.
+Prerequisites: Docker (easiest), or Go + Bun for local development.
 
 Docker:
 

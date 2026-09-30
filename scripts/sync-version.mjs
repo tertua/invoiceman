@@ -6,7 +6,7 @@
 // VERSION is the single source of truth; never bump package.json by hand.
 //
 // Usage:
-//   npm --prefix webui run sync:version          # sync package.json + stub changelog
+//   bun run --cwd=webui sync:version             # sync package.json + stub changelog
 //   node ../scripts/sync-version.mjs --check   # CI: verify, never mutate
 import { readFile, writeFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
@@ -78,7 +78,7 @@ const pkg = JSON.parse(await readFile(packagePath, "utf8"));
 let pkgChanged = false;
 if (pkg.version !== version) {
   if (checkOnly) {
-    console.error(`VERSION (${version}) != webui/package.json (${pkg.version}). Run: npm --prefix webui run sync:version`);
+    console.error(`VERSION (${version}) != webui/package.json (${pkg.version}). Run: bun run --cwd=webui sync:version`);
     process.exitCode = 1;
   } else {
     pkg.version = version;
@@ -107,7 +107,7 @@ const hasNotes = body !== null && body.replace(STUB, "").trim() !== "";
 
 if (checkOnly) {
   if (!hasHeading) {
-    console.error(`webui/CHANGELOG.md has no "${heading}" section. Run: npm --prefix webui run sync:version`);
+    console.error(`webui/CHANGELOG.md has no "${heading}" section. Run: bun run --cwd=webui sync:version`);
     process.exitCode = 1;
   } else if (!hasNotes) {
     console.error(`webui/CHANGELOG.md "${heading}" is still the stub. Write user-visible notes (Added/Changed/Fixed/Security).`);

@@ -20,14 +20,12 @@ jobs:
         working-directory: webui
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: webui/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
-      - run: npm run check:charts
-      - run: npm run build
-      - run: npm run check:bundles:strict
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run test
+      - run: bun run check:charts
+      - run: bun run build
+      - run: bun run check:bundles:strict

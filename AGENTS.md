@@ -11,8 +11,9 @@ Read in order: this file → `ARCHITECTURE.md` (system design, data flow, securi
 ## Invariants (summary only — full detail in the docs above)
 
 - Branching: never commit to `main`/`master`; promote with `make promote` (dev→main) then `make promote-prod` (main→master); `VERSION` changes only in releases. → `ARCHITECTURE.md`
-- Files: never grow a file past its `scripts/file-size-baseline.json` entry; run `npm --prefix webui run check:size` after any Go/JS change; lower a baseline entry after a split, never raise it. → `CODE_STYLE.md`
+- Files: never grow a file past its `scripts/file-size-baseline.json` entry; run `bun run --cwd=webui check:size` after any Go/JS change; lower a baseline entry after a split, never raise it. → `CODE_STYLE.md`
 - Data: queries in `app/queries` (no inline in controllers), raw SQL only in `platform/database`; SQLite + PostgreSQL must both work. → `ARCHITECTURE.md`
 - API: `utils.OK` / `utils.Fail` envelope, stable English errors; money as decimal strings; dates `YYYY-MM-DD`. → `ARCHITECTURE.md`
 - Frontend: axios only in `api/http.js`; `@react-pdf/renderer` / `recharts` / i18n boundaries are CI-enforced. → `CODE_STYLE.md`
 - Tests: `go test ./...` needs no external services; flow tests must use fixtures. → `CODE_STYLE.md`
+- Frontend tests: run `bun run test` (= `node --test`), never bare `bun test` — the suite uses `node:test` mock APIs (`stub.reset()`) that bun's runner lacks. → `CODE_STYLE.md`

@@ -84,7 +84,7 @@ async function main() {
   try {
     bundles = await bundleSizes();
   } catch {
-    violations.push("dist/assets is missing; run npm run build first");
+    violations.push("dist/assets is missing; run bun run build first");
     bundles = [];
   }
 
@@ -103,7 +103,7 @@ async function main() {
     const file = await entryFile(spec.html);
     const entry = file && bundles.find((bundle) => bundle.file === file);
     if (!entry) {
-      violations.push(`${spec.label} chunk missing (${spec.html} not in dist; run npm run build)`);
+      violations.push(`${spec.label} chunk missing (${spec.html} not in dist; run bun run build)`);
       continue;
     }
     if (entry.bytes > spec.raw) {

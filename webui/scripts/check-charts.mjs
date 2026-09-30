@@ -6,7 +6,7 @@
 // its data through `chartNumbers(...)` (src/lib/chartData.js) — either inline
 // in the tag or when the data variable is declared.
 //
-// Usage: npm --prefix webui run check:charts
+// Usage: bun run --cwd=webui check:charts
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -48,7 +48,7 @@ for (const file of await jsxFiles(sourceRoot)) {
 
 if (violations.length) {
   for (const message of violations) console.error(message);
-  console.error(`\nWrap the pie data (see src/lib/chartData.js), then re-run: npm --prefix webui run check:charts`);
+  console.error(`\nWrap the pie data (see src/lib/chartData.js), then re-run: bun run --cwd=webui check:charts`);
   process.exit(1);
 }
 console.log("charts OK: every <Pie> coerces its data.");

@@ -12,7 +12,7 @@
 // cards (see InvoiceDetail.jsx split), flow tests by domain (see
 // flow_*_test.go), i18n by language (see i18n.en/id.js).
 //
-// Usage: npm --prefix webui run check:size
+// Usage: bun run --cwd=webui check:size
 // After an intentional split, lower that file's baseline entry (never raise).
 import { execSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -66,7 +66,7 @@ for (const f of files) {
   }
 }
 if (failed) {
-  console.error("\nSplit the file (see header comment), then re-run: npm --prefix webui run check:size");
+  console.error("\nSplit the file (see header comment), then re-run: bun run --cwd=webui check:size");
   process.exit(1);
 }
 console.log(`size OK: ${files.length} files within ratchet.`);

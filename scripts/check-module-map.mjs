@@ -3,7 +3,7 @@
 //      path or basename), so new domains can't slip in undocumented;
 //   2. every backticked .go/.js/.jsx path in the map must exist, so renames
 //      and deletions can't leave dead pointers.
-// Usage: npm --prefix webui run check:map
+// Usage: bun run --cwd=webui check:map
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -81,7 +81,7 @@ for (const f of uniqueDead) {
   failed = true;
 }
 if (failed) {
-  console.error("\nUpdate docs/MODULE_MAP.md, then re-run: npm --prefix webui run check:map");
+  console.error("\nUpdate docs/MODULE_MAP.md, then re-run: bun run --cwd=webui check:map");
   process.exit(1);
 }
 console.log(`map OK: ${owned.length} owner files referenced, no dead links.`);

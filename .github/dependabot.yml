@@ -14,7 +14,7 @@ updates:
   groups:
     go-minor-patch:
       update-types: ["minor", "patch"]
-- package-ecosystem: npm
+- package-ecosystem: bun
   directory: "/webui"
   schedule:
     interval: weekly
@@ -22,5 +22,5 @@ updates:
   open-pull-requests-limit: 5
   target-branch: dev
   groups:
-    npm-minor-patch:
+    bun-minor-patch:
       update-types: ["minor", "patch"]

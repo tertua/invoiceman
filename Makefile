@@ -36,15 +36,15 @@ dev-be:
 	go build -ldflags="$(LDFLAGS)" -o /tmp/opencode/tupay . && /tmp/opencode/tupay
 
 dev-fe:
-	npm --prefix webui run dev -- --host 0.0.0.0
+	bun run --cwd=webui dev -- --host 0.0.0.0
 
 webui.check:
-	npm --prefix webui run lint
-	npm --prefix webui test
-	npm --prefix webui run check:charts
-	npm --prefix webui run check:fixtures
-	npm --prefix webui run build
-	npm --prefix webui run check:bundles:strict
+	bun run --cwd=webui lint
+	bun run --cwd=webui test
+	bun run --cwd=webui check:charts
+	bun run --cwd=webui check:fixtures
+	bun run --cwd=webui build
+	bun run --cwd=webui check:bundles:strict
 
 # Snapshots land in data/backups/ — SQLite (SQL_DSN empty) or PostgreSQL via
 # pg_dump/pg_restore (needs postgresql-client). Restore needs the backend
