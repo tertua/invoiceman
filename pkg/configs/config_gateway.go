@@ -56,3 +56,19 @@ func (g GatewayConfig) ReconcileAge() time.Duration {
 func (g GatewayConfig) WebhookRetry() time.Duration {
 	return time.Duration(g.WebhookRetryMinutes) * time.Minute
 }
+
+// loadGateway parses the gateway tuning env block (intEnv is the Load
+// collector so a bad integer still fails startup with the key name).
+func loadGateway(intEnv func(string, int) int) GatewayConfig {
+	return GatewayConfig{
+		ReconcileMinutes:         intEnv("GATEWAY_RECONCILE_MINUTES", 15),
+		APITimeoutSec:            intEnv("GATEWAY_API_TIMEOUT_SECONDS", 15),
+		PaymentTimeoutSec:        intEnv("GATEWAY_PAYMENT_TIMEOUT_SECONDS", 25),
+		QRFetchTimeoutSec:        intEnv("QR_FETCH_TIMEOUT_SECONDS", 10),
+		WebhookForwardTimeoutSec: intEnv("WEBHOOK_FORWARD_TIMEOUT_SECONDS", 10),
+		MaxAttempts:              intEnv("GATEWAY_MAX_ATTEMPTS", 3),
+		RetryBaseSec:             intEnv("GATEWAY_RETRY_BASE_SECONDS", 1),
+		RetryMaxSec:              intEnv("GATEWAY_RETRY_MAX_SECONDS", 30),
+		WebhookRetryMinutes:      intEnv("WEBHOOK_RETRY_MINUTES", 5),
+	}
+}

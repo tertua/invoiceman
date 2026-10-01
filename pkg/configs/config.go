@@ -48,6 +48,10 @@ type Config struct {
 	// sharing across replicas differs.
 	Cache CacheConfig
 
+	// OIDC holds the optional single-provider SSO block (OIDCConfig in
+	// config_oidc.go); disabled by default, so existing installs are unaffected.
+	OIDC OIDCConfig
+
 	Captcha CaptchaConfig
 
 	Debug DebugConfig
@@ -298,20 +302,11 @@ func Load() (Config, error) {
 			MaxAttempts:       intEnv("OUTBOX_MAX_ATTEMPTS", 10),
 			MaxBackoffMinutes: intEnv("OUTBOX_MAX_BACKOFF_MINUTES", 120),
 		},
-		Gateway: GatewayConfig{
-			ReconcileMinutes:         intEnv("GATEWAY_RECONCILE_MINUTES", 15),
-			APITimeoutSec:            intEnv("GATEWAY_API_TIMEOUT_SECONDS", 15),
-			PaymentTimeoutSec:        intEnv("GATEWAY_PAYMENT_TIMEOUT_SECONDS", 25),
-			QRFetchTimeoutSec:        intEnv("QR_FETCH_TIMEOUT_SECONDS", 10),
-			WebhookForwardTimeoutSec: intEnv("WEBHOOK_FORWARD_TIMEOUT_SECONDS", 10),
-			MaxAttempts:              intEnv("GATEWAY_MAX_ATTEMPTS", 3),
-			RetryBaseSec:             intEnv("GATEWAY_RETRY_BASE_SECONDS", 1),
-			RetryMaxSec:              intEnv("GATEWAY_RETRY_MAX_SECONDS", 30),
-			WebhookRetryMinutes:      intEnv("WEBHOOK_RETRY_MINUTES", 5),
-		},
+		Gateway: loadGateway(intEnv),
 		Cache: CacheConfig{
 			AggTTLSeconds: intEnv("CACHE_AGG_TTL_SECONDS", 60),
 		},
+		OIDC: loadOIDC(),
 		Captcha: CaptchaConfig{
 			TurnstileSecret: strings.TrimSpace(os.Getenv("TURNSTILE_SECRET")),
 			TimeoutSec:      intEnv("CAPTCHA_TIMEOUT_SECONDS", 3),
@@ -339,6 +334,9 @@ func Load() (Config, error) {
 		return cfg, errors.New(strings.Join(issues, "; "))
 	}
 	if err := cfg.Validate(); err != nil {
+		return cfg, err
+	}
+	if err := cfg.OIDC.Validate(); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
