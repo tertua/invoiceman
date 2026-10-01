@@ -45,6 +45,18 @@ definitions:
     required:
     - target_url
     type: object
+  models.CreateOrgInput:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      owner_user_id:
+        type: string
+    required:
+    - name
+    - owner_user_id
+    type: object
   models.CreateProjectInput:
     properties:
       default_gateway:
@@ -825,6 +837,41 @@ paths:
       security:
       - SessionCookie: []
       summary: rollback schema version
+      tags:
+      - Admin
+  /admin/orgs:
+    post:
+      consumes:
+      - application/json
+      description: Create an organization and assign its owner.
+      parameters:
+      - description: Organization payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateOrgInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: create organization
       tags:
       - Admin
   /admin/outbox/status:

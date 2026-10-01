@@ -428,6 +428,60 @@
                 }
             }
         },
+        "/admin/orgs": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Create an organization and assign its owner.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "create organization",
+                "parameters": [
+                    {
+                        "description": "Organization payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateOrgInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/outbox/status": {
             "get": {
                 "security": [
@@ -3654,6 +3708,23 @@
                 "target_url": {
                     "type": "string",
                     "maxLength": 1024
+                }
+            }
+        },
+        "models.CreateOrgInput": {
+            "type": "object",
+            "required": [
+                "name",
+                "owner_user_id"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "owner_user_id": {
+                    "type": "string"
                 }
             }
         },

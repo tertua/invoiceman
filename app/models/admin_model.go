@@ -12,3 +12,9 @@ type MigrateDownInput struct {
 type RoleInput struct {
 	Role string `json:"role" validate:"required,oneof=user admin"`
 }
+
+// CreateOrgInput is the admin payload for creating an organization and naming its founding owner (a cross-tenant bootstrap).
+type CreateOrgInput struct {
+	Name        string `json:"name" validate:"required,min=1,lte=255"`
+	OwnerUserID string `json:"owner_user_id" validate:"required,uuid"`
+}

@@ -24,6 +24,26 @@ func (q *OrgQueries) CreateOrg(name string) (models.Organization, error) {
 	return org, nil
 }
 
+// CreateOrgWithOwner inserts a new organization and its founding owner membership in one transaction (admin cross-tenant bootstrap); either both rows land or neither does.
+func (q *OrgQueries) CreateOrgWithOwner(name string, ownerID uuid.UUID) (models.Organization, error) {
+	var org models.Organization
+	err := q.Transaction(func(tx *gorm.DB) error {
+		created, err := (&OrgQueries{DB: tx}).CreateOrg(name)
+		if err != nil {
+			return err
+		}
+		if err := (&MembershipQueries{DB: tx}).CreateOwner(created.ID, ownerID); err != nil {
+			return err
+		}
+		org = created
+		return nil
+	})
+	if err != nil {
+		return models.Organization{}, err
+	}
+	return org, nil
+}
+
 // GetOrg loads one organization by id, translating a miss to sql.ErrNoRows.
 func (q *OrgQueries) GetOrg(id uuid.UUID) (models.Organization, error) {
 	org := models.Organization{}
