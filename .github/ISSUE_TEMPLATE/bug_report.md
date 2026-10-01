@@ -8,15 +8,16 @@ assignees: "tertua"
 
 **Required check list:**
 
-- [x] I'm gonna mark the checkboxes like this.
-- [ ] I didn't find in the repository's issues section similar bug.
-- [ ] I understand, this is Open Source and not-for-profit product.
-- [ ] This is not about third-party project, framework, package or technology.
+- [ ] I searched the repository's issues and didn't find a similar bug.
+- [ ] I understand this is an open-source, not-for-profit product.
+- [ ] This is not about a third-party project, framework, package, or technology.
 
 **My environment:**
 
 - OS (`uname -a`):
 - Golang (`go version`):
+- Bun (`bun --version`, frontend bugs):
+- Browser (frontend bugs):
 
 **Describe the bug:**
 

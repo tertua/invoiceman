@@ -63,6 +63,9 @@ make dev-fe   # Vite dev server on :5173
 - [`CODE_STYLE.md`](CODE_STYLE.md) — conventions, patterns, CI gates.
 - [`docs/MODULE_MAP.md`](docs/MODULE_MAP.md) — domain ownership and request path.
 - [`docs/API_DOCS.md`](docs/API_DOCS.md) — API conventions.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — local setup, branching model, and PR process.
+- [`SUPPORT.md`](SUPPORT.md) — where to ask questions, report bugs, and request features.
+- [`SECURITY.md`](SECURITY.md) — supported versions and private vulnerability reporting.
 
 ## License
 

@@ -1,0 +1,18 @@
+# Issue template chooser —
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+#
+# Kept true on purpose: until GitHub Discussions is confirmed enabled for this
+# repo, a blank issue is the only fallback for questions that fit no template.
+# Flip to false once the Discussions links below are verified.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Questions & general help
+    url: https://github.com/tertua/tupay/discussions
+    about: 'How do I… questions, ideas, and general help — please do not open an issue.'
+  - name: Security vulnerability
+    url: https://github.com/tertua/tupay/security/policy
+    about: Report security issues privately following SECURITY.md — never in a public issue.
+  - name: Support & documentation
+    url: https://github.com/tertua/tupay/blob/dev/SUPPORT.md
+    about: Which channel to use for each kind of question, and where the docs live.

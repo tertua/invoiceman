@@ -6,9 +6,12 @@ newIssueWelcomeComment: >
 # Configuration for new-pr-welcome - https://github.com/behaviorbot/new-pr-welcome
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
-  Thanks for opening this pull request! 🎉 Please check out our contributing guidelines.
+  Thanks for opening this pull request! 🎉 Please read CONTRIBUTING.md
+  before you start: it covers the branching model, commit style, and the
+  checks CI runs on every PR.
 
 # Configuration for first-pr-merge - https://github.com/behaviorbot/first-pr-merge
-# Comment to be posted to on pull requests merged by a first time user
+# Comment to be posted to on PRs merged by a first time user in your repository
 firstPRMergeComment: >
-  Congrats on merging your first pull request! 🎉 We here at `Create Go App` are proud of you!
+  Congrats on merging your first pull request! 🎉 Thanks for helping improve
+  TuPay.
