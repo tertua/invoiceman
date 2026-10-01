@@ -477,6 +477,16 @@ definitions:
     - currency
     - invoice_prefix
     type: object
+  models.StatusInput:
+    properties:
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - status
+    type: object
   models.UpdateEndpointInput:
     properties:
       events:
@@ -960,6 +970,36 @@ paths:
       security:
       - SessionCookie: []
       summary: update user role
+      tags:
+      - Admin
+  /admin/users/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Block or unblock a user account.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status payload (0=blocked, 1=active)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.StatusInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionCookie: []
+      summary: update user status
       tags:
       - Admin
   /ai/business-summary:

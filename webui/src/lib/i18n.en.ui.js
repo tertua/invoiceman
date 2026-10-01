@@ -28,6 +28,12 @@ export const uiEn = {
     "finish.successAnimAria": "Payment successful",
     /* invite-only registration */
     "auth.invite.subhead": "You've been invited — create your account to join the team.",
+    /* admin user block/unblock */
+    "admin.block": "Block",
+    "admin.unblock": "Unblock",
+    "admin.userBlocked": "User blocked",
+    "admin.userUnblocked": "User unblocked",
+    "admin.statusUpdateFailed": "Couldn't update user status",
     /* email verification */
     "api.account is pending verification": "account is pending verification",
     "auth.verify.pendingTitle": "Check your email",

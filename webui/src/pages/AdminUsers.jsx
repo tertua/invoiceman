@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";import { QueryError } from "@/components/ui/QueryError";
 import { AdminTableSkeleton } from "@/components/admin/AdminTableSkeleton";
+import { UserStatusButton } from "@/components/admin/UserStatusButton";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { toast } from "sonner";
@@ -64,15 +65,18 @@ function UserRow({ account, currentUserId }) {
         {isCurrentUser ? (
           <span className="text-xs text-[var(--ink-muted)]">{t("admin.you")}</span>
         ) : (
-          <select
-            aria-label={t("admin.changeRoleFor", { name: account.name })}
-            value={role}
-            onChange={onRoleChange}
-            disabled={updateRole.isPending}
-            className="h-9 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {ROLES.map((value) => <option key={value} value={value}>{t(`admin.role.${value}`)}</option>)}
-          </select>
+          <div className="flex items-center justify-end gap-2">
+            <UserStatusButton account={account} />
+            <select
+              aria-label={t("admin.changeRoleFor", { name: account.name })}
+              value={role}
+              onChange={onRoleChange}
+              disabled={updateRole.isPending}
+              className="h-9 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {ROLES.map((value) => <option key={value} value={value}>{t(`admin.role.${value}`)}</option>)}
+            </select>
+          </div>
         )}
       </td>
     </tr>

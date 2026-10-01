@@ -26,6 +26,12 @@ export const uiId = {
     "finish.successAnimAria": "Pembayaran berhasil",
     /* invite-only registration */
     "auth.invite.subhead": "Anda diundang — buat akun untuk bergabung dengan tim.",
+    /* admin user block/unblock */
+    "admin.block": "Blokir",
+    "admin.unblock": "Buka blokir",
+    "admin.userBlocked": "Pengguna diblokir",
+    "admin.userUnblocked": "Blokir pengguna dibuka",
+    "admin.statusUpdateFailed": "Gagal memperbarui status pengguna",
     /* email verification */
     "api.account is pending verification": "Akun menunggu verifikasi email.",
     "auth.verify.pendingTitle": "Periksa email Anda",
