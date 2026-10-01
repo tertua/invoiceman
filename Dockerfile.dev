@@ -11,7 +11,9 @@
 # Then open http://localhost:5000 (MPA) — /api/* is served same-origin,
 # so no CORS or vite proxy is needed.
 
-FROM oven/bun:1.4-alpine AS frontend
+# dist is plain JS/CSS — arch-independent — so build it natively on the
+# build platform; only the Go binary needs cross-compiling for other arches.
+FROM --platform=$BUILDPLATFORM oven/bun:1.4-alpine AS frontend
 WORKDIR /fe
 COPY webui/package.json webui/bun.lock ./
 RUN bun install --frozen-lockfile
@@ -24,7 +26,7 @@ ARG VITE_TURNSTILE_SITE_KEY=""
 ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
 RUN bun run build
 
-FROM golang:1.27-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 LABEL maintainer="Candro Aleandro <admin@tanet.eu.org> (https://tanet.eu.org)"
 WORKDIR /build
 COPY go.mod go.sum ./
@@ -32,16 +34,27 @@ RUN go mod download
 COPY . .
 # dist is built in the frontend stage and copied straight into the runtime
 # image; the Go build never needs it (no go:embed).
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-RUN go build -ldflags="-s -w" -o apiserver .
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o tupay .
+# Writable state dir for the non-root runtime user; scratch has no shell to
+# create it later (defaults: SQLITE_PATH=./data/db/*, STORAGE_DIR=./data/uploads).
+RUN mkdir -p /out/data
 
 FROM scratch
-COPY --from=builder ["/build/apiserver", "/"]
-COPY --from=frontend ["/fe/dist", "/spa"]
+COPY --from=builder ["/build/tupay", "/"]
+COPY --from=frontend ["/fe/dist", "/webui"]
 COPY --from=builder ["/build/VERSION", "/VERSION"]
+COPY --from=builder --chown=65532:65532 ["/out/data", "/data"]
 
-ENV SERVE_WEBUI=/spa
+# Serve the MPA from /webui (same word as SERVE_WEBUI, webui/, MountWebUI).
+ENV SERVE_WEBUI=/webui
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD ["/apiserver", "-healthcheck"]
+# Non-root: scratch has no /etc/passwd, numeric UID/GID 65532 (distroless
+# "nonroot" convention; nobody would be 65534). Bind-mounted state must be
+# owned by it on the host: chown -R 65532:65532 data/
+USER 65532:65532
 
-ENTRYPOINT ["/apiserver"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD ["/tupay", "-healthcheck"]
+
+ENTRYPOINT ["/tupay"]

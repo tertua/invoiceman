@@ -1,5 +1,6 @@
 # Files (kept out of the Go build context; the image holds only the
-# apiserver binary — secrets are injected at run time, never baked in)
+# tupay binary (+ VERSION, empty /data) — secrets are injected at run
+# time, never baked in)
 .dockerignore
 .editorconfig
 .gitignore
@@ -37,4 +38,5 @@ webui/
 data/
 
 # NOTE: no .env variant ever enters the image — the Dockerfile copies only
-# the binary. Inject config at run time via --env-file / -e / secrets.
+# the binary and VERSION. Inject config at run time via --env-file / -e /
+# secrets.

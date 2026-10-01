@@ -1,6 +1,6 @@
 .PHONY: clean critic security lint test build run webui.check dev-be dev-fe db.backup db.restore promote promote-prod check-flow check.imports
 
-APP_NAME = apiserver
+APP_NAME = tupay
 BUILD_DIR = $(PWD)/build
 VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
 LDFLAGS := -w -s -X github.com/tertua/tupay/pkg/constants.Version=$(VERSION)
@@ -67,14 +67,14 @@ docker.network:
 	docker network create -d bridge template-network
 
 docker.fiber.build:
-	docker build -t apiserver .
+	docker build -t tupay .
 
 docker.fiber: docker.fiber.build
 	docker run --rm -d \
 		--name template-fiber \
 		--network template-network \
 		-p 5000:5000 \
-		apiserver
+		tupay
 
 docker.postgres:
 	docker run --rm -d \

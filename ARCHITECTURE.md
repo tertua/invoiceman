@@ -419,7 +419,7 @@ make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backe
 - `CORS_ORIGINS` set untuk cross-origin cookie sessions
 
 **Single Container** (`Dockerfile.dev`)
-- FE embedded di image (`SERVE_WEBUI=/spa`)
+- FE embedded di image (`SERVE_WEBUI=/webui`)
 - Same-origin, no CORS
 - Build: `docker build -f Dockerfile.dev --build-arg VITE_TURNSTILE_SITE_KEY=... -t tupay:dev .`
 
@@ -523,7 +523,7 @@ make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backe
 **Health Checks**
 - `/healthz`: liveness probe
 - `/readyz`: readiness probe (DB connectivity)
-- Docker HEALTHCHECK: `./apiserver -healthcheck`
+- Docker HEALTHCHECK: `./tupay -healthcheck`
 
 **Debugging**
 - Localhost pprof: `DEBUG_PORT` (off by default)
