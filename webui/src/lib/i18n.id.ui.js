@@ -38,4 +38,13 @@ export const uiId = {
     "auth.verify.invalidTitle": "Tautan tidak valid atau kedaluwarsa",
     "auth.verify.invalidBody": "Tautan verifikasi ini tidak berlaku lagi. Masukkan email Anda untuk mendapatkan tautan baru.",
     "auth.verify.backToLogin": "Kembali ke masuk",
+    /* OIDC SSO login */
+    "auth.orContinueWith": "atau lanjutkan dengan",
+    "auth.signInWithSso": "Masuk dengan SSO",
+    "auth.oidcError.disabled": "Login SSO tidak tersedia.",
+    "auth.oidcError.provider": "Penyedia identitas mengembalikan kesalahan. Silakan coba lagi.",
+    "auth.oidcError.state": "Percobaan masuk ini telah kedaluwarsa. Silakan coba lagi.",
+    "auth.oidcError.email": "Email Anda belum diverifikasi di penyedia identitas.",
+    "auth.oidcError.denied": "Pembuatan akun dinonaktifkan. Hubungi administrator Anda.",
+    "auth.oidcError.busy": "Terlalu banyak percobaan masuk. Tunggu sebentar lalu coba lagi.",
 };

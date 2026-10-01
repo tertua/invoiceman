@@ -40,4 +40,13 @@ export const uiEn = {
     "auth.verify.invalidTitle": "Link invalid or expired",
     "auth.verify.invalidBody": "This verification link is no longer valid. Enter your email to get a new one.",
     "auth.verify.backToLogin": "Back to sign in",
+    /* OIDC SSO login */
+    "auth.orContinueWith": "or continue with",
+    "auth.signInWithSso": "Sign in with SSO",
+    "auth.oidcError.disabled": "SSO login is not available.",
+    "auth.oidcError.provider": "The identity provider returned an error. Please try again.",
+    "auth.oidcError.state": "This sign-in attempt has expired. Please try again.",
+    "auth.oidcError.email": "Your email is not verified at the identity provider.",
+    "auth.oidcError.denied": "Account creation is disabled. Contact your administrator.",
+    "auth.oidcError.busy": "Too many sign-in attempts. Please wait a moment and try again.",
 };
