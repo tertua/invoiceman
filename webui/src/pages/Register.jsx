@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, User, Mail, Lock } from "lucide-react";
 import {
@@ -8,15 +8,18 @@ import {
   AuthPrimaryButton,
   AuthErrorBanner,
 } from "@/components/auth/AuthShell";
+import { AuthFooter } from "@/components/auth/AuthFooter";
 import AILogo from "@/components/layout/AILogo";
 import Turnstile from "@/components/auth/Turnstile";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
+import { useInviteToken } from "@/hooks/useInviteToken";
 
 export default function Register() {
   const { register } = useAuth();
   const { t } = useLang();
   const nav = useNavigate();
+  const inviteToken = useInviteToken();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
@@ -27,7 +30,8 @@ export default function Register() {
     setErr("");
     setLoading(true);
     try {
-      await register(form, captchaToken);
+      // Empty token stays absent so the backend treats an open register as token-less.
+      await register(inviteToken ? { ...form, invite_token: inviteToken } : form, captchaToken);
       nav("/dashboard");
     } catch (e) {
       setErr(e.message || t("auth.registrationFailed"));
@@ -45,7 +49,7 @@ export default function Register() {
           <em style={{ fontStyle: "italic" }}>{t("auth.headline.register2")}</em>
         </>
       }
-      subhead={t("auth.register.subhead")}
+      subhead={inviteToken ? t("auth.invite.subhead") : t("auth.register.subhead")}
     >
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -114,21 +118,7 @@ export default function Register() {
           </div>
         </form>
 
-        <div className="text-sm text-[var(--ink-muted)] text-center mt-8">
-          {t("auth.haveAccount")}{" "}
-          <Link
-            to="/login"
-            className="text-[var(--accent-strong)] font-semibold hover:underline"
-          >
-            {t("auth.signIn")}
-          </Link>
-        </div>
-
-        <p className="text-[11px] text-[var(--ink-muted)]/80 text-center mt-6 leading-relaxed">
-          {t("auth.agreeTerms")}
-          <br />
-          {t("auth.neverShare")}
-        </p>
+        <AuthFooter />
       </motion.div>
     </AuthShell>
   );

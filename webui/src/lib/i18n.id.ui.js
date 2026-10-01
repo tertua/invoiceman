@@ -24,4 +24,6 @@ export const uiId = {
     "public.invoiceExpired": "Jendela pembayaran ini telah berakhir",
     "public.successPaidTitle": "Pembayaran diterima",
     "finish.successAnimAria": "Pembayaran berhasil",
+    /* invite-only registration */
+    "auth.invite.subhead": "Anda diundang — buat akun untuk bergabung dengan tim.",
 };

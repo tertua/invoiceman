@@ -26,4 +26,6 @@ export const uiEn = {
     "public.invoiceExpired": "This payment window has expired",
     "public.successPaidTitle": "Payment received",
     "finish.successAnimAria": "Payment successful",
+    /* invite-only registration */
+    "auth.invite.subhead": "You've been invited — create your account to join the team.",
 };

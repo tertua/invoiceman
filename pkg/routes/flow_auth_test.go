@@ -272,10 +272,37 @@ func TestRegistrationToggle(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, false, decodeBody(t, resp)["allowRegistration"])
 
+	// Token-less signup is refused with the stable message once the install has users (the shared suite guarantees that; the count==0 bootstrap exemption is pinned in TestRegistrationOpen).
 	resp = doRequest(t, app, "POST", "/api/auth/register",
 		`{"name":"Closed User","email":"closed-reg@example.com","password":"secret123"}`, nil)
 	assert.Equal(t, 403, resp.StatusCode)
 	assert.Equal(t, "registration is disabled", decodeBody(t, resp)["error"].(map[string]interface{})["message"])
+}
+
+// TestOpenRegistrationFlow guards the unchanged ALLOW_REGISTRATION=true paths: a token-less register provisions a personal org, and a valid invite still routes the newcomer into the inviting org.
+func TestOpenRegistrationFlow(t *testing.T) {
+	t.Setenv("RATE_LIMIT_AUTH", "100")
+	app := newTestApp()
+
+	// 9. Token-less register stays open and gets its own personal tenant.
+	loner := registerUser(t, app, "open-loner@example.com", "secret123")
+	assert.Equal(t, "owner", meOrg(t, app, loner)["role"])
+
+	// 8. An invite still joins the inviting org (regression guard).
+	inviter := registerUser(t, app, "open-inviter@example.com", "secret123")
+	inviterOrg := myOrgID(t, app, inviter)
+	token := inviteToken(t, app, inviter)
+	resp := doRequest(t, app, "POST", "/api/auth/register",
+		`{"name":"Joiner","email":"open-joiner@example.com","password":"secret123","invite_token":"`+token+`"}`, nil)
+	require.Equal(t, 201, resp.StatusCode)
+	resp.Body.Close()
+	resp = doRequest(t, app, "POST", "/api/auth/login",
+		`{"email":"open-joiner@example.com","password":"secret123"}`, nil)
+	require.Equal(t, 200, resp.StatusCode)
+	joined := meOrg(t, app, resp.Cookies())
+	resp.Body.Close()
+	assert.Equal(t, inviterOrg, joined["id"])
+	assert.Equal(t, "staff", joined["role"])
 }
 
 // TestDraftOnlinePaymentBlocked covers the draft/paid guards on public links:

@@ -44,6 +44,11 @@ func inviteErrorMessage(err error) string {
 	return "invite expired"
 }
 
+// registrationOpen reports whether a register request may proceed: always when registration is allowed or the install has no users yet (the first account bootstraps, and no invite can exist before it), otherwise only when an invite token is present. Presence alone is not validity — a bad token fails later in invite resolution.
+func registrationOpen(allow bool, userCount int64, inviteToken string) bool {
+	return allow || userCount == 0 || inviteToken != ""
+}
+
 // Register creates a new user and starts a session.
 // @Description Register a new user.
 // @Summary register a new user
@@ -55,9 +60,6 @@ func inviteErrorMessage(err error) string {
 // @Success 201 {object} map[string]interface{}
 // @Router /auth/register [post]
 func Register(c fiber.Ctx) error {
-	if !configs.Get().Auth.AllowRegistration {
-		return utils.Fail(c, fiber.StatusForbidden, "registration is disabled", nil)
-	}
 	if !checkCaptcha(c) {
 		return nil
 	}
@@ -75,6 +77,16 @@ func Register(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
+	inviteToken := strings.TrimSpace(payload.InviteToken)
+	count, err := db.CountUsers()
+	if err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
+	}
+	// Invite-only gate: with registration disabled only a valid org invite may register, and the first account is always exempt (no invite can exist before the first admin). The closed check runs before the email lookup so a token-less register cannot probe which emails exist via 409 vs 403.
+	if !registrationOpen(configs.Get().Auth.AllowRegistration, count, inviteToken) {
+		return utils.Fail(c, fiber.StatusForbidden, "registration is disabled", nil)
+	}
+
 	if _, err := db.GetUserByEmail(payload.Email); err == nil {
 		return utils.Fail(c, fiber.StatusConflict, "email is already registered", nil)
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -82,7 +94,6 @@ func Register(c fiber.Ctx) error {
 	}
 
 	// The invite is resolved before any write so a bad token never leaves an orphaned user row.
-	inviteToken := strings.TrimSpace(payload.InviteToken)
 	var invite *models.OrgInvite
 	if inviteToken != "" {
 		row, ierr := db.GetValidByToken(inviteToken)
@@ -93,10 +104,6 @@ func Register(c fiber.Ctx) error {
 	}
 
 	role := repository.UserRoleName
-	count, err := db.CountUsers()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
-	}
 	if count == 0 {
 		// First-install bootstrap: on a fresh platform the first account becomes the admin. A tie between two concurrent first registers can yield two admins, which the admin console can demote.
 		role = repository.AdminRoleName
