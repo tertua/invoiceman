@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue.svg"></a>
-  <a href="VERSION"><img alt="Version" src="https://img.shields.io/badge/version-2.2.0-blue.svg"></a>
+  <a href="VERSION"><img alt="Version" src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftertua%2Ftupay%2Fdev%2FVERSION&amp;search=(.*)&amp;label=version&amp;color=blue"></a>
   <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8.svg?logo=go&amp;logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&amp;logoColor=white">
   <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF.svg?logo=vite&amp;logoColor=white">
