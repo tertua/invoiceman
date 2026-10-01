@@ -344,6 +344,7 @@ Adding provider X touches only these files (nothing under `app/controllers/*`, `
 - `STAGE_STATUS`: `dev` (no graceful shutdown) / `prod` (graceful)
 - Gateway keys: `<PROVIDER>_<KEY>` convention (`MIDTRANS_*`, `NOWPAYMENTS_*`), read generically via `configs.Provider()`; `GATEWAY_DEFAULT_PROVIDER` overrides the built-in default provider
 - Optional: `GEMINI_API_KEY`, `TURNSTILE_SECRET`, `S3_*`
+- Optional SSO: `OIDC_ENABLED` (default `false`), `OIDC_ISSUER` (discovery base), `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_SCOPES` (`openid email profile`); the three non-scope keys are required once enabled (fail fast at startup) and the provider redirect URI is `<API_PUBLIC_URL>/api/v1/auth/oidc/callback`
 
 **Runtime Config** (`pkg/configs/`)
 - Load & validate di startup (fail fast pada bad env)
@@ -436,6 +437,7 @@ make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backe
 - Single session: login mints new SID, previous tokens invalidated
 - Bearer fallback untuk non-cookie clients
 - Email verification (`REQUIRE_EMAIL_VERIFICATION`, default on): a new registration creates a **pending** account (`UserStatus = 2`), mails a 24-hour single-use link, and starts no session; the account flips to active only when the link is followed (`POST /auth/verify-email`, which also logs the user in). Login is blocked while pending (`403 "account is pending verification"`). Tokens are stored hashed (`relay.HashKey`), only one is live per account, and the resend endpoint always answers `202` (enumeration-safe). The first-install account (`count == 0`) always bootstraps active, so a fresh install with SMTP unconfigured still works. Turning the flag off restores the previous register-auto-login behavior byte-for-byte.
+- **OIDC SSO (optional, `OIDC_ENABLED`, default off):** one external provider via Authorization Code + **PKCE S256** + `state` + `nonce`. `GET /auth/oidc/login` mints state/nonce/verifier and stores them in the session KV under `oidc:<state>` (TTL 10 min, **deleted before the code exchange** → single-use, anti-replay); `GET /auth/oidc/callback` verifies the ID token with `coreos/go-oidc` (discovery + JWKS signature, `iss`/`aud`/`exp`, nonce match — never hand-rolled). User resolution is deterministic: known `(provider, sub)` identity → login; else an existing email **auto-links only when `email_verified` is true** (guards account takeover); else auto-provision gated by `ALLOW_REGISTRATION` (new accounts are password-less, `PasswordHash == ""`, so they can only log in via SSO). A successful callback replays the local `Login` sequence exactly (`IssueSession` → CSRF → `saveRefreshToken(loginOrgHint)` → audit) and 302s to `/dashboard`; every failure 302s to `/login?oidc_error=<disabled|provider|state|email|denied|busy>` (no provider detail leaks). No OIDC token is ever persisted; public routes take `AuthLimiter` (login) / `PublicPayLimiter` (callback). `SchemaVersion` 20 adds `user_identities` (unique `provider,sub`).
 
 **CSRF Protection**
 - Double-submit token: readable `csrf_token` cookie → echo as `X-CSRF-Token` header

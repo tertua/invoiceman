@@ -397,6 +397,14 @@ definitions:
     - name
     - password
     type: object
+  models.ResendVerification:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+    required:
+    - email
+    type: object
   models.ResetPassword:
     properties:
       new_password:
@@ -501,6 +509,14 @@ definitions:
       webhook_url:
         maxLength: 1024
         type: string
+    type: object
+  models.VerifyEmail:
+    properties:
+      token:
+        maxLength: 255
+        type: string
+    required:
+    - token
     type: object
   models.WriteNoteInput:
     properties:
@@ -1138,6 +1154,41 @@ paths:
       summary: get current session user
       tags:
       - Auth
+  /auth/oidc/callback:
+    get:
+      description: Complete the OIDC SSO login and start a session.
+      parameters:
+      - description: Authorization code
+        in: query
+        name: code
+        type: string
+      - description: Opaque state
+        in: query
+        name: state
+        type: string
+      - description: Provider error code
+        in: query
+        name: error
+        type: string
+      responses:
+        "302":
+          description: redirect to /dashboard or /login?oidc_error=...
+          schema:
+            type: string
+      summary: complete OIDC SSO login
+      tags:
+      - Auth
+  /auth/oidc/login:
+    get:
+      description: Start the OIDC SSO login redirect.
+      responses:
+        "302":
+          description: redirect to the identity provider
+          schema:
+            type: string
+      summary: start OIDC SSO login
+      tags:
+      - Auth
   /auth/password:
     patch:
       consumes:
@@ -1240,6 +1291,56 @@ paths:
             additionalProperties: true
             type: object
       summary: reset password with token
+      tags:
+      - Auth
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verify an email address and start a session.
+      parameters:
+      - description: Verify email payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.VerifyEmail'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: verify email address
+      tags:
+      - Auth
+  /auth/verify-email/resend:
+    post:
+      consumes:
+      - application/json
+      description: Resend the email verification link.
+      parameters:
+      - description: Resend verification payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ResendVerification'
+      - description: Turnstile token (required when CAPTCHA is enabled)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties: true
+            type: object
+      summary: resend email verification link
       tags:
       - Auth
   /clients:

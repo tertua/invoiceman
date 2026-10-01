@@ -905,6 +905,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/oidc/callback": {
+            "get": {
+                "description": "Complete the OIDC SSO login and start a session.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "complete OIDC SSO login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization code",
+                        "name": "code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Opaque state",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Provider error code",
+                        "name": "error",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "redirect to /dashboard or /login?oidc_error=...",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oidc/login": {
+            "get": {
+                "description": "Start the OIDC SSO login redirect.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "start OIDC SSO login",
+                "responses": {
+                    "302": {
+                        "description": "redirect to the identity provider",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/password": {
             "patch": {
                 "security": [
@@ -1059,6 +1113,82 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-email": {
+            "post": {
+                "description": "Verify an email address and start a session.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "verify email address",
+                "parameters": [
+                    {
+                        "description": "Verify email payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.VerifyEmail"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-email/resend": {
+            "post": {
+                "description": "Resend the email verification link.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "resend email verification link",
+                "parameters": [
+                    {
+                        "description": "Resend verification payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ResendVerification"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Turnstile token (required when CAPTCHA is enabled)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4215,6 +4345,18 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ResendVerification": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
         "models.ResetPassword": {
             "type": "object",
             "required": [
@@ -4352,6 +4494,18 @@ const docTemplate = `{
                 "webhook_url": {
                     "type": "string",
                     "maxLength": 1024
+                }
+            }
+        },
+        "models.VerifyEmail": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
