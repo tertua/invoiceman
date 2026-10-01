@@ -13,6 +13,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// oidcCallbackPath is the registered callback route (versioned API prefix) the
+// provider must be told to redirect to; register it as the redirect URI.
+const oidcCallbackPath = "/api/v1/auth/oidc/callback"
+
 // oidcRedirectBase is the MPA login URL error codes land on.
 const oidcRedirectBase = "/login"
 
@@ -169,7 +173,7 @@ func oauth2Config(c fiber.Ctx, provider *oidc.Provider, cfg configs.OIDCConfig) 
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		Endpoint:     provider.Endpoint(),
-		RedirectURL:  strings.TrimRight(c.BaseURL(), "/") + "/auth/oidc/callback",
+		RedirectURL:  strings.TrimRight(c.BaseURL(), "/") + oidcCallbackPath,
 		Scopes:       cfg.ScopeList(),
 	}
 }
