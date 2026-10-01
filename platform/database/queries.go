@@ -8,6 +8,7 @@ import (
 // Queries struct for collect all app queries.
 type Queries struct {
 	*queries.UserQueries         // load queries from User model
+	*queries.UserIdentityQueries // load queries from UserIdentity model (OIDC SSO)
 	*queries.ClientQueries       // load queries from Client model
 	*queries.InvoiceQueries      // load queries from Invoice model
 	*queries.ItemQueries         // load queries from Item model
@@ -30,6 +31,7 @@ type Queries struct {
 func newQueries(db *gorm.DB) *Queries {
 	return &Queries{
 		UserQueries:         &queries.UserQueries{DB: db},         // from User model
+		UserIdentityQueries: &queries.UserIdentityQueries{DB: db}, // from UserIdentity model (OIDC SSO)
 		ClientQueries:       &queries.ClientQueries{DB: db},       // from Client model
 		InvoiceQueries:      &queries.InvoiceQueries{DB: db},      // from Invoice model
 		ItemQueries:         &queries.ItemQueries{DB: db},         // from Item model
