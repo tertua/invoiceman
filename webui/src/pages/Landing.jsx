@@ -25,6 +25,7 @@ import AILogo from "@/components/layout/AILogo";
 
 const TEAL = "var(--accent)";
 const TEAL_DARK = "var(--accent-strong)";
+const PRIMARY_STYLE = { background: "linear-gradient(135deg,var(--accent-hero-2),var(--accent) 50%,var(--accent-strong))", boxShadow: "0 8px 24px -8px color-mix(in srgb, var(--accent) 60%, transparent)" };
 
 export default function Landing() {
   useEffect(() => {
@@ -61,14 +62,14 @@ function Nav() {
           <span className="font-display font-semibold text-lg">{appName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/login" className="h-10 px-4 rounded-full text-sm font-semibold hover:bg-[var(--surface-2)] flex items-center transition-colors">
-            {t("landing.nav.signIn")}
+          <Link to="/login" className={allowRegistration ? "h-10 px-4 rounded-full text-sm font-semibold border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] flex items-center transition-colors" : "group h-10 px-5 rounded-full text-sm font-semibold text-white flex items-center gap-1.5 transition-all hover:-translate-y-px"} style={allowRegistration ? undefined : PRIMARY_STYLE}>
+            {t("landing.nav.signIn")}{!allowRegistration && <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />}
           </Link>
           {allowRegistration && (
             <Link
               to="/register"
               className="group h-10 px-5 rounded-full text-sm font-semibold text-white flex items-center gap-1.5 transition-all hover:-translate-y-px"
-              style={{ background: "linear-gradient(135deg,var(--accent-hero-2),var(--accent) 50%,var(--accent-strong))", boxShadow: "0 8px 24px -8px color-mix(in srgb, var(--accent) 60%, transparent)" }}
+              style={PRIMARY_STYLE}
             >
               {t("landing.nav.getStarted")} <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
@@ -113,12 +114,12 @@ function Hero() {
             {allowRegistration && (
               <Link to="/register"
                 className="group h-12 px-7 rounded-full text-sm font-semibold text-white flex items-center gap-2 transition-all hover:-translate-y-px"
-                style={{ background: "linear-gradient(135deg,var(--accent-hero-2),var(--accent) 50%,var(--accent-strong))" }}>
+                style={PRIMARY_STYLE}>
                 {t("landing.hero.startFree")} <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
             )}
-            <Link to="/login" className="h-12 px-6 rounded-full text-sm font-semibold border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] flex items-center transition-colors">
-              {t("landing.nav.signIn")}
+            <Link to="/login" className={allowRegistration ? "h-12 px-6 rounded-full text-sm font-semibold border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] flex items-center transition-colors" : "group h-12 px-7 rounded-full text-sm font-semibold text-white flex items-center gap-2 transition-all hover:-translate-y-px"} style={allowRegistration ? undefined : PRIMARY_STYLE}>
+              {t("landing.nav.signIn")}{!allowRegistration && <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />}
             </Link>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-8">
