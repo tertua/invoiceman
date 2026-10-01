@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.2.0] - 2026-10-01
+
+### Added
+- Single sign-on via OIDC: configurable provider, SSO button on the
+  login page, state/resolve handshake, and identity linking by verified
+  email.
+- Email verification on registration and an invite-only registration
+  gate — new accounts start pending until verified (or invited).
+- Admins can block and unblock user accounts (`PATCH /admin/users/:id/status`):
+  the target's live session is revoked on block and the change is
+  audit-logged; there is intentionally no hard delete.
+- Admins can bootstrap an organization for any owner (`POST /admin/orgs`).
+- Mobile bottom navigation, dashboard polish (sparkline, count-up, aging)
+  and optimistic list mutations with a shared table skeleton.
+
+### Changed
+- Gateway providers are pluggable and provider-neutral end to end (config,
+  method defaults, allowlist, checkout dispatch, schema) — adding a
+  provider no longer requires core edits.
+- Docker images are hardened and built multi-arch.
+
+### Fixed
+- Multi-tenant and org-role gaps (#1–#6): org-scoped records can no longer
+  leak across tenants or roles.
+- Date-only SQL bounds force UTC midnights, keeping report ranges stable
+  across timezones.
+
+### Security
+- The user/auth/OIDC pipeline is hardened end to end (session, CSRF,
+  guards).
+
 ## [v2.1.0] - 2026-09-30
 
 ### Changed
