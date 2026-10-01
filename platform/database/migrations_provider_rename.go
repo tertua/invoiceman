@@ -7,10 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// runStartupDataSteps runs every idempotent data step that must complete before
-// the forward-only version guard stamps the schema: the personal-org backfill
-// and the v17 provider-neutral column rename. A failure aborts startup so a
-// half-migrated database never reaches the version stamp.
+// runStartupDataSteps runs every idempotent startup step that must complete before
+// the forward-only version guard stamps the schema: the personal-org backfill,
+// the v17 provider-neutral column rename and the v18 admin_claims removal. A
+// failure aborts startup so a half-migrated database never reaches the version stamp.
 func runStartupDataSteps(db *gorm.DB) error {
 	if err := backfillOrganizations(db); err != nil {
 		return fmt.Errorf("organization backfill: %w", err)
@@ -18,7 +18,20 @@ func runStartupDataSteps(db *gorm.DB) error {
 	if err := migrateProviderColumnsUp(db); err != nil {
 		return fmt.Errorf("provider column rename: %w", err)
 	}
+	if err := dropLegacyAdminClaims(db); err != nil {
+		return fmt.Errorf("legacy admin_claims drop: %w", err)
+	}
 	return nil
+}
+
+// dropLegacyAdminClaims is the forward half of version 18: databases upgraded
+// from the claim-based bootstrap still carry the singleton table, and AutoMigrate
+// only ever adds. Idempotent on SQLite and PostgreSQL.
+func dropLegacyAdminClaims(db *gorm.DB) error {
+	if !db.Migrator().HasTable(&legacyAdminClaim{}) {
+		return nil
+	}
+	return db.Migrator().DropTable(&legacyAdminClaim{})
 }
 
 // providerColumnRename describes one v17 column rename: the old provider-named

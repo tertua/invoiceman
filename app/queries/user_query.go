@@ -64,22 +64,6 @@ func (q *UserQueries) CountUsers() (int64, error) {
 	return count, nil
 }
 
-// ClaimFirstAdmin tries to claim the singleton first-admin row for a new
-// user. Returns true only for the winner; a lost race returns (false, nil)
-// once the winner's row is visible. A genuine write failure (no row
-// present afterwards) is returned so the caller can fail the register.
-func (q *UserQueries) ClaimFirstAdmin(userID uuid.UUID) (bool, error) {
-	claim := &models.AdminClaim{ID: 1, UserID: userID, CreatedAt: time.Now()}
-	if err := q.Create(claim).Error; err != nil {
-		var existing models.AdminClaim
-		if rerr := q.Where("id = ?", 1).First(&existing).Error; rerr == nil {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
 // ListUsers returns one page of users without loading any related data.
 func (q *UserQueries) ListUsers(limit, offset int) ([]models.User, error) {
 	users := make([]models.User, 0)

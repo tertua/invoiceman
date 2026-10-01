@@ -170,9 +170,10 @@ func TestProviderRenameDownRenamesBack(t *testing.T) {
 }
 
 // TestProviderRenameMigrateRoundTrip drives the full public path: Migrate()
-// lands on SchemaVersion 17, MigrateDownTo(16) renames the columns back with
-// data intact, and a re-Migrate() returns to 17. It uses the package's shared
-// handle (established once per process) exactly like migrations_test.go.
+// lands on the current SchemaVersion, MigrateDownTo(16) renames the columns
+// back with data intact, and a re-Migrate() returns to the current version.
+// It uses the package's shared handle (established once per process) exactly
+// like migrations_test.go.
 func TestProviderRenameMigrateRoundTrip(t *testing.T) {
 	t.Setenv("SQL_DSN", "")
 	t.Setenv("SQLITE_PATH", filepath.Join(t.TempDir(), "v17.db"))
@@ -184,8 +185,8 @@ func TestProviderRenameMigrateRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected shared handle, got: %v", err)
 	}
-	if stamp, err := CurrentSchemaVersion(); err != nil || stamp != 17 {
-		t.Fatalf("expected stamp 17 after migrate, got %d (%v)", stamp, err)
+	if stamp, err := CurrentSchemaVersion(); err != nil || stamp != SchemaVersion {
+		t.Fatalf("expected stamp %d after migrate, got %d (%v)", SchemaVersion, stamp, err)
 	}
 	for _, r := range providerColumnRenames {
 		if db.Migrator().HasColumn(r.model, r.oldCol) {
@@ -221,8 +222,8 @@ func TestProviderRenameMigrateRoundTrip(t *testing.T) {
 	if err := Migrate(); err != nil {
 		t.Fatalf("expected re-migrate to succeed, got: %v", err)
 	}
-	if stamp, err := CurrentSchemaVersion(); err != nil || stamp != 17 {
-		t.Fatalf("expected stamp 17 after re-migrate, got %d (%v)", stamp, err)
+	if stamp, err := CurrentSchemaVersion(); err != nil || stamp != SchemaVersion {
+		t.Fatalf("expected stamp %d after re-migrate, got %d (%v)", SchemaVersion, stamp, err)
 	}
 	var out models.GatewayTransaction
 	if err := db.First(&out, "order_id = ?", "PAY-RT-1").Error; err != nil {

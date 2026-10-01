@@ -97,7 +97,10 @@ func Register(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
 	}
-	firstUser := count == 0
+	if count == 0 {
+		// First-install bootstrap: on a fresh platform the first account becomes the admin. A tie between two concurrent first registers can yield two admins, which the admin console can demote.
+		role = repository.AdminRoleName
+	}
 
 	user := &models.User{
 		ID:           uuid.New(),
@@ -114,20 +117,6 @@ func Register(c fiber.Ctx) error {
 	}
 	if err := db.CreateUser(user); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
-	}
-
-	// First-admin bootstrap is an atomic singleton insert: only the winner of a concurrent-register race becomes admin; non-first registers skip the claim (cheap path, no extra write).
-	if firstUser {
-		won, err := db.ClaimFirstAdmin(user.ID)
-		if err != nil {
-			return utils.Fail(c, fiber.StatusInternalServerError, "failed to determine account role", nil)
-		}
-		if won {
-			user.UserRole = repository.AdminRoleName
-			if err := db.UpdateUserRole(user.ID, repository.AdminRoleName); err != nil {
-				return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
-			}
-		}
 	}
 
 	// An invite joins the inviting org (no personal org is provisioned); a token-less register creates or reuses the personal tenant.

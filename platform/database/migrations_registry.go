@@ -1,9 +1,24 @@
 package database
 
 import (
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"gorm.io/gorm"
 )
+
+// legacyAdminClaim maps the admin_claims table for schema history only: the
+// singleton first-admin bootstrap (version 3) was removed in version 18, so no
+// model in app/models maps this table anymore.
+type legacyAdminClaim struct {
+	ID        int       `gorm:"primaryKey" db:"id"`
+	UserID    uuid.UUID `gorm:"type:uuid" db:"user_id"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+// TableName keeps the plural convention used by other models.
+func (legacyAdminClaim) TableName() string { return "admin_claims" }
 
 // migrations lists every rollback known to this binary, oldest first.
 // Ups run implicitly through AutoMigrate at startup; only the Down
@@ -24,7 +39,9 @@ var migrations = []Migration{
 		Version:     3,
 		Description: "admin_claims singleton for atomic first-admin bootstrap",
 		Down: func(db *gorm.DB) error {
-			return db.Migrator().DropTable(&models.AdminClaim{})
+			// DROP TABLE IF EXISTS on both backends: databases created after
+			// version 18 never carry the table.
+			return db.Migrator().DropTable(&legacyAdminClaim{})
 		},
 	},
 	{
@@ -188,5 +205,14 @@ var migrations = []Migration{
 		// The forward rename (copy old -> new, then drop old) lives in
 		// migrateProviderColumnsUp; only the rollback is registered here.
 		Down: migrateProviderColumnsDown,
+	},
+	{
+		Version:     18,
+		Description: "remove admin_claims (first-admin falls out of the register count)",
+		// Forward: dropLegacyAdminClaims at startup. Down restores the table so
+		// a rollback to 17 leaves the schema the previous binary expects.
+		Down: func(db *gorm.DB) error {
+			return db.AutoMigrate(&legacyAdminClaim{})
+		},
 	},
 }

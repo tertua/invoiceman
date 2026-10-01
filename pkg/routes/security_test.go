@@ -176,7 +176,7 @@ func TestAuthAuditTrail(t *testing.T) {
 	require.Equal(t, 204, resp.StatusCode)
 	resp.Body.Close()
 
-	// Promote to read the trail (register may not have won first-admin).
+	// Promote to read the trail (this register is not necessarily the first account).
 	adminCookies := adminSession(t, app, "Trail User", "trail@example.com")
 
 	resp = doRequest(t, app, "GET", "/api/admin/audit-logs?per_page=100", "", adminCookies)

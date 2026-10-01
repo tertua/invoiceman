@@ -2,13 +2,9 @@ package database
 
 import (
 	"path/filepath"
-	"sync"
-	"sync/atomic"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
-	"github.com/tertua/tupay/app/queries"
 )
 
 // TestMigrateDownUpRoundTrip rolls v2 columns away and back on an isolated
@@ -30,8 +26,8 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	if !db.Migrator().HasColumn(&models.MailOutbox{}, "html_body") {
 		t.Fatal("expected html_body column after migrate")
 	}
-	if !db.Migrator().HasTable(&models.AdminClaim{}) {
-		t.Fatal("expected admin_claims table after migrate")
+	if db.Migrator().HasTable(&legacyAdminClaim{}) {
+		t.Fatal("expected no admin_claims table after migrate")
 	}
 	if !db.Migrator().HasColumn(&models.Payment{}, "gateway_order_id") {
 		t.Fatal("expected gateway_order_id column after migrate")
@@ -56,7 +52,7 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	if db.Migrator().HasColumn(&models.MailOutbox{}, "html_body") {
 		t.Error("expected html_body column dropped after rollback")
 	}
-	if db.Migrator().HasTable(&models.AdminClaim{}) {
+	if db.Migrator().HasTable(&legacyAdminClaim{}) {
 		t.Error("expected admin_claims table dropped after rollback")
 	}
 	if db.Migrator().HasColumn(&models.Payment{}, "gateway_order_id") {
@@ -86,8 +82,8 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	if !db.Migrator().HasColumn(&models.Expense{}, "receipt_url") {
 		t.Error("expected receipt_url column restored after re-migrate")
 	}
-	if !db.Migrator().HasTable(&models.AdminClaim{}) {
-		t.Error("expected admin_claims table restored after re-migrate")
+	if db.Migrator().HasTable(&legacyAdminClaim{}) {
+		t.Error("expected no admin_claims table after re-migrate")
 	}
 	if !db.Migrator().HasColumn(&models.Payment{}, "gateway_order_id") {
 		t.Error("expected gateway_order_id column restored after re-migrate")
@@ -103,12 +99,12 @@ func TestMigrateDownUpRoundTrip(t *testing.T) {
 	}
 }
 
-// TestConcurrentAdminClaim proves exactly one concurrent claimant wins the
-// singleton first-admin row (the CountUsers+CreateUser race is closed by
-// the primary key, not by timing).
-func TestConcurrentAdminClaim(t *testing.T) {
+// TestDropLegacyAdminClaims proves the v18 startup step removes the orphaned
+// claim table that databases upgraded from the claim-based bootstrap still
+// carry: AutoMigrate only ever adds, so startup has to drop it explicitly.
+func TestDropLegacyAdminClaims(t *testing.T) {
 	t.Setenv("SQL_DSN", "")
-	t.Setenv("SQLITE_PATH", filepath.Join(t.TempDir(), "claim.db"))
+	t.Setenv("SQLITE_PATH", filepath.Join(t.TempDir(), "legacy.db"))
 
 	if err := Migrate(); err != nil {
 		t.Fatalf("expected migrate to succeed, got: %v", err)
@@ -117,36 +113,15 @@ func TestConcurrentAdminClaim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected shared handle, got: %v", err)
 	}
-	q := &queries.UserQueries{DB: db}
 
-	const racers = 8
-	var wins atomic.Int32
-	var wg sync.WaitGroup
-	for i := 0; i < racers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			won, err := q.ClaimFirstAdmin(uuid.New())
-			if err != nil {
-				t.Errorf("expected claim attempt to resolve, got: %v", err)
-				return
-			}
-			if won {
-				wins.Add(1)
-			}
-		}()
+	// Re-create the table a pre-v18 database would still carry.
+	if err := db.AutoMigrate(&legacyAdminClaim{}); err != nil {
+		t.Fatalf("expected legacy table to be recreated, got: %v", err)
 	}
-	wg.Wait()
-	if wins.Load() != 1 {
-		t.Fatalf("expected exactly 1 winner, got %d", wins.Load())
+	if err := Migrate(); err != nil {
+		t.Fatalf("expected re-migrate to succeed, got: %v", err)
 	}
-	var count int64
-	if err := db.Model(&models.AdminClaim{}).Count(&count).Error; err != nil || count != 1 {
-		t.Fatalf("expected 1 claim row, got %d (%v)", count, err)
-	}
-
-	// A late claim after the winner loses cleanly (no error, no new row).
-	if won, err := q.ClaimFirstAdmin(uuid.New()); err != nil || won {
-		t.Fatalf("expected late claim to lose, got won=%v err=%v", won, err)
+	if db.Migrator().HasTable(&legacyAdminClaim{}) {
+		t.Error("expected startup to drop the legacy admin_claims table")
 	}
 }

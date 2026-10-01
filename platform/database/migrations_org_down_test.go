@@ -46,7 +46,6 @@ func probeMigrate(t *testing.T, db *gorm.DB) {
 		&models.NotificationDelivery{},
 		&models.SchemaMigration{},
 		&models.AuditLog{},
-		&models.AdminClaim{},
 		&models.Organization{},
 		&models.Membership{},
 		&models.OrgInvite{},

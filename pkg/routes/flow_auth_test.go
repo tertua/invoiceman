@@ -29,7 +29,7 @@ func TestAuthFlow(t *testing.T) {
 	body := decodeBody(t, resp)
 	assert.Equal(t, "flow@example.com", body["user"].(map[string]interface{})["email"])
 	// Order-proof: only the first-ever account is admin by default, so
-	// promote explicitly when an earlier test already claimed it.
+	// promote explicitly when an earlier test already took that slot.
 	if body["user"].(map[string]interface{})["role"] != "admin" {
 		flowID := body["user"].(map[string]interface{})["id"].(string)
 		db, err := database.OpenDBConnection()
