@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, ArrowLeft, Loader2, Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { AuthField, AuthPrimaryButton, AuthErrorBanner } from "@/components/auth/AuthShell";
 import Turnstile from "@/components/auth/Turnstile";
+import { OidcButton } from "@/components/auth/OidcButton";
 import AILogo from "@/components/layout/AILogo";
 import { warmSessionAfterLogin } from "@/lib/sessionWarmup";
 import { authVerifyApi } from "@/api/authVerify";
@@ -18,6 +19,11 @@ import { useAllowRegistration } from "@/hooks/useConfig";
 export function LoginForm({ login, nav, location, sessionExpired, clearSessionExpired }) {
   const { t } = useLang();
   const allowRegistration = useAllowRegistration();
+  const [searchParams] = useSearchParams();
+  // A failed SSO round trip lands here as /login?oidc_error=<code>; an unknown
+  // code falls back to the generic provider message.
+  const oidcCode = searchParams.get("oidc_error");
+  const oidcError = oidcCode ? t(`auth.oidcError.${oidcCode}`) : "";
   const [form, setForm] = useState({ email: "", password: "" });
   const [captchaToken, setCaptchaToken] = useState("");
   const [err, setErr] = useState("");
@@ -103,7 +109,7 @@ export function LoginForm({ login, nav, location, sessionExpired, clearSessionEx
           }
         />
 
-        <AuthErrorBanner>{err}</AuthErrorBanner>
+        <AuthErrorBanner>{err || oidcError}</AuthErrorBanner>
         {pendingVerification && (
           <button
             type="button"
@@ -137,6 +143,8 @@ export function LoginForm({ login, nav, location, sessionExpired, clearSessionEx
           </AuthPrimaryButton>
         </div>
       </form>
+
+      <OidcButton />
 
       {allowRegistration && (
         <div className="text-sm text-[var(--ink-muted)] text-center mt-8">
