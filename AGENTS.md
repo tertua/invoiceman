@@ -1,6 +1,6 @@
 # Repository guide
 
-Read in order: this file → `ARCHITECTURE.md` (system design, data flow, security, deploy) → `CODE_STYLE.md` (naming, file structure, patterns, CI gates) → `app/BUSINESS_LOGIC.md` (domain rules, state machines, invariants) → `docs/MODULE_MAP.md` (domain owners + request path) → `main.go` → `pkg/routes/versioning.go`. Don't re-derive ownership by grepping. `ARCHITECTURE.md` and `CODE_STYLE.md` are the single source of truth for their topics — do not duplicate their rules here.
+Read in order: this file → `ARCHITECTURE.md` (system design, data flow, security, deploy) → `CODE_STYLE.md` (naming, file structure, patterns, CI gates) → `docs/MODULE_MAP.md` (domain owners + request path) → `main.go` → `pkg/routes/versioning.go`. Don't re-derive ownership by grepping. `ARCHITECTURE.md` and `CODE_STYLE.md` are the single source of truth for their topics — do not duplicate their rules here.
 
 ## Chat output (assistant)
 

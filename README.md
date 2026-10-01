@@ -61,7 +61,6 @@ make dev-fe   # Vite dev server on :5173
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — system design, data flow, security, deploy.
 - [`CODE_STYLE.md`](CODE_STYLE.md) — conventions, patterns, CI gates.
-- [`app/BUSINESS_LOGIC.md`](app/BUSINESS_LOGIC.md) — domain rules, state machines, invariants.
 - [`docs/MODULE_MAP.md`](docs/MODULE_MAP.md) — domain ownership and request path.
 - [`docs/API_DOCS.md`](docs/API_DOCS.md) — API conventions.
 
