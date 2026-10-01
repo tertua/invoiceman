@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"crypto/sha256"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -79,18 +79,13 @@ func generateNewAccessToken(id, sid string) (string, error) {
 }
 
 func generateNewRefreshToken() (string, error) {
-	// Create a new SHA256 hash.
-	hash := sha256.New()
-
-	// Create a new now date and time string with salt.
-	refresh := configs.Get().JWT.RefreshKey + time.Now().String()
-
-	// See: https://pkg.go.dev/io#Writer.Write
-	_, err := hash.Write([]byte(refresh))
-	if err != nil {
-		// Return error, it refresh token generation failed.
+	// 256 bits from the CSPRNG: the refresh secret must be unguessable, and a
+	// hash of the key plus the clock (the previous scheme) is not.
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
+	secret := hex.EncodeToString(buf)
 
 	// Set expires hours count for refresh key from the central config.
 	hoursCount := configs.Get().JWT.RefreshHours
@@ -98,10 +93,10 @@ func generateNewRefreshToken() (string, error) {
 	// Set expiration time.
 	expireTime := fmt.Sprint(time.Now().Add(time.Hour * time.Duration(hoursCount)).Unix())
 
-	// Create a new refresh token (sha256 string with salt + expire time).
-	t := hex.EncodeToString(hash.Sum(nil)) + "." + expireTime
-
-	return t, nil
+	// Keep the historical `<hex64>.<unix>` shape: ParseRefreshToken and the
+	// session-store string-equality check both depend on it, so older tokens
+	// already in flight stay valid.
+	return secret + "." + expireTime, nil
 }
 
 // ParseRefreshToken func for parse second argument from refresh token.

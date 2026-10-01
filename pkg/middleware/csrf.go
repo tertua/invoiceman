@@ -72,7 +72,7 @@ func RequireCSRF() fiber.Handler {
 		}
 		cookie := strings.TrimSpace(c.Cookies(CSRFCookieName))
 		header := strings.TrimSpace(c.Get(CSRFHeaderName))
-		if cookie == "" || header == "" || cookie != header {
+		if cookie == "" || header == "" || !secureEqual(cookie, header) {
 			return utils.Fail(c, fiber.StatusForbidden, "csrf token missing or mismatched", nil)
 		}
 		if userID, _, ok := userIDFromAccess(accessTokenString(c)); ok {
@@ -102,5 +102,5 @@ func csrfBound(c fiber.Ctx, userID uuid.UUID, token string) bool {
 	if !ok || bound == "" {
 		return true
 	}
-	return bound == token
+	return secureEqual(bound, token)
 }

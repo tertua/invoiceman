@@ -68,6 +68,9 @@ func Register(c fiber.Ctx) error {
 	if err := c.Bind().Body(payload); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
 	}
+	// Canonicalize before validation so the stored address matches every later
+	// lookup (the validator's `email` rule still accepts a lowercase address).
+	payload.Email = normalizeEmail(payload.Email)
 	if err := utils.NewValidator().Struct(payload); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
@@ -123,6 +126,12 @@ func Register(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 	if err := db.CreateUser(user); err != nil {
+		// The earlier GetUserByEmail check is a fast path, not a lock: a
+		// concurrent register for the same email slips past it and only the
+		// unique index stops the second insert, which is a 409, not a 500.
+		if isUniqueViolation(err) {
+			return utils.Fail(c, fiber.StatusConflict, "email is already registered", nil)
+		}
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user", nil)
 	}
 
@@ -206,7 +215,7 @@ func ForgotPassword(c fiber.Ctx) error {
 	}
 
 	// Always respond generically to avoid email enumeration; delivery is async (the worker sends the email, retries included).
-	if user, err := db.GetUserByEmail(payload.Email); err == nil {
+	if user, err := db.GetUserByEmail(normalizeEmail(payload.Email)); err == nil {
 		raw := make([]byte, 32)
 		if _, err := rand.Read(raw); err == nil {
 			token := hex.EncodeToString(raw)

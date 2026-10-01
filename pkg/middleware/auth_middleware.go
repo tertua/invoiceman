@@ -28,7 +28,7 @@ func AuthRequired() fiber.Handler {
 
 		userID, ok := refreshSession(c)
 		if !ok {
-			return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
+			return clearAuthCookies(c)
 		}
 
 		c.Locals(utils.SessionUserIDKey, userID)
@@ -132,7 +132,7 @@ func refreshSession(c fiber.Ctx) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	storedSID, storedRefresh, storedCSRF, storedOrg, ok := cache.DecodeSessionValue(stored)
-	if !ok || storedRefresh != refreshString {
+	if !ok || !secureEqual(storedRefresh, refreshString) {
 		return uuid.Nil, false
 	}
 	if storedSID == "" {

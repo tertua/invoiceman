@@ -229,4 +229,17 @@ var migrations = []Migration{
 			return db.Migrator().DropTable(&models.UserIdentity{})
 		},
 	},
+	{
+		Version:     21,
+		Description: "unique users.email + normalized emails",
+		// The forward half lives in the startup data steps: emails are trimmed
+		// and lowercased, duplicates abort startup, then the unique index is
+		// created. Down only drops the index (the normalized values stay).
+		Down: func(db *gorm.DB) error {
+			if !db.Migrator().HasIndex(&models.User{}, userEmailIndexName) {
+				return nil
+			}
+			return db.Migrator().DropIndex(&models.User{}, userEmailIndexName)
+		},
+	},
 }

@@ -166,21 +166,34 @@ func verifyEmailGate(count int64) int {
 	return models.UserStatusActive
 }
 
+// accountStatusReason maps a non-active account status to its audit reason so
+// the password and SSO gates report the same word for the same state.
+func accountStatusReason(status int) string {
+	if status == models.UserStatusPending {
+		return "pending"
+	}
+	return "blocked"
+}
+
+// statusAllowed reports whether an account status may start a session.
+func statusAllowed(status int) bool {
+	return status == models.UserStatusActive
+}
+
 // gateAccountStatus rejects login for anything but an active account, writing
 // the 403 itself and returning true when the request is done. It runs after
 // password verify so a wrong password never leaks the account state. A false
 // return means active: the caller may start the session.
 func gateAccountStatus(c fiber.Ctx, db *database.Queries, user models.User) bool {
-	switch user.UserStatus {
-	case models.UserStatusPending:
-		recordLoginFailure(c, db, user.Email, "pending", user.ID)
-		_ = utils.Fail(c, fiber.StatusForbidden, "account is pending verification", nil)
-		return true
-	case models.UserStatusActive:
+	if statusAllowed(user.UserStatus) {
 		return false
-	default:
-		recordLoginFailure(c, db, user.Email, "blocked", user.ID)
-		_ = utils.Fail(c, fiber.StatusForbidden, "account is blocked", nil)
-		return true
 	}
+	reason := accountStatusReason(user.UserStatus)
+	recordLoginFailure(c, db, user.Email, reason, user.ID)
+	if reason == "pending" {
+		_ = utils.Fail(c, fiber.StatusForbidden, "account is pending verification", nil)
+	} else {
+		_ = utils.Fail(c, fiber.StatusForbidden, "account is blocked", nil)
+	}
+	return true
 }

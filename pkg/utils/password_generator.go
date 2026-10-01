@@ -12,10 +12,10 @@ func GeneratePassword(p string) string {
 	// Normalize password from string to []byte.
 	bytePwd := NormalizePassword(p)
 
-	// MinCost is just an integer constant provided by the bcrypt package
-	// along with DefaultCost & MaxCost. The cost can be any value
-	// you want provided it isn't lower than the MinCost (4).
-	hash, err := bcrypt.GenerateFromPassword(bytePwd, bcrypt.MinCost)
+	// DefaultCost (10) is the work factor for new hashes (~50-100ms), high
+	// enough to make offline cracking expensive; old MinCost (4) hashes still
+	// verify because CompareHashAndPassword reads the cost from the hash.
+	hash, err := bcrypt.GenerateFromPassword(bytePwd, bcrypt.DefaultCost)
 	if err != nil {
 		return err.Error()
 	}

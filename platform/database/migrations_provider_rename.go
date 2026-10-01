@@ -9,8 +9,9 @@ import (
 
 // runStartupDataSteps runs every idempotent startup step that must complete before
 // the forward-only version guard stamps the schema: the personal-org backfill,
-// the v17 provider-neutral column rename and the v18 admin_claims removal. A
-// failure aborts startup so a half-migrated database never reaches the version stamp.
+// the v17 provider-neutral column rename, the v18 admin_claims removal and the
+// v21 users.email normalization + unique index. A failure aborts startup so a
+// half-migrated database never reaches the version stamp.
 func runStartupDataSteps(db *gorm.DB) error {
 	if err := backfillOrganizations(db); err != nil {
 		return fmt.Errorf("organization backfill: %w", err)
@@ -20,6 +21,14 @@ func runStartupDataSteps(db *gorm.DB) error {
 	}
 	if err := dropLegacyAdminClaims(db); err != nil {
 		return fmt.Errorf("legacy admin_claims drop: %w", err)
+	}
+	// Normalization must precede the index: the unique index can only build once
+	// the column is free of case-insensitive duplicates (or startup fails loudly).
+	if err := normalizeUserEmails(db); err != nil {
+		return fmt.Errorf("user email normalization: %w", err)
+	}
+	if err := ensureUserEmailIndex(db); err != nil {
+		return fmt.Errorf("user email index: %w", err)
 	}
 	return nil
 }

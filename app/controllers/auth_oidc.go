@@ -144,10 +144,11 @@ func OIDCCallback(c fiber.Ctx) error {
 		return oidcErrorRedirect(c, oidcResolveCode(err))
 	}
 	// gateAccountStatus is a JSON-403 helper; the SSO flow is a browser
-	// redirect, so suspended/pending accounts map to the stable denied code
-	// (the account state still blocks login, identically to the password path).
-	if user.UserStatus != models.UserStatusActive {
-		recordLoginFailure(c, db, user.Email, "blocked", user.ID)
+	// redirect, so suspended/pending accounts map to the stable denied code.
+	// The audit reason still comes from the shared helper, so the SSO path
+	// reports the same "pending"/"blocked" word as the password path.
+	if !statusAllowed(user.UserStatus) {
+		recordLoginFailure(c, db, user.Email, accountStatusReason(user.UserStatus), user.ID)
 		return oidcErrorRedirect(c, "denied")
 	}
 

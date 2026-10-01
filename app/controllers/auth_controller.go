@@ -4,14 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/middleware"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/cache"
 	"github.com/tertua/tupay/platform/database"
-	"github.com/tertua/tupay/platform/relay"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -60,12 +58,6 @@ func deleteRefreshToken(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 	return store.Delete(ctx, userID.String())
-}
-
-// recordLoginFailure audits a failed login without leaking the email: the entity id is a one-way hash, the reason stays generic.
-func recordLoginFailure(c fiber.Ctx, db *database.Queries, email, reason string, userID uuid.UUID) {
-	normalized := strings.ToLower(strings.TrimSpace(email))
-	recordAudit(c, db, userID, "auth.login.failed", "auth", relay.HashKey(normalized), `{"reason":"`+reason+`"}`)
 }
 
 // issueCSRF mints the double-submit token for a session and writes the readable cookie; the returned value must be bound to the session store (RequireCSRF cross-checks it, so a rotated token invalidates the old one).
@@ -119,6 +111,7 @@ func Login(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
 	}
 
+	payload.Email = normalizeEmail(payload.Email)
 	user, err := db.GetUserByEmail(payload.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -164,6 +157,7 @@ func Login(c fiber.Ctx) error {
 func Logout(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
 	if err != nil {
+		clearStaleSession(c)
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
@@ -192,6 +186,7 @@ func Logout(c fiber.Ctx) error {
 func Me(c fiber.Ctx) error {
 	userID, err := utils.CurrentUserID(c)
 	if err != nil {
+		clearStaleSession(c)
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
@@ -249,53 +244,4 @@ func UpdateProfile(c fiber.Ctx) error {
 
 	user.PasswordHash = ""
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"user": publicUser(user)})
-}
-
-// ChangePassword changes the current user password.
-// @Description Change current user password.
-// @Summary change current user password
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body models.ChangePassword true "Change password payload"
-// @Success 200 {object} map[string]interface{}
-// @Security SessionCookie
-// @Router /auth/password [patch]
-func ChangePassword(c fiber.Ctx) error {
-	userID, err := utils.CurrentUserID(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
-	}
-
-	payload := &models.ChangePassword{}
-	if err := c.Bind().Body(payload); err != nil {
-		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
-	if err := utils.NewValidator().Struct(payload); err != nil {
-		return utils.ValidationFailed(c, err)
-	}
-
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
-	}
-
-	user, err := db.GetUserByID(userID)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
-	}
-	if !utils.ComparePasswords(user.PasswordHash, payload.CurrentPassword) {
-		return utils.Fail(c, fiber.StatusBadRequest, "current password is wrong", nil)
-	}
-
-	if err := db.UpdateUserPassword(userID, utils.GeneratePassword(payload.NewPassword)); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update password", nil)
-	}
-	recordAudit(c, db, userID, "auth.password.change", "user", userID.String(), "")
-	// Privilege moment: a leaked CSRF token must not survive a password change — rotate and rebind, so the old token is rejected server-side.
-	if err := rotateCSRF(c, userID); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rotate csrf token", nil)
-	}
-
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "password updated"})
 }

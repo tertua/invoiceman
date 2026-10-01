@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,13 +29,16 @@ func (q *UserQueries) GetUserByID(id uuid.UUID) (models.User, error) {
 	return user, nil
 }
 
-// GetUserByEmail query for getting one User by given Email.
+// GetUserByEmail query for getting one User by given Email. The input is
+// normalized the same way registrations are (lowercase + trim) so a lookup can
+// never miss an account that was stored normalized, and the oldest row wins for
+// determinism on any legacy duplicate.
 func (q *UserQueries) GetUserByEmail(email string) (models.User, error) {
 	// Define User variable.
 	user := models.User{}
 
 	// Send query to database.
-	if err := q.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := q.Where("email = ?", strings.ToLower(strings.TrimSpace(email))).Order("created_at ASC").First(&user).Error; err != nil {
 		// Return empty object and error.
 		return user, notFound(err)
 	}
