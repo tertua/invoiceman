@@ -1,0 +1,72 @@
+# CODEOWNERS
+# Each line is a file pattern followed by one or more owners.
+# Order matters: later patterns override earlier ones for the same path.
+# Owners are GitHub usernames or team names (e.g. @tertua or @org/team).
+#
+# TuPay currently has a single maintainer (@tertua). When co-maintainers
+# join, replace the placeholder usernames with real handles per area.
+
+# Default owners for everything not matched below
+*                                                       @tertua
+
+# Top-level project docs (architecture, conventions, contributor guides)
+# /AGENTS.md                                             @tertua
+/ARCHITECTURE.md                                        @tertua
+/CODE_STYLE.md                                          @tertua
+/CONTRIBUTING.md                                        @tertua
+/CODE_OF_CONDUCT.md                                     @tertua
+/SECURITY.md                                            @tertua
+/SUPPORT.md                                             @tertua
+/README.md                                              @tertua
+/VERSION                                                @tertua
+
+# CI / GitHub configuration
+/.github/                                               @tertua
+/Makefile                                               @tertua
+/Dockerfile                                              @tertua
+/Dockerfile.dev                                         @tertua
+
+# Backend (Go) — application layer
+/app/                                                   @tertua
+/app/controllers/                                       @tertua
+/app/models/                                            @tertua
+/app/queries/                                           @tertua
+
+# Backend (Go) — shared packages
+/pkg/                                                   @tertua
+/pkg/configs/                                           @tertua
+/pkg/middleware/                                        @tertua
+/pkg/routes/                                            @tertua
+/pkg/utils/                                             @tertua
+/pkg/repository/                                        @tertua
+/pkg/metrics/                                           @tertua
+/pkg/logger/                                            @tertua
+/pkg/constants/                                         @tertua
+
+# Backend (Go) — platform layer (DB, gateway, mail, …)
+/platform/                                              @tertua
+/platform/database/                                     @tertua
+/platform/gateway/                                      @tertua
+/platform/mail/                                         @tertua
+/platform/midtrans/                                     @tertua
+/platform/nowpayments/                                  @tertua
+/platform/relay/                                        @tertua
+/platform/storage/                                      @tertua
+/platform/outbox/                                       @tertua
+/platform/events/                                       @tertua
+/platform/cache/                                        @tertua
+/platform/captcha/                                      @tertua
+/platform/ai/                                           @tertua
+
+# Frontend (React + Vite)
+/webui/                                                 @tertua
+/webui/src/                                             @tertua
+/webui/src/api/                                         @tertua
+/webui/src/components/                                  @tertua
+/webui/src/hooks/                                       @tertua
+/webui/src/lib/                                         @tertua
+/webui/src/pages/                                       @tertua
+/webui/src/routes/                                      @tertua
+
+# Scripts and tooling
+/scripts/                                               @tertua
