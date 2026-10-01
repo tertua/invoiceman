@@ -4,9 +4,9 @@ Read in order: this file → `ARCHITECTURE.md` (system design, data flow, securi
 
 ## Chat output (assistant)
 
-- Always respond user chat in Bahasa Indonesia, regardless of the language used in code, commits, spawn_agent, comments or docs.
+- Final respond user chat always in Bahasa Indonesia, regardless of the language used in code, commits message, delegates agent, spawn_agent, comments or docs.
 - Keep answers short and direct (CLI-friendly); no unnecessary preamble or postamble.
-- When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `question` tool instead of assuming — offer concrete options and a recommended first choice.
+- When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `ask user` instead of assuming — offer concrete options and a recommended first choice.
 
 ## Invariants (summary only — full detail in the docs above)
 
