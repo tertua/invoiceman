@@ -28,6 +28,7 @@ func probeMigrate(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	if err := db.AutoMigrate(
 		&models.User{},
+		&models.UserIdentity{},
 		&models.Client{},
 		&models.Invoice{},
 		&models.InvoiceItem{},

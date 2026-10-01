@@ -222,4 +222,11 @@ var migrations = []Migration{
 			return db.Migrator().DropTable(&models.EmailVerification{})
 		},
 	},
+	{
+		Version:     20,
+		Description: "OIDC user identities (provider, sub)",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropTable(&models.UserIdentity{})
+		},
+	},
 }
