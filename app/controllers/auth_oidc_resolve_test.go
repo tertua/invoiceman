@@ -21,7 +21,7 @@ func oidcTestCtx(t *testing.T, fn func(c fiber.Ctx) error) {
 	t.Helper()
 	app := fiber.New()
 	app.Get("/probe", fn)
-	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/probe", nil), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/probe", http.NoBody), fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	require.NoError(t, err)
 	resp.Body.Close()
 }
