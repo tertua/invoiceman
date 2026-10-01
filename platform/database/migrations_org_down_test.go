@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
@@ -40,6 +41,7 @@ func probeMigrate(t *testing.T, db *gorm.DB) {
 		&models.WebhookDelivery{},
 		&models.Settings{},
 		&models.PasswordReset{},
+		&models.EmailVerification{},
 		&models.IdempotencyKey{},
 		&models.MailOutbox{},
 		&models.NotificationEndpoint{},
@@ -262,5 +264,37 @@ func TestBackfillRebuildsUpgradedSettingsPK(t *testing.T) {
 	}
 	if ownerRow.CompanyName != "Owner Co" || staffRow.CompanyName != "Staff Co" || ownerRow.InvoiceSeq != 1 || staffRow.InvoiceSeq != 2 {
 		t.Errorf("expected settings values preserved, got %+v and %+v", ownerRow, staffRow)
+	}
+}
+
+// TestV19DownDropsEmailVerifications rolls the v19 step back: the verification table is gone while the schema stays usable.
+func TestV19DownDropsEmailVerifications(t *testing.T) {
+	db := probeDB(t)
+	probeMigrate(t, db)
+
+	user := models.User{ID: uuid.New(), Name: "Verify Probe", Email: "verify@example.com", PasswordHash: "hash", UserStatus: models.UserStatusPending, UserRole: "user"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("expected probe user, got: %v", err)
+	}
+	row := models.EmailVerification{Token: "probe-token", UserID: user.ID, CreatedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}
+	if err := db.Create(&row).Error; err != nil {
+		t.Fatalf("expected probe verification row, got: %v", err)
+	}
+
+	var down bool
+	for _, m := range migrations {
+		if m.Version != 19 {
+			continue
+		}
+		if err := m.Down(db); err != nil {
+			t.Fatalf("expected v19 rollback to succeed, got: %v", err)
+		}
+		down = true
+	}
+	if !down {
+		t.Fatal("v19 rollback step missing from the migration registry")
+	}
+	if db.Migrator().HasTable(&models.EmailVerification{}) {
+		t.Error("expected the email_verifications table to be dropped")
 	}
 }

@@ -131,9 +131,8 @@ func Login(c fiber.Ctx) error {
 		recordLoginFailure(c, db, payload.Email, "bad_password", user.ID)
 		return utils.Fail(c, fiber.StatusUnauthorized, "wrong email address or password", nil)
 	}
-	if user.UserStatus != 1 {
-		recordLoginFailure(c, db, payload.Email, "blocked", user.ID)
-		return utils.Fail(c, fiber.StatusForbidden, "account is blocked", nil)
+	if gateAccountStatus(c, db, user) {
+		return nil
 	}
 
 	tokens, err := utils.IssueSession(c, user.ID, "")

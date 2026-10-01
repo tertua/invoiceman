@@ -116,7 +116,7 @@ func Register(c fiber.Ctx) error {
 		Name:         payload.Name,
 		Email:        payload.Email,
 		PasswordHash: utils.GeneratePassword(payload.Password),
-		UserStatus:   1, // 0 == blocked, 1 == active
+		UserStatus:   verifyEmailGate(count), // 0 == blocked, 1 == active, 2 == pending verification
 		UserRole:     role,
 	}
 	if err := utils.NewValidator().Struct(user); err != nil {
@@ -148,6 +148,16 @@ func Register(c fiber.Ctx) error {
 	settings := models.DefaultSettings(orgID)
 	if err := db.CreateSettings(settings); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create user settings", nil)
+	}
+
+	// A pending account gets a verification link instead of a session: the email
+	// is proof of ownership, and the response never carries cookies or a user.
+	if user.UserStatus == models.UserStatusPending {
+		// Enqueue is best-effort (the outbox retries deliver): a failure here must
+		// not strand the account, which the user can re-trigger via resend.
+		_ = enqueueVerification(c, db, *user)
+		recordAudit(c, db, user.ID, "auth.register", "user", user.ID.String(), "")
+		return utils.OK(c, fiber.StatusCreated, fiber.Map{"status": "verification_required", "message": "verification email sent"})
 	}
 
 	tokens, err := utils.IssueSession(c, user.ID, "")

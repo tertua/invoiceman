@@ -9,6 +9,7 @@ const Login = lazy(() => import("@/pages/Login"));
 const Register = lazy(() => import("@/pages/Register"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const PublicPay = lazy(() => import("@/pages/PublicPay"));
 const PaymentFinish = lazy(() => import("@/pages/PaymentFinish"));
 
@@ -34,6 +35,7 @@ export const publicRoutes = [
   { path: "/invite/:token", element: <InviteRedirect />, errorElement: <RouteError /> },
   { path: "/forgot-password", element: <ForgotPassword />, errorElement: <RouteError /> },
   { path: "/reset-password", element: <ResetPassword />, errorElement: <RouteError /> },
+  { path: "/verify-email", element: <VerifyEmail />, errorElement: <RouteError /> },
   { path: "/pay/:token", element: <PublicPay />, errorElement: <RouteError /> },
   { path: "/payment/finish", element: <PaymentFinish />, errorElement: <RouteError /> },
 ];

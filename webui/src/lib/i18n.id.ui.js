@@ -26,4 +26,16 @@ export const uiId = {
     "finish.successAnimAria": "Pembayaran berhasil",
     /* invite-only registration */
     "auth.invite.subhead": "Anda diundang — buat akun untuk bergabung dengan tim.",
+    /* email verification */
+    "api.account is pending verification": "Akun menunggu verifikasi email.",
+    "auth.verify.pendingTitle": "Periksa email Anda",
+    "auth.verify.pendingBody": "Kami mengirim tautan verifikasi ke {email}. Klik untuk mengaktifkan akun Anda.",
+    "auth.verify.resend": "Kirim ulang email verifikasi",
+    "auth.verify.resending": "Mengirim...",
+    "auth.verify.resendSent": "Jika akun perlu verifikasi, tautan baru telah dikirim.",
+    "auth.verify.verifying": "Memverifikasi email Anda...",
+    "auth.verify.success": "Email terverifikasi — memasukkan Anda",
+    "auth.verify.invalidTitle": "Tautan tidak valid atau kedaluwarsa",
+    "auth.verify.invalidBody": "Tautan verifikasi ini tidak berlaku lagi. Masukkan email Anda untuk mendapatkan tautan baru.",
+    "auth.verify.backToLogin": "Kembali ke masuk",
 };

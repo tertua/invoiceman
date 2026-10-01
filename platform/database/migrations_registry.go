@@ -215,4 +215,11 @@ var migrations = []Migration{
 			return db.AutoMigrate(&legacyAdminClaim{})
 		},
 	},
+	{
+		Version:     19,
+		Description: "email verification tokens for pending registrations",
+		Down: func(db *gorm.DB) error {
+			return db.Migrator().DropTable(&models.EmailVerification{})
+		},
+	},
 }

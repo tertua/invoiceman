@@ -435,6 +435,7 @@ make db.restore FILE=<path|latest>  # replace DB from a snapshot (stop the backe
 - Transparent refresh: expired access → auto-refresh via refresh cookie
 - Single session: login mints new SID, previous tokens invalidated
 - Bearer fallback untuk non-cookie clients
+- Email verification (`REQUIRE_EMAIL_VERIFICATION`, default on): a new registration creates a **pending** account (`UserStatus = 2`), mails a 24-hour single-use link, and starts no session; the account flips to active only when the link is followed (`POST /auth/verify-email`, which also logs the user in). Login is blocked while pending (`403 "account is pending verification"`). Tokens are stored hashed (`relay.HashKey`), only one is live per account, and the resend endpoint always answers `202` (enumeration-safe). The first-install account (`count == 0`) always bootstraps active, so a fresh install with SMTP unconfigured still works. Turning the flag off restores the previous register-auto-login behavior byte-for-byte.
 
 **CSRF Protection**
 - Double-submit token: readable `csrf_token` cookie → echo as `X-CSRF-Token` header

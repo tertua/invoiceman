@@ -1,0 +1,121 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowRight, Loader2, User, Mail, Lock } from "lucide-react";
+
+import { AuthField, AuthPrimaryButton, AuthErrorBanner } from "@/components/auth/AuthShell";
+import { AuthFooter } from "@/components/auth/AuthFooter";
+import AILogo from "@/components/layout/AILogo";
+import Turnstile from "@/components/auth/Turnstile";
+import { VerifyPending } from "@/components/auth/VerifyPending";
+import { useAuth } from "@/context/AuthContext";
+import { useLang } from "@/context/LangContext";
+import { useInviteToken } from "@/hooks/useInviteToken";
+
+// RegisterForm owns the registration form and the pending-verification view.
+// Split out of Register.jsx for the size ratchet.
+export function RegisterForm() {
+  const { register } = useAuth();
+  const { t } = useLang();
+  const nav = useNavigate();
+  const inviteToken = useInviteToken();
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setErr("");
+    setLoading(true);
+    try {
+      // Empty token stays absent so the backend treats an open register as token-less.
+      const result = await register(inviteToken ? { ...form, invite_token: inviteToken } : form, captchaToken);
+      // Verification on: the account is pending, so show the check-your-email view.
+      if (result?.verificationRequired) {
+        setPending(true);
+        return;
+      }
+      nav("/dashboard");
+    } catch (e) {
+      setErr(e.message || t("auth.registrationFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (pending) return <VerifyPending email={form.email} />;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <div className="mb-12">
+        <AILogo size={48} />
+      </div>
+
+      <h1 className="font-display text-[34px] font-semibold tracking-tight text-[var(--ink)] leading-[1.05]">
+        {t("auth.getStarted")}
+      </h1>
+      <p className="text-[var(--ink-muted)] mt-2 text-[15px]">
+        {t("auth.freeToStart")}
+      </p>
+
+      <form onSubmit={onSubmit} className="mt-9 space-y-4">
+        <AuthField
+          label={t("auth.fullName")}
+          autoComplete="name"
+          value={form.name}
+          onChange={(v) => setForm({ ...form, name: v })}
+          icon={User}
+          placeholder={t("auth.fullName")}
+        />
+
+        <AuthField
+          label={t("common.email")}
+          type="email"
+          autoComplete="email"
+          value={form.email}
+          onChange={(v) => setForm({ ...form, email: v })}
+          icon={Mail}
+          placeholder={t("common.email")}
+        />
+
+        <AuthField
+          label={t("common.password")}
+          type="password"
+          autoComplete="new-password"
+          value={form.password}
+          onChange={(v) => setForm({ ...form, password: v })}
+          placeholder={t("auth.atLeast8")}
+          minLength={8}
+          icon={Lock}
+        />
+
+        <AuthErrorBanner>{err}</AuthErrorBanner>
+
+        <Turnstile onVerify={setCaptchaToken} />
+
+        <div className="pt-1">
+          <AuthPrimaryButton type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                {t("auth.creating")}
+              </>
+            ) : (
+              <>
+                {t("auth.createAccount")} <ArrowRight size={15} />
+              </>
+            )}
+          </AuthPrimaryButton>
+        </div>
+      </form>
+
+      <AuthFooter />
+    </motion.div>
+  );
+}

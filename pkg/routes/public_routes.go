@@ -21,11 +21,7 @@ func PublicRoutesAt(a *fiber.App, prefix string) {
 	route := a.Group(prefix)
 
 	// Brute-forceable auth endpoints get the strict limiter.
-	auth := middleware.AuthLimiter()
-	route.Post("/auth/register", auth, controllers.Register)              // register a new user
-	route.Post("/auth/login", auth, controllers.Login)                    // auth, start session
-	route.Post("/auth/forgot-password", auth, controllers.ForgotPassword) // request password reset
-	route.Post("/auth/reset-password", auth, controllers.ResetPassword)   // reset password with token
+	registerPublicAuthRoutes(route)
 
 	// Public payment pages (shared links, higher abuse potential).
 	publicPay := middleware.PublicPayLimiter()

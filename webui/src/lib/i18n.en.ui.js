@@ -28,4 +28,16 @@ export const uiEn = {
     "finish.successAnimAria": "Payment successful",
     /* invite-only registration */
     "auth.invite.subhead": "You've been invited — create your account to join the team.",
+    /* email verification */
+    "api.account is pending verification": "account is pending verification",
+    "auth.verify.pendingTitle": "Check your email",
+    "auth.verify.pendingBody": "We sent a verification link to {email}. Click it to activate your account.",
+    "auth.verify.resend": "Resend verification email",
+    "auth.verify.resending": "Sending...",
+    "auth.verify.resendSent": "If the account needs verification, a new link was sent.",
+    "auth.verify.verifying": "Verifying your email...",
+    "auth.verify.success": "Email verified — signing you in",
+    "auth.verify.invalidTitle": "Link invalid or expired",
+    "auth.verify.invalidBody": "This verification link is no longer valid. Enter your email to get a new one.",
+    "auth.verify.backToLogin": "Back to sign in",
 };

@@ -40,7 +40,11 @@ export function useAuthActions({ setUser, setLoading, setSessionExpired }) {
 
   const register = useCallback(async (payload, captchaToken) => {
     queryClient.clear(); // drop previous account's cached queries before swapping identity
-    const { user } = await authApi.register(payload, captchaToken);
+    const resp = await authApi.register(payload, captchaToken);
+    // Verification on: the account is pending, so there is no session to adopt
+    // yet — the caller shows the "check your email" view instead of a dashboard.
+    if (resp?.status === "verification_required") return { verificationRequired: true };
+    const { user } = resp;
     setUser(user);
     setSessionExpired(false);
     return user;
