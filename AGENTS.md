@@ -7,6 +7,7 @@ Read in order: this file → `ARCHITECTURE.md` (system design, data flow, securi
 - Final respond user chat always in Bahasa Indonesia, regardless of the language used in code, commits message, delegates agent, spawn_agent, comments or docs.
 - Keep answers short and direct (CLI-friendly); no unnecessary preamble or postamble.
 - When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `ask user` instead of assuming — offer concrete options and a recommended first choice.
+- Ask-user lifecycle: close the octto session (`end_session`) **immediately after the answer is received**, before doing any further thinking/work — never leave the browser window open while working.
 
 ## Invariants (summary only — full detail in the docs above)
 
