@@ -16,4 +16,5 @@ func registerPublicAuthRoutes(route fiber.Router) {
 	route.Post("/auth/reset-password", auth, controllers.ResetPassword)           // reset password with token
 	route.Post("/auth/verify-email", auth, controllers.VerifyEmail)               // verify email + start session
 	route.Post("/auth/verify-email/resend", auth, controllers.ResendVerification) // resend verification link
+	registerOIDCRoutes(route)                                                     // OIDC SSO login + callback
 }
