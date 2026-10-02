@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,6 +29,16 @@ type fakeIdP struct {
 
 	// nextClaims is what the token endpoint signs for the next exchange.
 	nextClaims map[string]any
+	// discoveryHits counts /.well-known/openid-configuration fetches (cache test).
+	discoveryHits atomic.Int64
+	// omitIDToken makes /token succeed without an id_token (claim-gap test).
+	omitIDToken bool
+	// tokenOverride rewrites the claims the next exchange signs.
+	tokenOverride func(map[string]any) map[string]any
+	// badSigner, when set, signs the id_token (wrong key -> bad signature).
+	badSigner jose.Signer
+	// claimsByState lets concurrent flows pin claims per state (race test).
+	claimsByState sync.Map
 }
 
 func newFakeIdP(t *testing.T) *fakeIdP {
@@ -40,6 +52,7 @@ func newFakeIdP(t *testing.T) *fakeIdP {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
+		idp.discoveryHits.Add(1)
 		writeJSON(w, map[string]any{
 			"issuer":                                idp.server.URL,
 			"authorization_endpoint":                idp.server.URL + "/authorize",
@@ -56,28 +69,67 @@ func newFakeIdP(t *testing.T) *fakeIdP {
 	})
 
 	// Authorize is a stub: it bounces straight back with a code (the browser
-	// would otherwise have to render a consent screen).
+	// would otherwise have to render a consent screen). The code carries the
+	// state so a concurrent token exchange can pick the matching claims.
 	mux.HandleFunc("/authorize", func(w http.ResponseWriter, r *http.Request) {
 		redirect := r.URL.Query().Get("redirect_uri")
 		state := r.URL.Query().Get("state")
-		http.Redirect(w, r, redirect+"?code=test-code&state="+url.QueryEscape(state), http.StatusFound)
+		http.Redirect(w, r, redirect+"?code="+url.QueryEscape(state)+"&state="+url.QueryEscape(state), http.StatusFound)
 	})
 
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		token, err := jwt.Signed(idp.signer).Claims(idp.nextClaims).Serialize()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		claims := idp.nextClaims
+		if state := r.FormValue("code"); state != "" {
+			if pinned, ok := idp.claimsByState.Load(state); ok {
+				claims = pinned.(map[string]any)
+			}
 		}
-		writeJSON(w, map[string]any{
-			"access_token": "access-token", "token_type": "Bearer",
-			"expires_in": 3600, "id_token": token,
-		})
+		if idp.tokenOverride != nil {
+			claims = idp.tokenOverride(claims)
+		}
+		out := map[string]any{
+			"access_token": "access-token", "token_type": "Bearer", "expires_in": 3600,
+		}
+		if !idp.omitIDToken {
+			signer := idp.signer
+			if idp.badSigner != nil {
+				signer = idp.badSigner
+			}
+			token, err := jwt.Signed(signer).Claims(claims).Serialize()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			out["id_token"] = token
+		}
+		writeJSON(w, out)
 	})
 
 	idp.server = httptest.NewServer(mux)
 	t.Cleanup(idp.server.Close)
 	return idp
+}
+
+// mutatingTokenOverride returns a hook that copies and mutates the token claims.
+func mutatingTokenOverride(mutate func(map[string]any)) func(map[string]any) map[string]any {
+	return func(claims map[string]any) map[string]any {
+		copied := map[string]any{}
+		for k, v := range claims {
+			copied[k] = v
+		}
+		mutate(copied)
+		return copied
+	}
+}
+
+// newBadSigner builds a signer with an unrelated key (valid JWT shape, bad sig).
+func newBadSigner(t *testing.T) jose.Signer {
+	t.Helper()
+	other, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	s, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: other}, (&jose.SignerOptions{}).WithType("JWT"))
+	require.NoError(t, err)
+	return s
 }
 
 // claimSet builds standard ID token claims for a subject.

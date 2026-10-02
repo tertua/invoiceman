@@ -2,8 +2,10 @@ package routes
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tertua/tupay/app/models"
@@ -51,4 +53,90 @@ func TestOIDCAuditReasonPending(t *testing.T) {
 	require.Len(t, rows, 1, "expected an auth.login.failed audit row for the pending OIDC account")
 	assert.Contains(t, rows[0].Meta, `"reason":"pending"`)
 	assert.NotContains(t, rows[0].Meta, `"reason":"blocked"`)
+}
+
+// TestOIDCProvisionCompleteness proves a new SSO account lands fully wired:
+// user, identity, personal org membership AND settings row all exist after one
+// successful callback (F1 transactional provision, end-to-end).
+func TestOIDCProvisionCompleteness(t *testing.T) {
+	idp := newFakeIdP(t)
+	seedOIDCEnv(t, idp)
+	app := newTestApp()
+
+	email := uniqueEmail("oidc-complete")
+	_, q := oidcStart(t, app)
+	idp.nextClaims = idp.claimSet("sub-"+email, email, true, q.Get("nonce"))
+
+	resp := doRequest(t, app, "GET", oidcCallback(q.Get("state"), "test-code"), "", nil)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusFound, resp.StatusCode)
+	require.Equal(t, "/dashboard", fetchLocation(resp))
+
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	user, err := db.GetUserByEmail(email)
+	require.NoError(t, err)
+	assert.Empty(t, user.PasswordHash, "SSO accounts are password-less")
+
+	identity, err := db.GetByIdentity(models.IdentityProviderOIDC, "sub-"+email)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, identity.UserID)
+
+	orgID, err := db.ResolveActiveOrgID(user.ID, uuid.Nil)
+	require.NoError(t, err)
+	assert.NotEqual(t, uuid.Nil, orgID)
+
+	settings, err := db.GetSettings(orgID)
+	require.NoError(t, err)
+	assert.Equal(t, orgID, settings.OrgID)
+}
+
+// TestOIDCConcurrentProvision proves a concurrent create race never surfaces
+// busy once an account exists: two callbacks for the same (verified) subject
+// both reach a session (the loser re-fetches the winner), and exactly one user
+// row is created. Tolerant of serialization.
+func TestOIDCConcurrentProvision(t *testing.T) {
+	idp := newFakeIdP(t)
+	seedOIDCEnv(t, idp)
+	app := newTestApp()
+
+	email := uniqueEmail("oidc-race")
+	sub := "sub-" + email
+	states := make([]string, 2)
+	for i := range states {
+		_, q := oidcStart(t, app)
+		states[i] = q.Get("state")
+		// Pin the claims to this exact state so concurrent exchanges never
+		// clobber each other's nonce.
+		idp.claimsByState.Store(states[i], idp.claimSet(sub, email, true, q.Get("nonce")))
+	}
+
+	var wg sync.WaitGroup
+	locations := make([]string, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			resp := doRequest(t, app, "GET", oidcCallback(states[i], states[i]), "", nil)
+			defer resp.Body.Close()
+			locations[i] = fetchLocation(resp)
+		}(i)
+	}
+	wg.Wait()
+
+	// Both must succeed (login or the initial register), never busy from the race.
+	for _, loc := range locations {
+		assert.Equal(t, "/dashboard", loc, "concurrent provision must not surface busy: %s", loc)
+	}
+
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	user, err := db.GetUserByEmail(email)
+	require.NoError(t, err)
+	var count int64
+	require.NoError(t, db.UserQueries.Model(&models.User{}).Where("email = ?", email).Count(&count).Error)
+	assert.EqualValues(t, 1, count, "exactly one account for the raced email")
+	identity, err := db.GetByIdentity(models.IdentityProviderOIDC, sub)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, identity.UserID)
 }
