@@ -4,7 +4,8 @@ Read in order: this file → `ARCHITECTURE.md` (system design, data flow, securi
 
 ## Chat output (assistant)
 
-- Final respond user chat always in Bahasa Indonesia, regardless of the language used in code, commits message, delegates agent, spawn_agent, comments or docs.
+- **Chat replies: always Bahasa Indonesia.** Every final answer you give the user in chat must be written in Bahasa Indonesia — no exceptions, even when the user writes in English or Indonesian.
+- That language rule covers **chat output only**. Code, identifiers, commit messages, PR text, comments, docs, and agent prompts (`delegated task`, `spawn_agent`) stay in English as they are today — the chat language never switches them, and their language never switches the chat.
 - Keep answers short and direct (CLI-friendly); no unnecessary preamble or postamble.
 - When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `ask user` instead of assuming — offer concrete options and a recommended first choice.
 - Ask-user lifecycle: close the octto session (`end_session`) **immediately after the answer is received**, before doing any further thinking/work — never leave the browser window open while working.
