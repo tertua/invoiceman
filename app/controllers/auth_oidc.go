@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -177,6 +178,7 @@ func OIDCCallback(c fiber.Ctx) error {
 	// (OIDC_ROLE_CLAIM) can be walked; same source, same verification guarantees.
 	var allClaims map[string]any
 	_ = idToken.Claims(&allClaims)
+	claimsJSON, _ := json.Marshal(allClaims)
 
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -197,7 +199,7 @@ func OIDCCallback(c fiber.Ctx) error {
 	// Sync after the status gate: a denied account must not change its role.
 	// The role is read from the DB per request, so this write is enough for the
 	// fresh session to see the mapped role (no token re-issue needed).
-	syncOIDCRole(c, db, &user, extractRawClaim(allClaims, cfg.RoleClaim))
+	syncOIDCRole(c, db, &user, claimsJSON)
 
 	tokens, err := utils.IssueSession(c, user.ID, "")
 	if err != nil {

@@ -38,8 +38,16 @@ func oidcRoleFromClaims(raw json.RawMessage, path, adminRole string) (role strin
 			return repository.UserRoleName, false
 		}
 	}
+	m, ok := cur.(map[string]any)
+	if !ok {
+		return repository.UserRoleName, false
+	}
+	node, ok := m[segs[len(segs)-1]]
+	if !ok {
+		return repository.UserRoleName, false
+	}
 
-	for _, v := range roleValues(cur) {
+	for _, v := range roleValues(node) {
 		if strings.EqualFold(v, adminRole) {
 			return repository.AdminRoleName, true
 		}
