@@ -14,19 +14,20 @@ type UserQueries struct {
 	*gorm.DB
 }
 
+// findOne loads the first row from a pre-chained query, mapping a GORM
+// not-found error through notFound (sql.ErrNoRows) so callers keep the
+// sentinel they already handle.
+func findOne[T any](tx *gorm.DB, dest *T) error {
+	if err := tx.First(dest).Error; err != nil {
+		return notFound(err)
+	}
+	return nil
+}
+
 // GetUserByID query for getting one User by given ID.
 func (q *UserQueries) GetUserByID(id uuid.UUID) (models.User, error) {
-	// Define User variable.
 	user := models.User{}
-
-	// Send query to database.
-	if err := q.Where("id = ?", id).First(&user).Error; err != nil {
-		// Return empty object and error.
-		return user, notFound(err)
-	}
-
-	// Return query result.
-	return user, nil
+	return user, findOne(q.Where("id = ?", id), &user)
 }
 
 // GetUserByEmail query for getting one User by given Email. The input is
@@ -34,29 +35,13 @@ func (q *UserQueries) GetUserByID(id uuid.UUID) (models.User, error) {
 // never miss an account that was stored normalized, and the oldest row wins for
 // determinism on any legacy duplicate.
 func (q *UserQueries) GetUserByEmail(email string) (models.User, error) {
-	// Define User variable.
 	user := models.User{}
-
-	// Send query to database.
-	if err := q.Where("email = ?", strings.ToLower(strings.TrimSpace(email))).Order("created_at ASC").First(&user).Error; err != nil {
-		// Return empty object and error.
-		return user, notFound(err)
-	}
-
-	// Return query result.
-	return user, nil
+	return user, findOne(q.Where("email = ?", strings.ToLower(strings.TrimSpace(email))).Order("created_at ASC"), &user)
 }
 
 // CreateUser query for creating a new user by given email and password hash.
 func (q *UserQueries) CreateUser(u *models.User) error {
-	// Send query to database.
-	if err := q.Create(u).Error; err != nil {
-		// Return only error.
-		return err
-	}
-
-	// This query returns nothing.
-	return nil
+	return q.Create(u).Error
 }
 
 // CountUsers returns the number of registered users.
@@ -87,75 +72,38 @@ func (q *UserQueries) UpdateUserRole(id uuid.UUID, role string) error {
 
 // UpdateUserProfile query for updating user display name.
 func (q *UserQueries) UpdateUserProfile(id uuid.UUID, name string) error {
-	// Send query to database.
-	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
+	return q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"updated_at": time.Now(),
 		"name":       name,
-	}).Error; err != nil {
-		// Return only error.
-		return err
-	}
-
-	// This query returns nothing.
-	return nil
+	}).Error
 }
 
 // UpdateUserPassword query for updating user password hash.
 func (q *UserQueries) UpdateUserPassword(id uuid.UUID, passwordHash string) error {
-	// Send query to database.
-	if err := q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
+	return q.Model(&models.User{}).Where("id = ?", id).Updates(map[string]any{
 		"updated_at":    time.Now(),
 		"password_hash": passwordHash,
-	}).Error; err != nil {
-		// Return only error.
-		return err
-	}
-
-	// This query returns nothing.
-	return nil
+	}).Error
 }
 
 // CreatePasswordReset query for storing a password reset token.
 func (q *UserQueries) CreatePasswordReset(userID uuid.UUID, token string, expiresAt time.Time) error {
-	// Send query to database.
 	reset := &models.PasswordReset{
 		Token:     token,
 		UserID:    userID,
 		CreatedAt: time.Now(),
 		ExpiresAt: expiresAt,
 	}
-	if err := q.Create(reset).Error; err != nil {
-		// Return only error.
-		return err
-	}
-
-	// This query returns nothing.
-	return nil
+	return q.Create(reset).Error
 }
 
 // GetPasswordReset query for getting a password reset token.
 func (q *UserQueries) GetPasswordReset(token string) (models.PasswordReset, error) {
-	// Define password reset variable.
 	reset := models.PasswordReset{}
-
-	// Send query to database.
-	if err := q.Where("token = ?", token).First(&reset).Error; err != nil {
-		// Return empty object and error.
-		return reset, notFound(err)
-	}
-
-	// Return query result.
-	return reset, nil
+	return reset, findOne(q.Where("token = ?", token), &reset)
 }
 
 // DeletePasswordResetsByUser query for deleting all reset tokens of a user.
 func (q *UserQueries) DeletePasswordResetsByUser(userID uuid.UUID) error {
-	// Send query to database.
-	if err := q.Where("user_id = ?", userID).Delete(&models.PasswordReset{}).Error; err != nil {
-		// Return only error.
-		return err
-	}
-
-	// This query returns nothing.
-	return nil
+	return q.Where("user_id = ?", userID).Delete(&models.PasswordReset{}).Error
 }
