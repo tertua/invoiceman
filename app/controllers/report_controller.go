@@ -34,11 +34,5 @@ func GetReports(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load reports", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"totals":          report.Totals,
-		"monthly":         report.Monthly,
-		"aging":           report.Aging,
-		"topClients":      report.TopClients,
-		"statusBreakdown": report.StatusBreakdown,
-	})
+	return utils.OK(c, fiber.StatusOK, newReportResponse(report))
 }

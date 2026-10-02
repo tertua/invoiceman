@@ -46,7 +46,7 @@ func OutboxStatus(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load outbox status", nil)
 	}
 	now := time.Now()
-	queues := make([]fiber.Map, 0, len(outboxQueues))
+	queues := make([]outboxQueueRow, 0, len(outboxQueues))
 	for _, q := range outboxQueues {
 		statuses := make(map[string]int64, len(q.statuses))
 		for _, st := range q.statuses {
@@ -65,17 +65,32 @@ func OutboxStatus(c fiber.Ctx) error {
 				oldestProcessing = s.Oldest
 			}
 		}
-		queues = append(queues, fiber.Map{
-			"queue":                     q.queue,
-			"statuses":                  statuses,
-			"oldest_pending_seconds":    ageSeconds(now, oldestPending),
-			"oldest_processing_seconds": ageSeconds(now, oldestProcessing),
+		queues = append(queues, outboxQueueRow{
+			Queue:                   q.queue,
+			Statuses:                statuses,
+			OldestPendingSeconds:    ageSeconds(now, oldestPending),
+			OldestProcessingSeconds: ageSeconds(now, oldestProcessing),
 		})
 	}
 	out := configs.Get().Outbox
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"queues":       queues,
-		"poll_seconds": out.PollSeconds,
-		"batch_size":   out.Batch,
+	return utils.OK(c, fiber.StatusOK, outboxStatusResponse{
+		Queues:      queues,
+		PollSeconds: out.PollSeconds,
+		BatchSize:   out.Batch,
 	})
+}
+
+// outboxQueueRow is one outbox queue's depth per status plus oldest-row ages.
+type outboxQueueRow struct {
+	Queue                   string           `json:"queue"`
+	Statuses                map[string]int64 `json:"statuses"`
+	OldestPendingSeconds    *int64           `json:"oldest_pending_seconds"`
+	OldestProcessingSeconds *int64           `json:"oldest_processing_seconds"`
+}
+
+// outboxStatusResponse is the outbox status payload with worker poll settings.
+type outboxStatusResponse struct {
+	Queues      []outboxQueueRow `json:"queues"`
+	PollSeconds int              `json:"poll_seconds"`
+	BatchSize   int              `json:"batch_size"`
 }

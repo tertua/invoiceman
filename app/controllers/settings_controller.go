@@ -31,7 +31,7 @@ func GetSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsPayload(settings)})
 }
 
 // UpdateSettings updates settings for the current user.
@@ -77,7 +77,7 @@ func UpdateSettings(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsPayload(settings)})
 }
 
 // UploadLogo stores the company logo file and points LogoURL at it.
@@ -143,5 +143,5 @@ func UploadLogo(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load updated settings", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsPayload(settings)})
 }

@@ -12,25 +12,6 @@ import (
 	"github.com/tertua/tupay/platform/relay"
 )
 
-func projectResponse(p models.GatewayProject, revealSecrets bool, apiKey string) fiber.Map {
-	out := fiber.Map{
-		"slug":            p.Slug,
-		"name":            p.Name,
-		"webhook_url":     p.WebhookURL,
-		"default_gateway": p.DefaultGateway,
-		"is_active":       p.IsActive,
-		"created_at":      p.CreatedAt,
-		"updated_at":      p.UpdatedAt,
-	}
-	if revealSecrets {
-		out["webhook_secret"] = p.WebhookSecret
-	}
-	if apiKey != "" {
-		out["api_key"] = apiKey
-	}
-	return out
-}
-
 // @Description Register a downstream project.
 // @Summary create gateway project
 // @Tags Admin
@@ -118,7 +99,7 @@ func ListProjects(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count projects", nil)
 	}
-	out := make([]fiber.Map, 0, len(rows))
+	out := make([]projectResponseRow, 0, len(rows))
 	for _, p := range rows {
 		out = append(out, projectResponse(p, true, ""))
 	}
@@ -259,7 +240,7 @@ func ListAllTransactions(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count transactions", nil)
 	}
-	out := make([]fiber.Map, 0, len(rows))
+	out := make([]intentResponseRow, 0, len(rows))
 	for _, t := range rows {
 		out = append(out, intentResponse(t))
 	}

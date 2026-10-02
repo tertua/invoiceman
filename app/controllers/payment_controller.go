@@ -72,17 +72,17 @@ func ListPayments(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment totals", nil)
 	}
-	payments := make([]fiber.Map, 0, len(rows))
+	payments := make([]paymentListResponseRow, 0, len(rows))
 	for _, row := range rows {
 		payments = append(payments, paymentListResponse(row))
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"payments": payments,
-		"totals": fiber.Map{
+	return utils.OK(c, fiber.StatusOK, paymentListPayload{
+		Payments: payments,
+		Totals: fiber.Map{
 			"total":     totals.Total,
 			"thisMonth": totals.ThisMonth,
 		},
-		"meta": paging.Meta(total),
+		Meta: paging.Meta(total),
 	})
 }
 
@@ -232,14 +232,14 @@ func VoidPayment(c fiber.Ctx) error {
 	}
 	// Reopen the invoice when a void drops payments below the total again.
 	reopenInvoiceIfUnderpaid(db, orgID, payment.InvoiceID)
-	meta, _ := json.Marshal(fiber.Map{
-		"invoice_id": payment.InvoiceID.String(),
-		"amount":     payment.Amount,
-		"reason":     reason,
+	meta, _ := json.Marshal(paymentAuditMeta{
+		InvoiceID: payment.InvoiceID.String(),
+		Amount:    payment.Amount,
+		Reason:    reason,
 	})
 	recordAudit(c, db, utils.CurrentActorID(c), "payment.void", "payment", id.String(), string(meta))
 	voidData := paymentNotifData(db, payment)
-	voidData["void_reason"] = reason
+	voidData.VoidReason = reason
 	enqueueOrgNotification(db, orgID, models.NotifEventPaymentVoided, "", voidData)
 	invalidateAggregates(c, orgID)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"payment": paymentVoidResponse(payment)})

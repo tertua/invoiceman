@@ -10,17 +10,6 @@ import (
 	"github.com/tertua/tupay/platform/database"
 )
 
-func adminUserResponse(user models.User) fiber.Map {
-	return fiber.Map{
-		"id":         user.ID,
-		"name":       user.Name,
-		"email":      user.Email,
-		"role":       user.UserRole,
-		"status":     user.UserStatus,
-		"created_at": user.CreatedAt,
-	}
-}
-
 // ListUsers returns one page of accounts for an administrator.
 // @Description List registered users.
 // @Summary list users
@@ -45,7 +34,7 @@ func ListUsers(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count users", nil)
 	}
-	result := make([]fiber.Map, 0, len(users))
+	result := make([]adminUserRow, 0, len(users))
 	for _, user := range users {
 		result = append(result, adminUserResponse(user))
 	}
@@ -127,12 +116,12 @@ func ListAuditLogs(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count audit logs", nil)
 	}
-	out := make([]fiber.Map, 0, len(rows))
+	out := make([]auditLogRow, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, fiber.Map{
-			"id": r.ID, "user_id": r.UserID, "action": r.Action,
-			"entity": r.Entity, "entity_id": r.EntityID,
-			"ip": r.IP, "created_at": r.CreatedAt,
+		out = append(out, auditLogRow{
+			ID: r.ID, UserID: r.UserID, Action: r.Action,
+			Entity: r.Entity, EntityID: r.EntityID,
+			IP: r.IP, CreatedAt: r.CreatedAt,
 		})
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"audit_logs": out, "meta": paging.Meta(total)})

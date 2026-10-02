@@ -81,7 +81,7 @@ func GetClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client invoices", nil)
 	}
 
-	invoices := make([]fiber.Map, 0, len(rows))
+	invoices := make([]clientInvoiceRow, 0, len(rows))
 	var totalBilled, paidTotal decimal.Decimal
 	pending := db.PendingInvoiceIDs(orgID)
 	for _, row := range rows {
@@ -91,17 +91,17 @@ func GetClient(c fiber.Ctx) error {
 			totalBilled = totalBilled.Add(row.Total)
 			paidTotal = paidTotal.Add(paid)
 		}
-		invoices = append(invoices, fiber.Map{
-			"id":               row.ID,
-			"invoice_number":   row.InvoiceNumber,
-			"issue_date":       utils.FormatDate(row.IssueDate),
-			"due_date":         utils.FormatDate(row.DueDate),
-			"total":            row.Total,
-			"currency":         row.Currency,
-			"status":           row.Status,
-			"effective_status": row.EffectiveStatus(pending[row.ID]),
-			"paid_amount":      paid,
-			"balance":          row.Total.Sub(paid),
+		invoices = append(invoices, clientInvoiceRow{
+			ID:              row.ID,
+			InvoiceNumber:   row.InvoiceNumber,
+			IssueDate:       utils.FormatDate(row.IssueDate),
+			DueDate:         utils.FormatDate(row.DueDate),
+			Total:           row.Total,
+			Currency:        row.Currency,
+			Status:          row.Status,
+			EffectiveStatus: row.EffectiveStatus(pending[row.ID]),
+			PaidAmount:      paid,
+			Balance:         row.Total.Sub(paid),
 		})
 	}
 
@@ -111,10 +111,10 @@ func GetClient(c fiber.Ctx) error {
 		Outstanding: totalBilled.Sub(paidTotal),
 	}
 
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"client":   client,
-		"invoices": invoices,
-		"stats":    stats,
+	return utils.OK(c, fiber.StatusOK, clientDetailResponse{
+		Client:   client,
+		Invoices: invoices,
+		Stats:    stats,
 	})
 }
 

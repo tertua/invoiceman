@@ -13,13 +13,20 @@ import (
 )
 
 // publicUser returns the user fields exposed to the frontend.
-func publicUser(u models.User) fiber.Map {
-	return fiber.Map{
-		"id":    u.ID,
-		"name":  u.Name,
-		"email": u.Email,
-		"role":  u.UserRole,
+func publicUser(u models.User) publicUserRow {
+	return publicUserRow{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.UserRole,
 	}
+}
+
+type publicUserRow struct {
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+	Role  string    `json:"role"`
 }
 
 // Login authenticates a user and starts a session.

@@ -1,31 +1,53 @@
 package controllers
 
 import (
-	"github.com/gofiber/fiber/v3"
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 )
 
-// settingsResponse renders settings for the API. The model's own json tags carry
-// the provider-neutral keys; this helper additionally emits the DEPRECATED
-// midtrans_methods alias so relay/dashboard clients that read the old key keep
-// working until they migrate (mirrors how intentResponse keeps snap_token). It
-// is a hand-built fiber.Map rather than a raw struct so both keys always agree.
-func settingsResponse(s models.Settings) fiber.Map {
-	return fiber.Map{
-		"org_id":           s.OrgID,
-		"user_id":          s.UserID,
-		"updated_at":       s.UpdatedAt,
-		"company_name":     s.CompanyName,
-		"email":            s.Email,
-		"phone":            s.Phone,
-		"address":          s.Address,
-		"logo_url":         s.LogoURL,
-		"currency":         s.Currency,
-		"tax_rate":         s.TaxRate,
-		"usd_to_idr":       s.UsdToIdr,
-		"provider_methods": s.ProviderMethods,
-		"midtrans_methods": s.ProviderMethods,
-		"invoice_prefix":   s.InvoicePrefix,
-		"language":         s.Language,
+// settingsPayload renders settings for the API. MidtransMethods is the
+// DEPRECATED alias for ProviderMethods: both are assigned from
+// s.ProviderMethods so the two keys always agree (mirrors how intentResponse
+// keeps snap_token) until old relay/dashboard clients migrate.
+func settingsPayload(s models.Settings) settingsResponse {
+	return settingsResponse{
+		OrgID:           s.OrgID,
+		UserID:          s.UserID,
+		UpdatedAt:       s.UpdatedAt,
+		CompanyName:     s.CompanyName,
+		Email:           s.Email,
+		Phone:           s.Phone,
+		Address:         s.Address,
+		LogoURL:         s.LogoURL,
+		Currency:        s.Currency,
+		TaxRate:         s.TaxRate,
+		UsdToIDR:        s.UsdToIdr,
+		ProviderMethods: s.ProviderMethods,
+		MidtransMethods: s.ProviderMethods,
+		InvoicePrefix:   s.InvoicePrefix,
+		Language:        s.Language,
 	}
+}
+
+// settingsResponse is the settings payload. Field order mirrors the historical
+// hand-built map; MidtransMethods is a deprecated alias kept in lockstep with
+// ProviderMethods inside settingsPayload.
+type settingsResponse struct {
+	OrgID           uuid.UUID    `json:"org_id"`
+	UserID          uuid.UUID    `json:"user_id"`
+	UpdatedAt       time.Time    `json:"updated_at"`
+	CompanyName     string       `json:"company_name"`
+	Email           string       `json:"email"`
+	Phone           string       `json:"phone"`
+	Address         string       `json:"address"`
+	LogoURL         string       `json:"logo_url"`
+	Currency        string       `json:"currency"`
+	TaxRate         float64      `json:"tax_rate"`
+	UsdToIDR        models.Money `json:"usd_to_idr"`
+	ProviderMethods string       `json:"provider_methods"`
+	MidtransMethods string       `json:"midtrans_methods"`
+	InvoicePrefix   string       `json:"invoice_prefix"`
+	Language        string       `json:"language"`
 }

@@ -26,7 +26,7 @@ func activeOrgHint(c fiber.Ctx) uuid.UUID {
 }
 
 // orgPayload builds the org block of /auth/me (active org + every membership with its role); best-effort, any failure yields an empty map. hint is the middleware-resolved active org so the reported role matches the org actually in use, not the oldest membership.
-func orgPayload(db *database.Queries, userID, hint uuid.UUID) fiber.Map {
+func orgPayload(db *database.Queries, userID, hint uuid.UUID) any {
 	orgID, err := db.ResolveActiveOrgID(userID, hint)
 	if err != nil {
 		return fiber.Map{}
@@ -43,13 +43,26 @@ func orgPayload(db *database.Queries, userID, hint uuid.UUID) fiber.Map {
 	if err != nil {
 		return fiber.Map{}
 	}
-	memberships := make([]fiber.Map, 0, len(rows))
+	memberships := make([]orgMembershipRow, 0, len(rows))
 	for _, m := range rows {
 		memberOrg, err := db.GetOrg(m.OrgID)
 		if err != nil {
 			return fiber.Map{}
 		}
-		memberships = append(memberships, fiber.Map{"org_id": m.OrgID, "name": memberOrg.Name, "role": m.Role})
+		memberships = append(memberships, orgMembershipRow{OrgID: m.OrgID, Name: memberOrg.Name, Role: m.Role})
 	}
-	return fiber.Map{"id": org.ID, "name": org.Name, "role": role, "memberships": memberships}
+	return orgPayloadResponse{ID: org.ID, Name: org.Name, Role: role, Memberships: memberships}
+}
+
+type orgMembershipRow struct {
+	OrgID uuid.UUID `json:"org_id"`
+	Name  string    `json:"name"`
+	Role  string    `json:"role"`
+}
+
+type orgPayloadResponse struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	Role        string             `json:"role"`
+	Memberships []orgMembershipRow `json:"memberships"`
 }

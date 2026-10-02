@@ -59,9 +59,15 @@ func CreateOrg(c fiber.Ctx) error {
 	}
 	recordAudit(c, db, adminID, "org.create", "org", org.ID.String(),
 		`{"owner_user_id":"`+ownerID.String()+`"}`)
-	return utils.OK(c, fiber.StatusCreated, fiber.Map{
-		"org":           fiber.Map{"id": org.ID.String(), "name": org.Name},
-		"role":          models.RoleOwner,
-		"owner_user_id": ownerID.String(),
+	return utils.OK(c, fiber.StatusCreated, adminOrgResponse{
+		Org:         fiber.Map{"id": org.ID.String(), "name": org.Name},
+		Role:        models.RoleOwner,
+		OwnerUserID: ownerID.String(),
 	})
+}
+
+type adminOrgResponse struct {
+	Org         fiber.Map `json:"org"`
+	Role        string    `json:"role"`
+	OwnerUserID string    `json:"owner_user_id"`
 }

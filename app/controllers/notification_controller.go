@@ -72,7 +72,7 @@ func CreateEndpoint(c fiber.Ctx) error {
 	}
 	recordAudit(c, db, userID, "notification.endpoint.create", "notification_endpoint", e.ID.String(), "")
 	out := endpointResponse(*e)
-	out["secret"] = secret
+	out.Secret = secret
 	return utils.OK(c, fiber.StatusCreated, fiber.Map{"endpoint": out})
 }
 
@@ -97,7 +97,7 @@ func ListEndpoints(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load endpoints", nil)
 	}
-	out := make([]fiber.Map, 0, len(rows))
+	out := make([]endpointResponseRow, 0, len(rows))
 	for _, e := range rows {
 		out = append(out, endpointResponse(e))
 	}
@@ -229,7 +229,7 @@ func RotateEndpointSecret(c fiber.Ctx) error {
 	}
 	recordAudit(c, db, userID, "notification.endpoint.rotate", "notification_endpoint", e.ID.String(), "")
 	out := endpointResponse(e)
-	out["secret"] = secret
+	out.Secret = secret
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"endpoint": out})
 }
 
@@ -297,7 +297,7 @@ func ListNotificationDeliveries(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count deliveries", nil)
 	}
-	out := make([]fiber.Map, 0, len(rows))
+	out := make([]notificationDeliveryRow, 0, len(rows))
 	for _, d := range rows {
 		out = append(out, notificationDeliveryResponse(d))
 	}

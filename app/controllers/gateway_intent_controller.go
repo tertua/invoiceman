@@ -86,7 +86,7 @@ func ListMyTransactions(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to count transactions", nil)
 	}
-	out := make([]fiber.Map, 0, len(rows))
+	out := make([]intentResponseRow, 0, len(rows))
 	for _, t := range rows {
 		out = append(out, intentResponse(t))
 	}
@@ -105,17 +105,17 @@ func ListMyTransactions(c fiber.Ctx) error {
 func GatewayStatus(c fiber.Ctx) error {
 	names := gateway.Names()
 	sort.Strings(names)
-	out := make([]fiber.Map, 0, len(names))
+	out := make([]gatewayStatusRow, 0, len(names))
 	for _, name := range names {
 		gw, err := gateway.Get(name)
 		if err != nil {
 			continue
 		}
-		status := fiber.Map{"name": name, "configured": gateway.ProviderReady(gw), "sandbox": false}
+		row := gatewayStatusRow{Name: name, Configured: gateway.ProviderReady(gw), Sandbox: false}
 		if provider, ok := gw.(gateway.SandboxProvider); ok {
-			status["sandbox"] = provider.Sandbox()
+			row.Sandbox = provider.Sandbox()
 		}
-		out = append(out, status)
+		out = append(out, row)
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"gateways": out})
 }
@@ -208,4 +208,12 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to store transaction", nil)
 	}
 	return utils.OK(c, fiber.StatusCreated, intentResponse(*txn))
+}
+
+// gatewayStatusRow is one public gateway availability entry. sandbox is always
+// present (false when the provider is not a SandboxProvider).
+type gatewayStatusRow struct {
+	Name       string `json:"name"`
+	Configured bool   `json:"configured"`
+	Sandbox    bool   `json:"sandbox"`
 }

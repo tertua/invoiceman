@@ -133,23 +133,36 @@ func saveDeliveryState(db *database.Queries, d *models.WebhookDelivery) {
 	}
 }
 
-func deliveryResponse(d models.WebhookDelivery) fiber.Map {
-	return fiber.Map{
-		"id":           d.ID,
-		"order_id":     d.OrderID,
-		"project_slug": d.ProjectSlug,
-		"gateway":      d.Gateway,
-		"target_url":   d.TargetURL,
-		"attempt":      d.Attempt,
-		"status":       d.Status,
-		"resp_code":    d.RespCode,
-		"created_at":   d.CreatedAt,
-		"updated_at":   d.UpdatedAt,
+func deliveryResponse(d models.WebhookDelivery) deliveryResponseRow {
+	return deliveryResponseRow{
+		ID:          d.ID,
+		OrderID:     d.OrderID,
+		ProjectSlug: d.ProjectSlug,
+		Gateway:     d.Gateway,
+		TargetURL:   d.TargetURL,
+		Attempt:     d.Attempt,
+		Status:      d.Status,
+		RespCode:    d.RespCode,
+		CreatedAt:   d.CreatedAt,
+		UpdatedAt:   d.UpdatedAt,
 	}
 }
 
-func deliveryResponses(rows []models.WebhookDelivery) []fiber.Map {
-	out := make([]fiber.Map, 0, len(rows))
+type deliveryResponseRow struct {
+	ID          uuid.UUID `json:"id"`
+	OrderID     string    `json:"order_id"`
+	ProjectSlug string    `json:"project_slug"`
+	Gateway     string    `json:"gateway"`
+	TargetURL   string    `json:"target_url"`
+	Attempt     int       `json:"attempt"`
+	Status      string    `json:"status"`
+	RespCode    int       `json:"resp_code"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func deliveryResponses(rows []models.WebhookDelivery) []deliveryResponseRow {
+	out := make([]deliveryResponseRow, 0, len(rows))
 	for _, d := range rows {
 		out = append(out, deliveryResponse(d))
 	}

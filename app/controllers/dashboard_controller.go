@@ -57,9 +57,9 @@ func GetDashboard(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load recent invoices", nil)
 	}
 
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"stats":          stats,
-		"revenueSeries":  series,
-		"recentInvoices": recent,
+	return utils.OK(c, fiber.StatusOK, dashboardResponse{
+		Stats:          stats,
+		RevenueSeries:  series,
+		RecentInvoices: recent,
 	})
 }

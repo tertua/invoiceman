@@ -12,17 +12,37 @@ import (
 	"github.com/tertua/tupay/platform/storage"
 )
 
-func expenseResponse(expense models.Expense) fiber.Map {
-	return fiber.Map{
-		"id":           expense.ID,
-		"vendor":       expense.Vendor,
-		"category":     expense.Category,
-		"expense_date": utils.FormatTime(expense.ExpenseDate),
-		"amount":       expense.Amount,
-		"currency":     expense.Currency,
-		"notes":        expense.Notes,
-		"receipt_url":  receiptProxyURL(expense),
+func expenseResponse(expense models.Expense) expenseRow {
+	return expenseRow{
+		ID:          expense.ID,
+		Vendor:      expense.Vendor,
+		Category:    expense.Category,
+		ExpenseDate: utils.FormatTime(expense.ExpenseDate),
+		Amount:      expense.Amount,
+		Currency:    expense.Currency,
+		Notes:       expense.Notes,
+		ReceiptURL:  receiptProxyURL(expense),
 	}
+}
+
+// expenseRow is the expense payload used by list and mutation responses.
+type expenseRow struct {
+	ID          uuid.UUID    `json:"id"`
+	Vendor      string       `json:"vendor"`
+	Category    string       `json:"category"`
+	ExpenseDate string       `json:"expense_date"`
+	Amount      models.Money `json:"amount"`
+	Currency    string       `json:"currency"`
+	Notes       string       `json:"notes"`
+	ReceiptURL  string       `json:"receipt_url"`
+}
+
+// expenseListResponse wraps one page of expenses with the global filter data.
+type expenseListResponse struct {
+	Expenses   []expenseRow `json:"expenses"`
+	Categories []string     `json:"categories"`
+	Totals     fiber.Map    `json:"totals"`
+	Meta       fiber.Map    `json:"meta"`
 }
 
 // receiptProxyURL returns the authenticated proxy path for an attached receipt, or "" when none is attached.
@@ -74,19 +94,19 @@ func ListExpenses(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense categories", nil)
 	}
 
-	expenses := make([]fiber.Map, 0, len(page))
+	expenses := make([]expenseRow, 0, len(page))
 	for _, expense := range page {
 		expenses = append(expenses, expenseResponse(expense))
 	}
 
-	return utils.OK(c, fiber.StatusOK, fiber.Map{
-		"expenses":   expenses,
-		"categories": categories,
-		"totals": fiber.Map{
+	return utils.OK(c, fiber.StatusOK, expenseListResponse{
+		Expenses:   expenses,
+		Categories: categories,
+		Totals: fiber.Map{
 			"total":     totals.Total,
 			"thisMonth": totals.ThisMonth,
 		},
-		"meta": paging.Meta(total),
+		Meta: paging.Meta(total),
 	})
 }
 

@@ -111,6 +111,14 @@ func ListMembers(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"members": members})
 }
 
+type orgInviteRow struct {
+	ID        uuid.UUID `json:"id"`
+	Token     string    `json:"token"`
+	Role      string    `json:"role"`
+	ExpiresAt time.Time `json:"expires_at"`
+	URL       string    `json:"url"`
+}
+
 // CreateOrgInvite mints a single-use join link; the route already guards the owner role and the same check repeats here (defence in depth).
 // @Description Create an invite link for the active organization (owner only).
 // @Summary create organization invite
@@ -159,8 +167,12 @@ func CreateOrgInvite(c fiber.Ctx) error {
 	if email != nil && configs.Get().Mail.SMTPHost != "" {
 		queueInviteMail(c, db, orgID, *email, invite.Token)
 	}
-	return utils.OK(c, fiber.StatusCreated, fiber.Map{"invite": fiber.Map{
-		"id": invite.ID, "token": invite.Token, "role": invite.Role, "expires_at": invite.ExpiresAt, "url": "/invite/" + invite.Token,
+	return utils.OK(c, fiber.StatusCreated, fiber.Map{"invite": orgInviteRow{
+		ID:        invite.ID,
+		Token:     invite.Token,
+		Role:      invite.Role,
+		ExpiresAt: invite.ExpiresAt,
+		URL:       "/invite/" + invite.Token,
 	}})
 }
 

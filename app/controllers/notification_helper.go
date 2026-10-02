@@ -5,54 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
-	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/configs"
-	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 )
-
-// invoiceNotifData builds the data block shared by invoice.* events; orgID scopes both lookups.
-func invoiceNotifData(db *database.Queries, orgID, invoiceID uuid.UUID) fiber.Map {
-	out := fiber.Map{"invoice_id": invoiceID.String()}
-	invoice, err := db.GetInvoice(orgID, invoiceID)
-	if err != nil {
-		return out
-	}
-	out["invoice_number"] = invoice.InvoiceNumber
-	out["status"] = invoice.Status
-	out["issue_date"] = utils.FormatDate(invoice.IssueDate)
-	out["due_date"] = utils.FormatDate(invoice.DueDate)
-	out["currency"] = invoice.Currency
-	out["total"] = invoice.Total
-	if invoice.ClientID != nil {
-		if client, err := db.GetClient(orgID, *invoice.ClientID); err == nil {
-			out["client_name"] = client.Name
-			out["client_company"] = client.Company
-			out["client_email"] = client.Email
-			out["client_phone"] = client.Phone
-		}
-	}
-	return out
-}
-
-// paymentNotifData builds the data block for payment.created events.
-func paymentNotifData(db *database.Queries, payment models.Payment) fiber.Map {
-	out := fiber.Map{
-		"payment_id": payment.ID.String(),
-		"invoice_id": payment.InvoiceID.String(),
-		"amount":     payment.Amount,
-		"method":     payment.Method,
-		"paid_on":    utils.FormatDate(payment.PaidOn),
-	}
-	for k, v := range invoiceNotifData(db, payment.OrgID, payment.InvoiceID) {
-		if _, exists := out[k]; !exists {
-			out[k] = v
-		}
-	}
-	return out
-}
 
 // validateEndpointURL rejects non-http(s) targets and SSRF-prone hosts
 // (loopback / private / link-local) when running in prod stage.
