@@ -13,7 +13,7 @@
  "app/controllers/gateway_intent_controller.go": 219,
  "app/controllers/gateway_project_controller.go": 279,
  "app/controllers/gateway_shared.go": 104,
- "app/controllers/gateway_webhook_controller.go": 311,
+ "app/controllers/gateway_webhook_controller.go": 168,
  "app/controllers/payment_public_intent.go": 259,
  "app/controllers/payment_public_controller.go": 169,
  "app/controllers/health_controller.go": 67,
