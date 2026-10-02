@@ -233,27 +233,3 @@ func publicIntentSuffix(token, method, payCurrency string) string {
 	}
 	return suffix
 }
-
-func publicIntentResponse(t models.GatewayTransaction) fiber.Map {
-	out := fiber.Map{
-		"order_id":     t.OrderID,
-		"redirect_url": t.RedirectURL,
-		"payment_url":  t.PaymentURL,
-		"qr_string":    t.QRString,
-		"address":      t.Address,
-		"pay_amount":   t.PayAmount,
-		"pay_currency": t.PayCurrency,
-		"expires_at":   t.ExpiresAt,
-	}
-	// Expose the token as a widget token only when the provider declares it
-	// is one (BrowserSDKProvider): hosted payment-page ids stored in the same
-	// column would be handed to the wrong browser SDK otherwise. Both the
-	// provider-neutral key (provider_token) and the legacy key (snap_token)
-	// carry the same value; the legacy key stays until pay-page clients
-	// migrate.
-	if gw, err := gateway.Get(t.Gateway); err == nil && gateway.ExposesBrowserToken(gw, t.ProviderToken) {
-		out["provider_token"] = t.ProviderToken
-		out["snap_token"] = t.ProviderToken
-	}
-	return out
-}

@@ -1,69 +1,12 @@
 package controllers
 
 import (
-	"context"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
-	"github.com/tertua/tupay/platform/gateway"
 )
-
-func publicPaymentData(ctx context.Context, db database.Queries, link models.PaymentLink, payCurrency string) (fiber.Map, error) {
-	invoice, err := db.GetInvoiceUnscoped(link.InvoiceID)
-	if err != nil {
-		return nil, err
-	}
-	orgID := invoice.OrgID
-	detail, err := invoiceDetail(db, orgID, link.InvoiceID)
-	if err != nil {
-		return nil, err
-	}
-	settings, err := db.GetSettings(orgID)
-	if err != nil {
-		return nil, err
-	}
-	paid, err := db.PaidAmount(invoice.ID)
-	if err != nil {
-		return nil, err
-	}
-	balance := invoice.Total.Sub(paid)
-	if balance.IsNegative() {
-		balance = decimal.Zero
-	}
-	delete(detail, "client_id")
-	delete(detail, "client_email")
-	delete(detail, "payment_link")
-	// The public list is rebuilt from the payment rows so each method can be
-	// relabeled without the provider name — the payer never needs to know it.
-	payments, err := db.GetInvoicePayments(invoice.ID)
-	if err != nil {
-		return nil, err
-	}
-	clean := make([]fiber.Map, 0, len(payments))
-	for _, p := range payments {
-		clean = append(clean, fiber.Map{
-			"id":      p.ID,
-			"amount":  p.Amount,
-			"paid_on": utils.FormatDate(p.PaidOn),
-			"method":  publicPayMethodLabel(db, p),
-		})
-	}
-	detail["payments"] = clean
-	return fiber.Map{
-		"invoice": detail,
-		"branding": fiber.Map{
-			"company_name": settings.CompanyName,
-			"logo_url":     settings.LogoURL,
-		},
-		"gateway": payerConfigFor(gateway.DefaultProvider()),
-		"methods": availableChargeMethods(ctx, invoice.Currency, balance, settings.UsdToIdr, settings, payCurrency),
-		"can_pay": detail["effective_status"] != models.InvoiceStatusPaid,
-	}, nil
-}
 
 // GetPublicPayment returns invoice data for a public payment token.
 // @Description Get a public payment invoice.
@@ -165,5 +108,9 @@ func GetPublicPaymentStatus(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
 	}
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"status": detail["effective_status"], "paid": detail["paid_amount"], "balance": detail["balance"]})
+	return utils.OK(c, fiber.StatusOK, publicInvoiceStatusResponse{
+		Status:  detail.EffectiveStatus,
+		Paid:    detail.PaidAmount,
+		Balance: detail.Balance,
+	})
 }

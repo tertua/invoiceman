@@ -4,8 +4,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// OK sends a success JSON response with the given data fields.
-func OK(c fiber.Ctx, status int, data fiber.Map) error {
+// OK sends a success JSON response with the given data fields (fiber.Map or a typed struct).
+func OK(c fiber.Ctx, status int, data any) error {
 	return c.Status(status).JSON(data)
 }
 

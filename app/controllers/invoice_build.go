@@ -6,9 +6,7 @@ import (
 
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 
-	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -88,88 +86,6 @@ func applyInvoiceTotals(invoice *models.Invoice) {
 	}
 	invoice.TaxAmount = taxable.Mul(models.DecimalFromFloat(invoice.TaxRate)).Div(decimal.NewFromInt(100))
 	invoice.Total = taxable.Add(invoice.TaxAmount)
-}
-
-// invoiceDetail loads the full invoice response for the frontend, scoped to the caller's org.
-func invoiceDetail(db database.Queries, orgID, id uuid.UUID) (fiber.Map, error) {
-	invoice, err := db.GetInvoice(orgID, id)
-	if err != nil {
-		return nil, err
-	}
-
-	items, err := db.GetInvoiceItems(id)
-	if err != nil {
-		return nil, err
-	}
-	itemMaps := make([]fiber.Map, 0, len(items))
-	for _, item := range items {
-		itemMaps = append(itemMaps, fiber.Map{
-			"description": item.Description,
-			"quantity":    item.Quantity,
-			"rate":        item.Rate,
-			"amount":      item.Amount,
-		})
-	}
-
-	payments, err := db.GetInvoicePayments(id)
-	if err != nil {
-		return nil, err
-	}
-	paymentMaps := make([]fiber.Map, 0, len(payments))
-	var paid decimal.Decimal
-	for _, payment := range payments {
-		paid = paid.Add(payment.Amount)
-		paymentMaps = append(paymentMaps, fiber.Map{
-			"id":       payment.ID,
-			"amount":   payment.Amount,
-			"paid_on":  utils.FormatDate(payment.PaidOn),
-			"method":   payment.Method,
-			"txn_id":   payment.TxnID,
-			"can_void": payment.CanVoid(),
-		})
-	}
-
-	var clientName, clientCompany, clientEmail string
-	if invoice.ClientID != nil {
-		if client, err := db.GetClient(orgID, *invoice.ClientID); err == nil {
-			clientName = client.Name
-			clientCompany = client.Company
-			clientEmail = client.Email
-		}
-	}
-
-	// Expose the existing public payment link (if any) so the MPA can render it persistently instead of transient state.
-	var paymentLink fiber.Map
-	if link, err := db.GetPaymentLinkForInvoice(id, orgID); err == nil {
-		paymentLink = fiber.Map{"token": link.Token, "url": "/pay/" + link.Token}
-	}
-
-	return fiber.Map{
-		"id":               invoice.ID,
-		"invoice_number":   invoice.InvoiceNumber,
-		"status":           invoice.Status,
-		"effective_status": models.ResolveEffectiveStatus(invoice.Status, invoice.DueDate, invoice.Total, paid, db.PendingInvoiceIDs(orgID)[id]),
-		"payment_link":     paymentLink,
-		"client_id":        invoice.ClientID,
-		"client_name":      clientName,
-		"client_company":   clientCompany,
-		"client_email":     clientEmail,
-		"issue_date":       utils.FormatDate(invoice.IssueDate),
-		"due_date":         utils.FormatDate(invoice.DueDate),
-		"currency":         invoice.Currency,
-		"subtotal":         invoice.Subtotal,
-		"discount":         invoice.Discount,
-		"tax_rate":         invoice.TaxRate,
-		"tax_amount":       invoice.TaxAmount,
-		"total":            invoice.Total,
-		"notes":            invoice.Notes,
-		"terms":            invoice.Terms,
-		"payment_method":   invoice.PaymentMethod,
-		"items":            itemMaps,
-		"payments":         paymentMaps,
-		"paid_amount":      paid,
-		"balance":          invoice.Total.Sub(paid),
-	}, nil
 }
 
 // isPaidLocked reports whether an invoice is effectively paid (stored paid or payments covering the total) and must be treated as immutable.

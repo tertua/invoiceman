@@ -110,6 +110,6 @@ func gatewayInvoiceResponse(c fiber.Ctx, db database.Queries, orgID uuid.UUID, i
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
 	}
-	detail["external_id"] = invoice.ExternalID
+	detail.ExternalID = invoice.ExternalID
 	return utils.OK(c, status, fiber.Map{"invoice": detail})
 }
