@@ -75,9 +75,9 @@ func Register(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	inviteToken := strings.TrimSpace(payload.InviteToken)
@@ -169,16 +169,8 @@ func Register(c fiber.Ctx) error {
 		return utils.OK(c, fiber.StatusCreated, fiber.Map{"status": "verification_required", "message": "verification email sent"})
 	}
 
-	tokens, err := utils.IssueSession(c, user.ID, "")
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
-	}
-	csrf, err := issueCSRF(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
-	}
-	if err := saveRefreshToken(c.Context(), user.ID, tokens.SID, tokens.Refresh, csrf, orgID.String()); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
+	if _, err := startSession(c, db, user.ID, orgID.String()); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to start session", nil)
 	}
 	recordAudit(c, db, user.ID, "auth.register", "user", user.ID.String(), "")
 
@@ -209,41 +201,55 @@ func ForgotPassword(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	// Always respond generically to avoid email enumeration; delivery is async (the worker sends the email, retries included).
 	if user, err := db.GetUserByEmail(normalizeEmail(payload.Email)); err == nil {
-		raw := make([]byte, 32)
-		if _, err := rand.Read(raw); err == nil {
-			token := hex.EncodeToString(raw)
-			_ = db.DeletePasswordResetsByUser(user.ID)
-			// Store only the hash: a DB leak must not hand out live reset links (same rule as service API keys, relay.HashKey).
-			if err := db.CreatePasswordReset(user.ID, relay.HashKey(token), time.Now().Add(time.Hour)); err != nil {
-				return utils.Fail(c, fiber.StatusInternalServerError, "failed to create password reset request", nil)
-			}
-			resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
-			body := fmt.Sprintf("Hello %s,\n\nReset your password using this link:\n%s\n\nThis link expires in one hour.", user.Name, resetURL)
-			htmlBody, terr := mail.Render("reset_password", mail.TemplateData{
-				AppName: configs.Get().AppName, Name: user.Name, URL: resetURL,
-			})
-			if terr != nil {
-				utils.RequestLogger(c).Warn("password reset email template failed", "err", terr)
-			}
-			if err := db.EnqueueMail(&models.MailOutbox{
-				To:       user.Email,
-				Subject:  "Reset your " + configs.Get().AppName + " password",
-				Body:     body,
-				HtmlBody: htmlBody,
-			}); err != nil {
-				utils.RequestLogger(c).Warn("password reset email queue failed", "email", user.Email, "err", err)
-			}
-		}
+		enqueuePasswordReset(c, db, user)
 	}
 
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"message": "if the email exists, a reset link was sent"})
+}
+
+// enqueuePasswordReset mints a fresh single-use password reset token for user,
+// stores only its hash, and queues the email. Best-effort on delivery: any error
+// is logged but not surfaced, since the caller must always respond generically
+// to avoid email enumeration. Callers must be inside an enumeration-safe path.
+func enqueuePasswordReset(c fiber.Ctx, db *database.Queries, user models.User) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		utils.RequestLogger(c).Warn("password reset token gen failed", "err", err)
+		return
+	}
+	token := hex.EncodeToString(raw)
+	if err := db.DeletePasswordResetsByUser(user.ID); err != nil {
+		utils.RequestLogger(c).Warn("password reset prior-token delete failed", "err", err)
+		return
+	}
+	// Store only the hash: a DB leak must not hand out live reset links (same rule as service API keys, relay.HashKey).
+	if err := db.CreatePasswordReset(user.ID, relay.HashKey(token), time.Now().Add(time.Hour)); err != nil {
+		utils.RequestLogger(c).Warn("password reset token store failed", "err", err)
+		return
+	}
+	resetURL := strings.TrimRight(configs.Get().Mail.AppPublicURL, "/") + "/reset-password?token=" + token
+	body := fmt.Sprintf("Hello %s,\n\nReset your password using this link:\n%s\n\nThis link expires in one hour.", user.Name, resetURL)
+	htmlBody, terr := mail.Render("reset_password", mail.TemplateData{
+		AppName: configs.Get().AppName, Name: user.Name, URL: resetURL,
+	})
+	if terr != nil {
+		utils.RequestLogger(c).Warn("password reset email template failed", "err", terr)
+	}
+	if err := db.EnqueueMail(&models.MailOutbox{
+		To:       user.Email,
+		Subject:  "Reset your " + configs.Get().AppName + " password",
+		Body:     body,
+		HtmlBody: htmlBody,
+	}); err != nil {
+		utils.RequestLogger(c).Warn("password reset email queue failed", "email", user.Email, "err", err)
+	}
 }
 
 // ResetPassword resets the password using a reset token.
