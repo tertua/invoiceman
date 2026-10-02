@@ -2,6 +2,7 @@ package configs
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -54,6 +55,11 @@ func (o OIDCConfig) Validate() error {
 	if len(missing) > 0 {
 		return fmt.Errorf("OIDC_ENABLED=true requires %s", strings.Join(missing, " and "))
 	}
+	// Issuer must be a real http(s) URL; localhost is allowed for dev/test IdPs.
+	u, err := url.Parse(o.Issuer)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("OIDC_ISSUER must be an http(s) URL, got %q", o.Issuer)
+	}
 	return nil
 }
 
@@ -61,7 +67,7 @@ func (o OIDCConfig) Validate() error {
 func loadOIDC() OIDCConfig {
 	return OIDCConfig{
 		Enabled:      envBool("OIDC_ENABLED", false),
-		Issuer:       strings.TrimSpace(os.Getenv("OIDC_ISSUER")),
+		Issuer:       strings.TrimRight(strings.TrimSpace(os.Getenv("OIDC_ISSUER")), "/"),
 		ClientID:     strings.TrimSpace(os.Getenv("OIDC_CLIENT_ID")),
 		ClientSecret: strings.TrimSpace(os.Getenv("OIDC_CLIENT_SECRET")),
 		Scopes:       envOr("OIDC_SCOPES", "openid email profile"),

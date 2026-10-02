@@ -58,3 +58,53 @@ func TestOIDCDisabledUnchanged(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, cfg.OIDC.Active())
 }
+
+// TestOIDCIssuerValidation rejects issuers that are not a usable http(s) URL.
+func TestOIDCIssuerValidation(t *testing.T) {
+	valid := []string{"http://localhost:9000", "https://idp.example.com"}
+	invalid := []string{"::not a url", "ftp://x", "idp.example.com", "mailto:a@b.com"}
+
+	for _, issuer := range valid {
+		t.Run("valid "+issuer, func(t *testing.T) {
+			t.Setenv("OIDC_ENABLED", "true")
+			t.Setenv("OIDC_ISSUER", issuer)
+			t.Setenv("OIDC_CLIENT_ID", "client-1")
+			t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+			cfg, err := Load()
+			require.NoError(t, err)
+			assert.True(t, cfg.OIDC.Active())
+		})
+	}
+	for _, issuer := range invalid {
+		t.Run("invalid "+issuer, func(t *testing.T) {
+			t.Setenv("OIDC_ENABLED", "true")
+			t.Setenv("OIDC_ISSUER", issuer)
+			t.Setenv("OIDC_CLIENT_ID", "client-1")
+			t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+			_, err := Load()
+			require.ErrorContains(t, err, "OIDC_ISSUER")
+		})
+	}
+	// An empty issuer still fails the required-field check, not the URL check.
+	t.Run("empty", func(t *testing.T) {
+		t.Setenv("OIDC_ENABLED", "true")
+		t.Setenv("OIDC_ISSUER", "")
+		t.Setenv("OIDC_CLIENT_ID", "client-1")
+		t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+		_, err := Load()
+		require.ErrorContains(t, err, "OIDC_ISSUER")
+	})
+}
+
+// TestOIDCIssuerNormalized trims whitespace and a trailing slash from the issuer.
+func TestOIDCIssuerNormalized(t *testing.T) {
+	t.Setenv("OIDC_ENABLED", "true")
+	t.Setenv("OIDC_ISSUER", " https://idp.example.com/ ")
+	t.Setenv("OIDC_CLIENT_ID", "client-1")
+	t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "https://idp.example.com", cfg.OIDC.Issuer)
+	assert.True(t, cfg.OIDC.Active())
+}
