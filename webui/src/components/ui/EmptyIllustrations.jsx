@@ -62,7 +62,7 @@ export function ClientsIllo(props) {
 export function ExpensesIllo(props) {
   return (
     <Frame {...props}>
-      <path d="M40 14h40v68l-6-4-6 4-6-4-6 4-6-4-6 4-6-4-6 4z" />
+      <path d="M40 14h40v68l-5-4-5 4-5-4-5 4-5-4-5 4-5-4-5 4z" />
       <path d="M50 34h20M50 44h20M50 54h12" />
     </Frame>
   );
