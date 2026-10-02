@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/tertua/tupay/platform/cache"
@@ -48,21 +49,25 @@ func saveOIDCState(ctx context.Context, state string, s oidcState) error {
 
 // takeOIDCState reads and immediately deletes a state entry (delete-before-use
 // so a replayed callback can never consume it twice). A miss/expired entry
-// returns ok=false.
-func takeOIDCState(ctx context.Context, state string) (oidcState, bool) {
+// returns ok=false with a nil error; a store failure returns a non-nil error so
+// the caller can distinguish an outage (busy) from an unknown state (state).
+func takeOIDCState(ctx context.Context, state string) (oidcState, bool, error) {
 	store, err := cache.Sessions()
 	if err != nil {
-		return oidcState{}, false
+		return oidcState{}, false, err
 	}
 	raw, err := store.Get(ctx, oidcStateKey(state))
 	if err != nil {
-		return oidcState{}, false
+		if errors.Is(err, cache.ErrSessionNotFound) {
+			return oidcState{}, false, nil
+		}
+		return oidcState{}, false, err
 	}
 	// Delete first: even if decoding fails below, the attempt is spent.
 	_ = store.Delete(ctx, oidcStateKey(state))
 	var s oidcState
 	if err := json.Unmarshal([]byte(raw), &s); err != nil {
-		return oidcState{}, false
+		return oidcState{}, false, nil
 	}
-	return s, true
+	return s, true, nil
 }

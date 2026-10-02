@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"context"
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gofiber/fiber/v3"
@@ -26,6 +28,40 @@ func oidcErrorRedirect(c fiber.Ctx, code string) error {
 	return c.Redirect().Status(fiber.StatusFound).To(oidcRedirectBase + "?oidc_error=" + code)
 }
 
+// Provider discovery is cached per issuer: configs.Get() re-reads env on every
+// call and tests swap OIDC_ISSUER (@t.Setenv), so the key must be the issuer.
+var (
+	oidcProviderMu    sync.RWMutex
+	oidcProviderCache = map[string]*oidc.Provider{}
+)
+
+// oidcProviderFor returns the cached discovery provider for issuer, fetching
+// and caching it on a miss. Errors are never cached, so the next attempt
+// re-fetches.
+func oidcProviderFor(ctx context.Context, issuer string) (*oidc.Provider, error) {
+	oidcProviderMu.RLock()
+	p := oidcProviderCache[issuer]
+	oidcProviderMu.RUnlock()
+	if p != nil {
+		return p, nil
+	}
+	p, err := oidc.NewProvider(ctx, issuer)
+	if err != nil {
+		return nil, err
+	}
+	oidcProviderMu.Lock()
+	oidcProviderCache[issuer] = p
+	oidcProviderMu.Unlock()
+	return p, nil
+}
+
+// resetOIDCProviderCache clears the discovery cache (test isolation).
+func resetOIDCProviderCache() {
+	oidcProviderMu.Lock()
+	oidcProviderCache = map[string]*oidc.Provider{}
+	oidcProviderMu.Unlock()
+}
+
 // OIDCLogin starts the SSO flow: it mints state+nonce+PKCE verifier, stores
 // them under oidc:<state> and redirects to the provider's authorization URL.
 // @Description Start the OIDC SSO login redirect.
@@ -40,7 +76,7 @@ func OIDCLogin(c fiber.Ctx) error {
 	}
 
 	ctx := c.Context()
-	provider, err := oidc.NewProvider(ctx, cfg.Issuer)
+	provider, err := oidcProviderFor(ctx, cfg.Issuer)
 	if err != nil {
 		utils.RequestLogger(c).Warn("oidc discovery failed", "err", err)
 		return oidcErrorRedirect(c, "provider")
@@ -93,13 +129,16 @@ func OIDCCallback(c fiber.Ctx) error {
 	if state == "" {
 		return oidcErrorRedirect(c, "state")
 	}
-	stored, ok := takeOIDCState(c.Context(), state)
+	stored, ok, err := takeOIDCState(c.Context(), state)
+	if err != nil {
+		return oidcErrorRedirect(c, "busy")
+	}
 	if !ok {
 		return oidcErrorRedirect(c, "state")
 	}
 
 	ctx := c.Context()
-	provider, err := oidc.NewProvider(ctx, cfg.Issuer)
+	provider, err := oidcProviderFor(ctx, cfg.Issuer)
 	if err != nil {
 		utils.RequestLogger(c).Warn("oidc discovery failed", "err", err)
 		return oidcErrorRedirect(c, "provider")
