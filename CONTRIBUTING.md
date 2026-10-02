@@ -88,6 +88,8 @@ their rules here:
 - [`docs/MODULE_MAP.md`](docs/MODULE_MAP.md) — domain owners and request paths.
 - [`docs/API_DOCS.md`](docs/API_DOCS.md) — API envelope, errors, money/date
   formats.
+- [`docs/adr/`](docs/adr/) — Architecture Decision Records; code marked
+  `INTEGRATION CONTRACT` points at one and must not be deleted as dead code.
 
 ### Backend (Go)
 

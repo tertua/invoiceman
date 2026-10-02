@@ -457,6 +457,19 @@ Swagger annotation multi-line (ubah → jalankan `swag init` / `make swag`, `doc
 - JSDoc untuk exported functions bila non-obvious
 - Inline comments untuk non-obvious logic: `// Replay is idempotent: second request returns cached response`
 
+### Integration contract marker
+
+An integration point created before its caller exists (future provider capability, planned route, optional hook) is unreferenced **on purpose**. Mark it so it is never mistaken for dead code:
+
+```go
+// INTEGRATION CONTRACT — do not delete. See docs/adr/0001-integration-contract.md
+func VerifyWebhookSignature(payload []byte, sig string) error { ... }
+```
+
+- Own comment line, immediately above the declaration: `//` in Go/JS, `--` in SQL, `#` in shell/YAML, `<!-- -->` in markup.
+- The path must point to an existing `docs/adr/*.md` that explains why the door exists — no ADR, no marker.
+- Never delete, "clean up", or de-reference marked code because it has no call site. To retire the door: deprecate the ADR first, then remove marker + code in the same change (full rules: `docs/adr/0001-integration-contract.md`).
+
 ## Do's and Don'ts
 
 ### Backend (Go)
@@ -497,6 +510,7 @@ Swagger annotation multi-line (ubah → jalankan `swag init` / `make swag`, `doc
 - Read/Edit/Grep via tool dedicated, jangan `cat`/`sed`/`grep` di bash
 
 **❌ Don't**
+- Jangan hapus kode ber-marker `INTEGRATION CONTRACT` sebagai dead code — baca ADR-nya dulu (`docs/adr/0001-integration-contract.md`)
 - Jangan commit ke `main`/`master` (pakai `make promote`); jangan ubah `VERSION` di feat/fix commits
 - Jangan emoji di file kecuali diminta; jangan buat markdown docs tanpa diminta
 - Jangan mixed line endings (ikut `.editorconfig`: Go tab, JS 2 space)
