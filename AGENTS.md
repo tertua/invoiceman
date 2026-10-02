@@ -10,6 +10,12 @@ Read in order: this file → `ARCHITECTURE.md` (system design, data flow, securi
 - When a request is ambiguous (scope, phrasing, defaults, or direction), resolve it with the `ask user` instead of assuming — offer concrete options and a recommended first choice.
 - Ask-user lifecycle: close the octto session (`end_session`) **immediately after the answer is received**, before doing any further thinking/work — never leave the browser window open while working.
 
+## Naming
+
+- **Never invent a name** — route URL, API field, file, identifier, env var, branch. Derive it from what the system already calls the thing (`docs/MODULE_MAP.md`, existing routes/models/queries, `CODE_STYLE.md`). Enterprise-grade means *consistent with the codebase*, not a fresh invention: for anything client-visible (URLs, JSON fields, public IDs) stop and `ask user` with concrete options + a recommended first choice instead of picking one yourself.
+- **Singular, not plural: `X`, never `Xs`.** No `-s` pluralization in any new name (route segment, file, identifier, API field) — `database` not `databases`, `client` not `clients`, `invite` not `invites`. The plural names that already exist (`/invoices`, `/payments`, `/settings`, …) are legacy and frozen: never rename them, or the FE and any existing client break.
+- **Debug first, names second.** While debugging, do not rename/restructure code and do not introduce new abstraction layers (`pipeline`, `manager`, `factory`, `service`, `helper`) — find the root cause and show evidence (diff, failing/passing test) first. Any rename or new layer is a separate, explicit proposal the user approves, never a side effect of a fix.
+
 ## Invariants (summary only — full detail in the docs above)
 
 - Branching: never commit to `main`/`master`; promote with `make promote` (dev→main) then `make promote-prod` (main→master); `VERSION` changes only in releases. → `ARCHITECTURE.md`
