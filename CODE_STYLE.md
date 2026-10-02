@@ -488,6 +488,7 @@ Swagger annotation multi-line (ubah → jalankan `swag init` / `make swag`, `doc
 - Jangan pass string ke recharts pie; jangan hardcode currency symbol (pakai `formatCurrency()`)
 - Jangan localStorage untuk sensitive data (httpOnly cookies)
 - Jangan hardcode user strings — taruh di `i18n.en.js`/`i18n.id.js` (fix `en` dulu, `id` fallback)
+- Jangan terjemahan literal EN→ID untuk istilah yang memang dipakai apa adanya — `Scan struk`, bukan `Pemindaian struk`; `Dashboard`, bukan `Dasbor`; `Gateway`, bukan `Gerbang`. Patokannya: apa yang dibaca user Indonesia sehari-hari, bukan padanan KBBI yang jarang dipakai. `id` ditulis ulang seperti penutur asli, bukan hasil translate tool per-kata. CI: `webui/src/lib/i18nLiteral.test.js`.
 
 ### General
 

@@ -1,7 +1,7 @@
 // ID gateway namespace — split out of i18n.id.js (file-size ratchet).
 export const gatewayId = {
     /* ============================ gateway ============================ */
-    "gateway.title": "Gerbang Pembayaran",
+    "gateway.title": "Gateway Pembayaran",
     "gateway.desc": "Hubungkan proyek ke satu pembayaran terpusat dan pantau pengiriman webhook.",
     "gateway.addTitle": "Hubungkan proyek",
     "gateway.addProject": "Tambah proyek",

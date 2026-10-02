@@ -80,7 +80,7 @@ export const id = {
     "relative.dayAgo": "{n} hari lalu",
 
     /* ============================ sidebar ============================ */
-    "sidebar.dashboard": "Dasbor",
+    "sidebar.dashboard": "Dashboard",
     "sidebar.invoices": "Faktur",
     "sidebar.clients": "Klien",
     "sidebar.expenses": "Pengeluaran",
@@ -145,7 +145,7 @@ export const id = {
     /* ============================ topbar ============================ */
     "topbar.hello": "Halo, {name}.",
     "topbar.subtitle": "Inilah yang terjadi dengan penagihan Anda hari ini.",
-    "topbar.searchPlaceholder": "Cari faktur, klien, atau lompat ke halaman...",
+    "topbar.searchPlaceholder": "Cari faktur, klien, atau ke halaman...",
     "topbar.search": "Cari",
     "topbar.toggleTheme": "Ubah tema",
 
@@ -158,7 +158,7 @@ export const id = {
     "notifications.viewAll": "Lihat semua faktur",
 
     /* ============================ command palette ============================ */
-    "palette.dashboard": "Dasbor",
+    "palette.dashboard": "Dashboard",
     "palette.dashboardHint": "Ringkasan",
     "palette.invoices": "Faktur",
     "palette.invoicesHint": "Lihat & kelola",
@@ -193,7 +193,7 @@ export const id = {
       "Neon Postgres",
       "Google Gemini AI",
       "Faktur PDF",
-      "Pemindaian struk",
+      "Scan struk",
       "Lacak pembayaran",
       "Manajemen pengeluaran",
       "Analitik pendapatan",
@@ -204,7 +204,7 @@ export const id = {
     "landing.wall.total": "Total",
     "landing.wall.revenue": "Total Pendapatan",
     "landing.wall.last6": "6 bulan terakhir",
-    "landing.wall.scan": "Pemindaian Struk AI",
+    "landing.wall.scan": "AI Scan Struk",
     "landing.wall.parsed": "Terbaca",
     "landing.wall.extracted": "Diekstrak",
     "landing.wall.imageToInvoice": "Gambar → faktur",
@@ -228,7 +228,7 @@ export const id = {
     "landing.ai.eyebrow": "Fitur AI",
     "landing.ai.title": "Empat keunggulan AI",
     "landing.ai.sub": "Didukung Google Gemini, terintegrasi langsung ke alur kerja Anda.",
-    "landing.ai.f1.title": "Pemindaian struk",
+    "landing.ai.f1.title": "Scan struk",
     "landing.ai.f1.desc":
       "Foto atau unggah PDF — AI mengekstrak penjual, tanggal, dan rincian barang lalu mengisi faktur atau pengeluaran Anda.",
     "landing.ai.f2.title": "Ringkasan pendapatan",
