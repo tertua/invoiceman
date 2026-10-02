@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"strings"
 	"time"
 
@@ -10,20 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/relay"
 )
-
-func endpointResponse(e models.NotificationEndpoint) fiber.Map {
-	return fiber.Map{
-		"id":         e.ID,
-		"target_url": e.TargetURL,
-		"events":     e.Events,
-		"is_active":  e.IsActive,
-		"created_at": e.CreatedAt,
-		"updated_at": e.UpdatedAt,
-	}
-}
 
 // sanitizeEvents keeps only known subscribable events; empty means all.
 func sanitizeEvents(raw string) string {
@@ -70,9 +56,9 @@ func CreateEndpoint(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to generate secret", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	e := &models.NotificationEndpoint{
 		UserID:    userID,
@@ -103,9 +89,9 @@ func ListEndpoints(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	rows, err := db.ListEndpoints(userID)
 	if err != nil {
@@ -145,16 +131,13 @@ func UpdateEndpoint(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	e, err := db.GetEndpoint(userID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "endpoint not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load endpoint", nil)
+		return utils.NotFoundOrFailed(c, err, "endpoint")
 	}
 	if strings.TrimSpace(input.TargetURL) != "" {
 		target := strings.TrimSpace(input.TargetURL)
@@ -195,15 +178,12 @@ func DeleteEndpoint(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid endpoint id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if _, err := db.GetEndpoint(userID, id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "endpoint not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load endpoint", nil)
+		return utils.NotFoundOrFailed(c, err, "endpoint")
 	}
 	if err := db.DeleteEndpoint(userID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete endpoint", nil)
@@ -230,16 +210,13 @@ func RotateEndpointSecret(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid endpoint id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	e, err := db.GetEndpoint(userID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "endpoint not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load endpoint", nil)
+		return utils.NotFoundOrFailed(c, err, "endpoint")
 	}
 	secret, err := relay.GenerateSecret()
 	if err != nil {
@@ -274,16 +251,13 @@ func TestEndpoint(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid endpoint id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	e, err := db.GetEndpoint(userID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "endpoint not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load endpoint", nil)
+		return utils.NotFoundOrFailed(c, err, "endpoint")
 	}
 	eventHex, _ := randHex(8)
 	enqueueNotificationDelivery(db, userID, e, models.NotifEventTest, "evt_"+eventHex,
@@ -308,9 +282,9 @@ func ListNotificationDeliveries(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	eventType := strings.TrimSpace(c.Query("event_type"))
 	status := strings.TrimSpace(c.Query("status"))
@@ -348,16 +322,13 @@ func RetryNotificationDelivery(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid delivery id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	d, err := db.GetDeliveryByUser(userID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "delivery not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load delivery", nil)
+		return utils.NotFoundOrFailed(c, err, "delivery")
 	}
 	if _, err := db.GetEndpoint(userID, d.EndpointID); err != nil {
 		return utils.Fail(c, fiber.StatusNotFound, "endpoint not found", nil)
@@ -370,19 +341,4 @@ func RetryNotificationDelivery(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load delivery", nil)
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"delivery": notificationDeliveryResponse(updated)})
-}
-
-func notificationDeliveryResponse(d models.NotificationDelivery) fiber.Map {
-	return fiber.Map{
-		"id":          d.ID,
-		"endpoint_id": d.EndpointID,
-		"event_id":    d.EventID,
-		"event_type":  d.EventType,
-		"target_url":  d.TargetURL,
-		"attempt":     d.Attempt,
-		"status":      d.Status,
-		"resp_code":   d.RespCode,
-		"created_at":  d.CreatedAt,
-		"updated_at":  d.UpdatedAt,
-	}
 }

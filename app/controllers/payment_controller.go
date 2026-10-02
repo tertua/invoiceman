@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -26,20 +25,19 @@ func newPaymentToken() (string, error) {
 	return hex.EncodeToString(raw), nil
 }
 
-func paymentResponse(row models.PaymentListRow) fiber.Map {
-	return fiber.Map{
-		"id":               row.PaymentID,
-		"invoice_id":       row.InvoiceID,
-		"invoice_number":   row.InvoiceNumber,
-		"client_name":      row.ClientName,
-		"invoice_currency": row.InvoiceCurrency,
-		"amount":           row.Amount,
-		"method":           row.Method,
-		"paid_on":          utils.FormatDate(row.PaidOn),
-		"txn_id":           row.TxnID,
-		"notes":            row.Notes,
-		"can_void":         row.CanVoid(),
+// reopenInvoiceIfUnderpaid flips a paid invoice back to sent when the void
+// dropped its covered amount below the total. Best-effort: a failure here must
+// not undo the void (the audit row already records it).
+func reopenInvoiceIfUnderpaid(db *database.Queries, orgID, invoiceID uuid.UUID) {
+	invoice, err := db.GetInvoice(orgID, invoiceID)
+	if err != nil || invoice.Status != models.InvoiceStatusPaid {
+		return
 	}
+	remaining, err := db.PaidAmount(invoiceID)
+	if err != nil || remaining.GreaterThanOrEqual(invoice.Total) {
+		return
+	}
+	_ = db.UpdateInvoiceStatus(orgID, invoiceID, models.InvoiceStatusSent)
 }
 
 // ListPayments returns one page of payments plus global totals.
@@ -57,9 +55,9 @@ func ListPayments(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	rows, err := db.ListPayments(orgID, paging.Limit(), paging.Offset())
@@ -76,7 +74,7 @@ func ListPayments(c fiber.Ctx) error {
 	}
 	payments := make([]fiber.Map, 0, len(rows))
 	for _, row := range rows {
-		payments = append(payments, paymentResponse(row))
+		payments = append(payments, paymentListResponse(row))
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{
 		"payments": payments,
@@ -122,9 +120,9 @@ func CreatePayment(c fiber.Ctx) error {
 	if err != nil || paidOn == nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid paid_on, expected YYYY-MM-DD", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
@@ -169,15 +167,7 @@ func CreatePayment(c fiber.Ctx) error {
 		`{"invoice_id":"`+invoiceID.String()+`","amount":"`+input.Amount.String()+`"}`)
 	invalidateAggregates(c, orgID)
 	enqueueOrgNotification(db, orgID, models.NotifEventPaymentCreated, "", paymentNotifData(db, *payment))
-	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": fiber.Map{
-		"id":         payment.ID,
-		"invoice_id": payment.InvoiceID,
-		"amount":     payment.Amount,
-		"method":     payment.Method,
-		"paid_on":    utils.FormatDate(payment.PaidOn),
-		"txn_id":     payment.TxnID,
-		"notes":      payment.Notes,
-	}})
+	return utils.OK(c, fiber.StatusCreated, fiber.Map{"payment": paymentItemResponse(*payment)})
 }
 
 // VoidPayment voids a payment owned by the current user instead of deleting
@@ -204,16 +194,13 @@ func VoidPayment(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid payment id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	payment, err := db.GetPayment(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "payment not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load payment", nil)
+		return utils.NotFoundOrFailed(c, err, "payment")
 	}
 	if payment.VoidedAt != nil {
 		return utils.Fail(c, fiber.StatusConflict, "payment is already voided", nil)
@@ -230,13 +217,9 @@ func VoidPayment(c fiber.Ctx) error {
 			return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice has a pending payment", nil)
 		}
 	}
-	reason := strings.TrimSpace(c.Query("reason"))
-	if reason == "" && len(c.Body()) > 0 {
-		input := &models.PaymentVoidInput{}
-		if err := c.Bind().Body(input); err != nil {
-			return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
-		}
-		reason = strings.TrimSpace(input.Reason)
+	reason, rerr := resolveVoidReason(c)
+	if rerr != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "invalid request body", nil)
 	}
 	if reason == "" {
 		return utils.Fail(c, fiber.StatusBadRequest, "void reason is required", nil)
@@ -251,13 +234,7 @@ func VoidPayment(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to void payment", nil)
 	}
 	// Reopen the invoice when a void drops payments below the total again.
-	if invoice, err := db.GetInvoice(orgID, payment.InvoiceID); err == nil {
-		if invoice.Status == models.InvoiceStatusPaid {
-			if remaining, err := db.PaidAmount(payment.InvoiceID); err == nil && remaining.LessThan(invoice.Total) {
-				_ = db.UpdateInvoiceStatus(orgID, payment.InvoiceID, models.InvoiceStatusSent)
-			}
-		}
-	}
+	reopenInvoiceIfUnderpaid(db, orgID, payment.InvoiceID)
 	meta, _ := json.Marshal(fiber.Map{
 		"invoice_id": payment.InvoiceID.String(),
 		"amount":     payment.Amount,
@@ -268,9 +245,5 @@ func VoidPayment(c fiber.Ctx) error {
 	voidData["void_reason"] = reason
 	enqueueOrgNotification(db, orgID, models.NotifEventPaymentVoided, "", voidData)
 	invalidateAggregates(c, orgID)
-	return utils.OK(c, fiber.StatusOK, fiber.Map{"payment": fiber.Map{
-		"id":         payment.ID,
-		"invoice_id": payment.InvoiceID,
-		"voided":     true,
-	}})
+	return utils.OK(c, fiber.StatusOK, fiber.Map{"payment": paymentVoidResponse(payment)})
 }
