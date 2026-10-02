@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -82,10 +83,10 @@ func handleGatewayWebhook(c fiber.Ctx, gatewayName string) error {
 	// Idempotent: same status + same gateway txn id needs no work unless no delivery ever succeeded (forward may have failed earlier).
 	if !statusChanged && txn.ProviderTxnID == notif.TransactionID {
 		if deliveries, derr := db.ListDeliveriesByOrder(txn.OrderID); derr == nil {
-			for _, d := range deliveries {
-				if d.Status == "delivered" {
-					return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true})
-				}
+			if slices.ContainsFunc(deliveries, func(d models.WebhookDelivery) bool {
+				return d.Status == "delivered"
+			}) {
+				return utils.OK(c, fiber.StatusOK, fiber.Map{"success": true})
 			}
 		}
 	}
@@ -267,9 +268,7 @@ func RetryDelivery(c fiber.Ctx) error {
 		delivery.Status = "failed"
 		delivery.RespBody = constants.TruncateLog(ferr.Error())
 		delivery.NextRetryAt = &retryAt
-		if serr := db.SaveDelivery(&delivery); serr != nil {
-			logger.L().Warn("delivery retry state store failed", "delivery_id", delivery.ID.String(), "err", serr)
-		}
+		saveDeliveryState(db, &delivery)
 		return utils.Fail(c, fiber.StatusBadGateway, "retry failed", nil)
 	}
 	delivery.RespCode = result.StatusCode
@@ -281,10 +280,15 @@ func RetryDelivery(c fiber.Ctx) error {
 		delivery.Status = "failed"
 		delivery.NextRetryAt = &retryAt
 	}
-	if serr := db.SaveDelivery(&delivery); serr != nil {
-		logger.L().Warn("delivery retry state store failed", "delivery_id", delivery.ID.String(), "err", serr)
-	}
+	saveDeliveryState(db, &delivery)
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"delivery": deliveryResponse(delivery)})
+}
+
+// saveDeliveryState persists the delivery row, logging (never propagating) errors.
+func saveDeliveryState(db *database.Queries, d *models.WebhookDelivery) {
+	if err := db.SaveDelivery(d); err != nil {
+		logger.L().Warn("delivery state store failed", "delivery_id", d.ID.String(), "err", err)
+	}
 }
 
 func deliveryResponse(d models.WebhookDelivery) fiber.Map {
