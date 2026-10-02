@@ -37,8 +37,8 @@ function detectLang(searchParams) {
 // End dev path
 export default function PublicPay() {
   const { token } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [lang, setLang] = useState(() => detectLang(searchParams));
+  const [searchParams] = useSearchParams();
+  const [lang] = useState(() => detectLang(searchParams));
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [panelStep, setPanelStep] = useState("choose");
@@ -51,24 +51,6 @@ export default function PublicPay() {
     document.documentElement.setAttribute("lang", lang);
     setLocale(lang);
   }, [lang]);
-
-  function changeLang(next) {
-    if (next !== "en" && next !== "id") return;
-    setLang(next);
-    try {
-      localStorage.setItem(LANG_STORAGE_KEY, next);
-    } catch {
-      // Private mode may block storage; the ?lang= param still applies.
-    }
-    setSearchParams(
-      (prev) => {
-        const nextParams = new URLSearchParams(prev);
-        nextParams.set("lang", next);
-        return nextParams;
-      },
-      { replace: true }
-    );
-  }
 
   useEffect(() => {
     let cancelled = false;
@@ -108,14 +90,14 @@ export default function PublicPay() {
 
   if (err) {
     return (
-      <PublicShell lang={lang} onLang={changeLang}>
+      <PublicShell>
         <PublicErrorCard lang={lang} status={err.status} message={err.message} />
       </PublicShell>
     );
   }
   if (!data) {
     return (
-      <PublicShell lang={lang} onLang={changeLang}>
+      <PublicShell>
         <Loader2 className="animate-spin text-[var(--ink-muted)]" size={22} />
       </PublicShell>
     );
@@ -127,7 +109,7 @@ export default function PublicPay() {
   const step = resolvePayStep({ isPaid, canPay: can_pay, panelStep });
 
   return (
-    <PublicShell branding={branding} lang={lang} onLang={changeLang}>
+    <PublicShell branding={branding}>
       <Card padding="lg" className="w-full max-w-[520px]">
         <div className="mb-4 flex justify-center">
           <StepIndicator current={step} lang={lang} />

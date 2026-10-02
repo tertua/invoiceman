@@ -34,8 +34,8 @@ const STATE_META = {
 // appends `?order_id=&status_code=&transaction_status=`. No backend call: the
 // page only reflects the redirect params, settlement truth stays on webhooks.
 export default function PaymentFinish() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [lang, setLang] = useState(() => detectLang(searchParams));
+  const [searchParams] = useSearchParams();
+  const [lang] = useState(() => detectLang(searchParams));
   const reduce = useReducedMotion();
   const orderId = searchParams.get("order_id") || "";
   const meta = STATE_META[finishState(searchParams.get("transaction_status"))];
@@ -46,26 +46,8 @@ export default function PaymentFinish() {
     setLocale(lang);
   }, [lang]);
 
-  function changeLang(next) {
-    if (next !== "en" && next !== "id") return;
-    setLang(next);
-    try {
-      localStorage.setItem(LANG_STORAGE_KEY, next);
-    } catch {
-      // Private mode may block storage; the ?lang= param still applies.
-    }
-    setSearchParams(
-      (prev) => {
-        const nextParams = new URLSearchParams(prev);
-        nextParams.set("lang", next);
-        return nextParams;
-      },
-      { replace: true }
-    );
-  }
-
   return (
-    <PublicShell lang={lang} onLang={changeLang}>
+    <PublicShell>
       <Card padding="lg" className="max-w-md w-full flex flex-col items-center text-center py-12">
         <motion.div
           className="h-14 w-14 rounded-2xl flex items-center justify-center mb-4"
