@@ -1,15 +1,12 @@
 package controllers
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/middleware"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/cache"
-	"github.com/tertua/tupay/platform/database"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -23,64 +20,6 @@ func publicUser(u models.User) fiber.Map {
 		"email": u.Email,
 		"role":  u.UserRole,
 	}
-}
-
-// saveRefreshToken stores the session (sid + refresh token + bound CSRF token + active org) in the session store; overwriting kills any previous session (strict single-session).
-func saveRefreshToken(ctx context.Context, userID uuid.UUID, sid, refresh, csrf, activeOrg string) error {
-	store, err := cache.Sessions()
-	if err != nil {
-		return err
-	}
-	return store.Set(ctx, userID.String(), cache.EncodeSessionValue(sid, refresh, csrf, activeOrg), cache.RefreshTTL())
-}
-
-// saveSessionCSRF rebinds the CSRF token of the live session without touching its sid or refresh token (rotation on privilege moments).
-func saveSessionCSRF(ctx context.Context, userID uuid.UUID, csrf string) error {
-	store, err := cache.Sessions()
-	if err != nil {
-		return err
-	}
-	stored, err := store.Get(ctx, userID.String())
-	if err != nil {
-		return err
-	}
-	sid, refresh, _, activeOrg, ok := cache.DecodeSessionValue(stored)
-	if !ok {
-		return cache.ErrSessionNotFound
-	}
-	return store.Set(ctx, userID.String(), cache.EncodeSessionValue(sid, refresh, csrf, activeOrg), cache.RefreshTTL())
-}
-
-// deleteRefreshToken removes the refresh token from the session store.
-func deleteRefreshToken(ctx context.Context, userID uuid.UUID) error {
-	store, err := cache.Sessions()
-	if err != nil {
-		return err
-	}
-	return store.Delete(ctx, userID.String())
-}
-
-// issueCSRF mints the double-submit token for a session and writes the readable cookie; the returned value must be bound to the session store (RequireCSRF cross-checks it, so a rotated token invalidates the old one).
-func issueCSRF(c fiber.Ctx) (string, error) {
-	token, err := middleware.NewCSRFToken()
-	if err != nil {
-		return "", err
-	}
-	middleware.SetCSRFCookie(c, token)
-	return token, nil
-}
-
-// rotateCSRF mints a new CSRF token for a privilege moment; the binding is stored before the cookie is written, so a store failure never leaves browser and server disagreeing.
-func rotateCSRF(c fiber.Ctx, userID uuid.UUID) error {
-	token, err := middleware.NewCSRFToken()
-	if err != nil {
-		return err
-	}
-	if err := saveSessionCSRF(c.Context(), userID, token); err != nil {
-		return err
-	}
-	middleware.SetCSRFCookie(c, token)
-	return nil
 }
 
 // Login authenticates a user and starts a session.
@@ -106,9 +45,9 @@ func Login(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	payload.Email = normalizeEmail(payload.Email)
@@ -128,16 +67,8 @@ func Login(c fiber.Ctx) error {
 		return nil
 	}
 
-	tokens, err := utils.IssueSession(c, user.ID, "")
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
-	}
-	csrf, err := issueCSRF(c)
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to create session", nil)
-	}
-	if err := saveRefreshToken(c.Context(), user.ID, tokens.SID, tokens.Refresh, csrf, loginOrgHint(db, user.ID)); err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
+	if _, err := startSession(c, db, user.ID, loginOrgHint(db, user.ID)); err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "failed to start session", nil)
 	}
 	recordAudit(c, db, user.ID, "auth.login.success", "user", user.ID.String(), "")
 
@@ -162,7 +93,7 @@ func Logout(c fiber.Ctx) error {
 	}
 
 	// Audit is best-effort (never fails logout): no handle, no trail.
-	if db, err := database.OpenDBConnection(); err == nil {
+	if db, ok := openDB(c); ok {
 		recordAudit(c, db, userID, "auth.logout", "user", userID.String(), "")
 	}
 	if err := deleteRefreshToken(c.Context(), userID); err != nil {
@@ -190,9 +121,9 @@ func Me(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	user, err := db.GetUserByID(userID)
@@ -228,9 +159,9 @@ func UpdateProfile(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	if err := db.UpdateUserProfile(userID, payload.Name); err != nil {
