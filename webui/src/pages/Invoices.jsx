@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, FileText } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/Input";
@@ -92,7 +92,6 @@ export default function Invoices() {
         <QueryError error={error} />
       ) : invoices.length === 0 ? (
         <EmptyState
-          icon={FileText}
           illustration={<InvoicesIllo />}
           title={search || status !== "all" ? t("invoices.noMatching") : t("invoices.noneYet")}
           description={

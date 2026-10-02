@@ -21,38 +21,11 @@ function MiniLine({ data, color }) {
   );
 }
 
-function MiniBars({ data, color }) {
-  const values = data.map((point) => Number(point?.v) || 0);
-  const max = Math.max(...values, 1);
-  const gap = values.length > 1 ? 4 : 0;
-  const width = values.length ? (110 - gap * (values.length - 1)) / values.length : 0;
-
-  return (
-    <svg viewBox="0 0 110 42" width="110" height="42" aria-hidden="true">
-      {values.map((value, index) => {
-        const height = Math.max((value / max) * 30, 2);
-        return (
-          <rect
-            key={index}
-            x={index * (width + gap)}
-            y={36 - height}
-            width={Math.max(width, 1)}
-            height={height}
-            rx="3"
-            fill={color}
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
 export function StatCard({
   label,
   value,
   suffix,
   delta,
-  chart = "line",
   data = [],
   icon: Icon,
   accent = false,
@@ -61,7 +34,6 @@ export function StatCard({
   renderValue,
 }) {
   const color = accent ? "#FFFFFF" : "var(--accent)";
-  const ChartCmp = chart === "bars" ? MiniBars : MiniLine;
   const hasData = Array.isArray(data) && data.length > 0;
 
   return (
@@ -87,7 +59,7 @@ export function StatCard({
 
         {hasData && (
           <div className="w-[110px] shrink-0 self-end opacity-90">
-            <ChartCmp data={data} color={color} />
+            <MiniLine data={data} color={color} />
           </div>
         )}
       </div>

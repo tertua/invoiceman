@@ -54,7 +54,6 @@ export default function Dashboard() {
   if (!stats?.invoiceCount) {
     return (
       <EmptyState
-        icon={Plus}
         illustration={<WelcomeIllo />}
         title={t("dash.welcomeTitle")}
         description={t("dash.welcomeDesc")}
@@ -89,9 +88,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard label={t("dash.totalRevenue")} value={formatMoney(stats.totalRevenue)} icon={Wallet} accent data={spark} chart="line" delta={delta} animateValue valueNumber={Number(stats.totalRevenue) || 0} renderValue={money} />
+        <StatCard label={t("dash.totalRevenue")} value={formatMoney(stats.totalRevenue)} icon={Wallet} accent data={spark} delta={delta} animateValue valueNumber={Number(stats.totalRevenue) || 0} renderValue={money} />
         <StatCard label={t("dash.outstanding")} value={formatMoney(stats.outstanding)} icon={Clock} animateValue valueNumber={Number(stats.outstanding) || 0} renderValue={money} />
-        <StatCard label={t("dash.paidThisMonth")} value={formatMoney(stats.paidThisMonth)} icon={TrendingUp} data={spark} chart="line" animateValue valueNumber={Number(stats.paidThisMonth) || 0} renderValue={money} />
+        <StatCard label={t("dash.paidThisMonth")} value={formatMoney(stats.paidThisMonth)} icon={TrendingUp} data={spark} animateValue valueNumber={Number(stats.paidThisMonth) || 0} renderValue={money} />
         <StatCard label={t("dash.overdue")} value={stats.overdueCount} suffix={stats.overdueTotal ? formatMoney(stats.overdueTotal) : null} icon={AlertTriangle} animateValue valueNumber={Number(stats.overdueCount) || 0} renderValue={(n) => Math.round(n)} />
       </div>
 

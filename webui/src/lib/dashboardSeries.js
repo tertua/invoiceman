@@ -6,7 +6,7 @@
 // source of truth for every amount we display or send back.
 
 // revenueSpark maps the dashboard revenueSeries to the { v } point shape that
-// StatCard's MiniLine/MiniBars read. Missing/invalid revenue degrades to 0.
+// StatCard's MiniLine reads. Missing/invalid revenue degrades to 0.
 export function revenueSpark(series) {
   if (!Array.isArray(series)) return [];
   return series.slice(-6).map((point) => ({ v: Number(point?.revenue) || 0 }));
