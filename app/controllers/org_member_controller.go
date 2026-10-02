@@ -96,9 +96,9 @@ func ListMembers(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusForbidden, "org.notMember", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	rows, err := db.ListByOrg(orgID)
 	if err != nil {
@@ -147,9 +147,9 @@ func CreateOrgInvite(c fiber.Ctx) error {
 	if !ok {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invite role", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invite, err := db.CreateInvite(orgID, email, joinRole, inviteTTL(input.TTLHours))
 	if err != nil {
@@ -177,9 +177,9 @@ func ListOrgInvites(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusForbidden, "org.notMember", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invites, err := db.ListInvitesByOrg(orgID)
 	if err != nil {
@@ -206,9 +206,9 @@ func RevokeOrgInvite(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invite id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if err := db.Revoke(orgID, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -239,9 +239,9 @@ func AcceptOrgInvite(c fiber.Ctx) error {
 	if token == "" {
 		return utils.Fail(c, fiber.StatusBadRequest, "token is required", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invite, err := db.GetValidByToken(token)
 	if err != nil {

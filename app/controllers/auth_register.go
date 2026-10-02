@@ -275,9 +275,9 @@ func ResetPassword(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	reset, err := db.GetPasswordReset(relay.HashKey(strings.TrimSpace(payload.Token)))

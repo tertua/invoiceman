@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -28,9 +27,9 @@ func ListInvoices(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	status, search := c.Query("status"), c.Query("search")

@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // outboxQueues are the fixed queue names with their zero-fill status enums.
@@ -38,9 +37,9 @@ func ageSeconds(now time.Time, t *time.Time) *int64 {
 // @Security SessionCookie
 // @Router /admin/outbox/status [get]
 func OutboxStatus(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	stats, err := db.OutboxStats()
 	if err != nil {

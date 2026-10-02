@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/mail"
 )
 
@@ -41,16 +39,13 @@ func CreateOnlineLink(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+		return utils.NotFoundOrFailed(c, err, "invoice")
 	}
 	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)
@@ -97,16 +92,13 @@ func SendOnlineLink(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+		return utils.NotFoundOrFailed(c, err, "invoice")
 	}
 	if effectiveInvoiceStatus(*db, invoice) == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)

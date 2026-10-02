@@ -1,12 +1,10 @@
 package controllers
 
 import (
-	"database/sql"
 	"errors"
 
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -46,17 +44,14 @@ func UpdateInvoice(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	existing, err := db.GetInvoice(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+		return utils.NotFoundOrFailed(c, err, "invoice")
 	}
 
 	if err := guardInvoiceRewrite(c, *db, orgID, id, existing, input.Status); err != nil {

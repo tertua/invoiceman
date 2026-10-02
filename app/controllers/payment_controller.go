@@ -126,10 +126,7 @@ func CreatePayment(c fiber.Ctx) error {
 	}
 	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+		return utils.NotFoundOrFailed(c, err, "invoice")
 	}
 	paid, err := db.PaidAmount(invoiceID)
 	if err != nil {

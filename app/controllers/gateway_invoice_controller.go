@@ -42,9 +42,9 @@ func CreateGatewayInvoice(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if _, lookupErr := db.GetGatewayInvoice(project.Slug, input.ExternalID); lookupErr == nil {
 		return utils.Fail(c, fiber.StatusConflict, "external_id already exists", nil)

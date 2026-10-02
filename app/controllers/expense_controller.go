@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"io"
 	"strings"
 	"time"
@@ -11,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/storage"
 )
 
@@ -54,9 +51,9 @@ func ListExpenses(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	category := c.Query("category")
 	paging := utils.ParsePagination(c)
@@ -122,9 +119,9 @@ func CreateExpense(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense_date, expected YYYY-MM-DD", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	settings, err := db.GetSettings(orgID)
 	if err != nil {
@@ -186,9 +183,9 @@ func UpdateExpense(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense_date, expected YYYY-MM-DD", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	settings, err := db.GetSettings(orgID)
 	if err != nil {
@@ -196,10 +193,7 @@ func UpdateExpense(c fiber.Ctx) error {
 	}
 	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+		return utils.NotFoundOrFailed(c, err, "expense")
 	}
 	expense.Vendor = input.Vendor
 	expense.Category = input.Category
@@ -235,15 +229,12 @@ func DeleteExpense(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if _, err := db.GetExpense(orgID, id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+		return utils.NotFoundOrFailed(c, err, "expense")
 	}
 	if err := db.DeleteExpense(orgID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete expense", nil)
@@ -273,16 +264,13 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+		return utils.NotFoundOrFailed(c, err, "expense")
 	}
 	file, err := c.FormFile("file")
 	if err != nil || file == nil {
@@ -342,16 +330,13 @@ func GetReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+		return utils.NotFoundOrFailed(c, err, "expense")
 	}
 	if strings.TrimSpace(expense.ReceiptURL) == "" {
 		return utils.Fail(c, fiber.StatusNotFound, "receipt not found", nil)
@@ -396,16 +381,13 @@ func DeleteReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid expense id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	expense, err := db.GetExpense(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "expense not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load expense", nil)
+		return utils.NotFoundOrFailed(c, err, "expense")
 	}
 	if key := strings.TrimSpace(expense.ReceiptURL); key != "" {
 		if store, serr := storage.Shared(); serr == nil {

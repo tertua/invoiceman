@@ -12,7 +12,6 @@ import (
 	"github.com/tertua/tupay/pkg/configs"
 	"github.com/tertua/tupay/pkg/constants"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/gateway"
 )
 
@@ -28,9 +27,9 @@ import (
 // @Success 200 {string} binary "QR png"
 // @Router /public/pay/{token}/qr [get]
 func GetPublicQrImage(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	link, err := db.GetPaymentLink(c.Params("token"))
 	if err != nil {

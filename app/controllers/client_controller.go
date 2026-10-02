@@ -1,13 +1,10 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -31,9 +28,9 @@ func ListClients(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	paging := utils.ParsePagination(c)
@@ -69,17 +66,14 @@ func GetClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid client id", nil)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	client, err := db.GetClient(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
+		return utils.NotFoundOrFailed(c, err, "client")
 	}
 
 	rows, err := db.ClientInvoices(orgID, id)
@@ -148,9 +142,9 @@ func CreateClient(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	now := time.Now()
 	client := &models.Client{
@@ -204,17 +198,14 @@ func UpdateClient(c fiber.Ctx) error {
 		return utils.ValidationFailed(c, err)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	client, err := db.GetClient(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
+		return utils.NotFoundOrFailed(c, err, "client")
 	}
 
 	now := time.Now()
@@ -255,16 +246,13 @@ func DeleteClient(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid client id", nil)
 	}
 
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	if _, err := db.GetClient(orgID, id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "client not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load client", nil)
+		return utils.NotFoundOrFailed(c, err, "client")
 	}
 
 	if err := db.DeleteClient(orgID, id); err != nil {

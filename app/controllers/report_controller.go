@@ -8,7 +8,6 @@ import (
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/cache"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // GetReports returns financial reports for the current organization.
@@ -24,9 +23,9 @@ func GetReports(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	report, err := cache.FetchJSON(c.Context(), cache.AggKey(orgID.String(), "reports", strings.TrimSpace(c.Query("currency"))),
 		func(ctx context.Context) (models.Reports, error) {

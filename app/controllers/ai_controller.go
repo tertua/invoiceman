@@ -12,7 +12,6 @@ import (
 	"github.com/tertua/tupay/pkg/logger"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/ai"
-	"github.com/tertua/tupay/platform/database"
 )
 
 const maxReceiptSize = 10 << 20
@@ -139,9 +138,9 @@ func BusinessSummary(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	stats, err := db.GetStats(orgID, "")
 	if err != nil {
@@ -192,9 +191,9 @@ func PaymentReminder(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {

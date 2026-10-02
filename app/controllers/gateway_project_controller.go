@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"strings"
 	"time"
 
@@ -10,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/gateway"
 	"github.com/tertua/tupay/platform/relay"
 )
@@ -63,9 +60,9 @@ func CreateProject(c fiber.Ctx) error {
 	if _, err := gateway.Get(defaultGateway); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "unknown payment gateway", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if _, err := db.GetProjectBySlug(input.Slug); err == nil {
 		return utils.Fail(c, fiber.StatusConflict, "project slug already exists", nil)
@@ -108,9 +105,9 @@ func CreateProject(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects [get]
 func ListProjects(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	rows, err := db.ListProjects(paging.Limit(), paging.Offset())
@@ -139,16 +136,13 @@ func ListProjects(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects/{slug} [patch]
 func UpdateProject(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	p, err := db.GetProjectBySlug(c.Params("slug"))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "project not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load project", nil)
+		return utils.NotFoundOrFailed(c, err, "project")
 	}
 	input := &models.UpdateProjectInput{}
 	if err := c.Bind().Body(input); err != nil {
@@ -188,16 +182,13 @@ func UpdateProject(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects/{slug}/rotate-key [post]
 func RotateProjectKey(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	p, err := db.GetProjectBySlug(c.Params("slug"))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "project not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load project", nil)
+		return utils.NotFoundOrFailed(c, err, "project")
 	}
 	apiKey, err := relay.GenerateAPIKey()
 	if err != nil {
@@ -222,16 +213,13 @@ func RotateProjectKey(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/projects/{slug}/rotate-secret [post]
 func RotateProjectSecret(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	p, err := db.GetProjectBySlug(c.Params("slug"))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "project not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load project", nil)
+		return utils.NotFoundOrFailed(c, err, "project")
 	}
 	secret, err := relay.GenerateSecret()
 	if err != nil {
@@ -258,9 +246,9 @@ func RotateProjectSecret(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/gateway/transactions [get]
 func ListAllTransactions(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	rows, err := db.ListAllTransactions(paging.Limit(), paging.Offset())

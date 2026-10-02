@@ -1,15 +1,12 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // CreateOrg creates a brand-new organization and assigns a user as its owner in one transaction (cross-tenant bootstrap). The calling admin is NOT added as a member; the route only carries RequireRoles("admin").
@@ -44,16 +41,13 @@ func CreateOrg(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid owner user id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	owner, err := db.GetUserByID(ownerID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load user", nil)
+		return utils.NotFoundOrFailed(c, err, "user")
 	}
 	// 0 == blocked (see the auth login guard): a blocked account cannot own a tenant.
 	if owner.UserStatus != 1 {

@@ -41,9 +41,9 @@ func createRelayIntent(c fiber.Ctx) error {
 	if input.AmountIDR <= 0 && strings.TrimSpace(input.AmountDecimal) == "" {
 		return utils.Fail(c, fiber.StatusBadRequest, "amount_idr or amount_decimal is required", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 
 	// The canonical amount is expressed in the request currency; amount_idr

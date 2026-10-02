@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
 	"errors"
 	"sort"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 	"github.com/tertua/tupay/platform/gateway"
 )
 
@@ -47,16 +45,13 @@ func GetIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	txn, err := db.GetTransaction(c.Params("order_id"))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "transaction not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load transaction", nil)
+		return utils.NotFoundOrFailed(c, err, "transaction")
 	}
 	if txn.ProjectSlug != project.Slug {
 		return utils.Fail(c, fiber.StatusNotFound, "transaction not found", nil)
@@ -78,9 +73,9 @@ func ListMyTransactions(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	rows, err := db.ListTransactionsByProject(project.Slug, paging.Limit(), paging.Offset())
@@ -145,16 +140,13 @@ func CreateInvoiceIntent(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	invoice, err := db.GetInvoice(orgID, invoiceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "invoice not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load invoice", nil)
+		return utils.NotFoundOrFailed(c, err, "invoice")
 	}
 	if invoice.Status == models.InvoiceStatusDraft {
 		return utils.Fail(c, fiber.StatusUnprocessableEntity, "invoice is still a draft", nil)

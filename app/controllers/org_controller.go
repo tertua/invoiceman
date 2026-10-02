@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/pkg/utils"
 	"github.com/tertua/tupay/platform/cache"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // orgRenameInput is the PATCH /orgs/{id} payload.
@@ -34,16 +33,13 @@ func GetMyOrg(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusForbidden, "org.notMember", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	org, err := db.GetOrg(orgID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "org not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load org", nil)
+		return utils.NotFoundOrFailed(c, err, "org")
 	}
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"org": fiber.Map{"id": org.ID.String(), "name": org.Name}, "role": role})
 }
@@ -66,9 +62,9 @@ func ActivateOrg(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid org id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	role, err := db.GetRole(orgID, userID)
 	if err != nil {
@@ -79,10 +75,7 @@ func ActivateOrg(c fiber.Ctx) error {
 	}
 	org, err := db.GetOrg(orgID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "org not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load org", nil)
+		return utils.NotFoundOrFailed(c, err, "org")
 	}
 	if err := persistActiveOrg(c, userID, orgID); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to persist session", nil)
@@ -118,9 +111,9 @@ func RenameOrg(c fiber.Ctx) error {
 	if name == "" {
 		return utils.Fail(c, fiber.StatusBadRequest, "name is required", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if err := db.RenameOrg(orgID, name); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to rename org", nil)

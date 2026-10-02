@@ -1,13 +1,9 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // DeleteProject removes a gateway project that has never been used.
@@ -21,16 +17,13 @@ import (
 // @Failure 409 {object} map[string]interface{}
 // @Router /admin/gateway/projects/{slug} [delete]
 func DeleteProject(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	p, err := db.GetProjectBySlug(c.Params("slug"))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "project not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load project", nil)
+		return utils.NotFoundOrFailed(c, err, "project")
 	}
 	total, err := db.CountTransactionsByProject(p.Slug)
 	if err != nil {

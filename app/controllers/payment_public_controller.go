@@ -75,9 +75,9 @@ func publicPaymentData(ctx context.Context, db database.Queries, link models.Pay
 // @Success 200 {object} map[string]interface{}
 // @Router /public/pay/{token} [get]
 func GetPublicPayment(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	link, err := db.GetPaymentLink(c.Params("token"))
 	if err != nil {
@@ -113,9 +113,9 @@ func GetPublicPayment(c fiber.Ctx) error {
 // @Param Idempotency-Key header string false "Replay protection key (uuid per payment intent)"
 // @Router /public/pay/{token}/transaction [post]
 func CreatePublicTransaction(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	link, err := db.GetPaymentLink(c.Params("token"))
 	if err != nil {
@@ -149,9 +149,9 @@ func CreatePublicTransaction(c fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /public/pay/{token}/status [get]
 func GetPublicPaymentStatus(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	link, err := db.GetPaymentLink(c.Params("token"))
 	if err != nil {

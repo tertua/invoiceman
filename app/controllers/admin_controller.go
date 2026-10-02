@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
@@ -34,9 +32,9 @@ func adminUserResponse(user models.User) fiber.Map {
 // @Security SessionCookie
 // @Router /admin/users [get]
 func ListUsers(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	users, err := db.ListUsers(paging.Limit(), paging.Offset())
@@ -84,16 +82,13 @@ func UpdateUserRole(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	user, err := db.GetUserByID(userID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "user not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load user", nil)
+		return utils.NotFoundOrFailed(c, err, "user")
 	}
 	if err := db.UpdateUserRole(userID, input.Role); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to update user role", nil)
@@ -119,9 +114,9 @@ func UpdateUserRole(c fiber.Ctx) error {
 // @Security SessionCookie
 // @Router /admin/audit-logs [get]
 func ListAuditLogs(c fiber.Ctx) error {
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	rows, err := db.ListAuditLogs(paging.Limit(), paging.Offset())
@@ -168,9 +163,9 @@ func MigrateDown(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	version, err := database.MigrateDownTo(input.TargetVersion)
 	if err != nil {

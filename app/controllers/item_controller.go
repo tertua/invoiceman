@@ -1,15 +1,12 @@
 package controllers
 
 import (
-	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/tertua/tupay/app/models"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // ListItems returns one page of catalog items owned by the current user.
@@ -27,9 +24,9 @@ func ListItems(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	paging := utils.ParsePagination(c)
 	items, err := db.ListItems(orgID, paging.Limit(), paging.Offset())
@@ -68,9 +65,9 @@ func CreateItem(c fiber.Ctx) error {
 	if input.Rate.IsNegative() {
 		return utils.Fail(c, fiber.StatusBadRequest, "rate cannot be negative", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	now := time.Now()
 	item := &models.Item{
@@ -116,16 +113,13 @@ func UpdateItem(c fiber.Ctx) error {
 	if err := utils.NewValidator().Struct(input); err != nil {
 		return utils.ValidationFailed(c, err)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	item, err := db.GetItem(orgID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "item not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load item", nil)
+		return utils.NotFoundOrFailed(c, err, "item")
 	}
 	item.Name = input.Name
 	item.Description = input.Description
@@ -155,15 +149,12 @@ func DeleteItem(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "invalid item id", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	if _, err := db.GetItem(orgID, id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return utils.Fail(c, fiber.StatusNotFound, "item not found", nil)
-		}
-		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load item", nil)
+		return utils.NotFoundOrFailed(c, err, "item")
 	}
 	if err := db.DeleteItem(orgID, id); err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to delete item", nil)

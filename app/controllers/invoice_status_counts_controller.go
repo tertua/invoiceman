@@ -3,7 +3,6 @@ package controllers
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/tupay/pkg/utils"
-	"github.com/tertua/tupay/platform/database"
 )
 
 // InvoiceStatusCounts returns the number of invoices per status for the
@@ -20,9 +19,9 @@ func InvoiceStatusCounts(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "unauthorized, please sign in again", nil)
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
+		return nil
 	}
 	counts, err := db.InvoiceStatusCounts(orgID)
 	if err != nil {

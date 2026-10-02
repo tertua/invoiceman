@@ -32,9 +32,8 @@ func approvalLoad(c fiber.Ctx) *approvalTarget {
 		_ = utils.Fail(c, fiber.StatusBadRequest, "invalid invoice id", nil)
 		return nil
 	}
-	db, err := database.OpenDBConnection()
-	if err != nil {
-		_ = utils.Fail(c, fiber.StatusInternalServerError, "database connection error", nil)
+	db, ok := openDB(c)
+	if !ok {
 		return nil
 	}
 	existing, err := db.GetInvoice(orgID, id)
