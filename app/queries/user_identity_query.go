@@ -31,6 +31,33 @@ func (q *UserIdentityQueries) CreateIdentity(identity *models.UserIdentity) erro
 	})
 }
 
+// CreateUserTx inserts a user inside a caller-owned transaction.
+func CreateUserTx(tx *gorm.DB, u *models.User) error {
+	return tx.Create(u).Error
+}
+
+// ProvisionOIDCUser atomically creates a password-less user, its identity link, personal org and settings.
+func (q *UserIdentityQueries) ProvisionOIDCUser(user *models.User, provider, sub, email string) error {
+	return DoRetry(func() error {
+		return q.Transaction(func(tx *gorm.DB) error {
+			if err := CreateUserTx(tx, user); err != nil {
+				return err
+			}
+			identity := &models.UserIdentity{
+				ID: uuid.New(), UserID: user.ID, Provider: provider, Sub: sub, Email: email, CreatedAt: time.Now(),
+			}
+			if err := tx.Create(identity).Error; err != nil {
+				return err
+			}
+			orgID, err := EnsurePersonalOrgTx(tx, user.ID)
+			if err != nil {
+				return err
+			}
+			return CreateSettingsTx(tx, models.DefaultSettings(orgID))
+		})
+	})
+}
+
 // LinkIdentity links an external identity to an existing user (auto-link by
 // verified email). The caller has already checked that no row exists.
 func (q *UserIdentityQueries) LinkIdentity(userID uuid.UUID, provider, sub, email string) error {

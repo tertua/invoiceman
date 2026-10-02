@@ -30,6 +30,11 @@ func (q *SettingsQueries) CreateSettings(s *models.Settings) error {
 	return q.Where("org_id = ?", s.OrgID).Attrs(*s).FirstOrCreate(s).Error
 }
 
+// CreateSettingsTx is CreateSettings inside a caller-owned transaction (OIDC provisioning shares one tx).
+func CreateSettingsTx(tx *gorm.DB, s *models.Settings) error {
+	return tx.Where("org_id = ?", s.OrgID).Attrs(*s).FirstOrCreate(s).Error
+}
+
 // UpdateSettings updates org settings.
 func (q *SettingsQueries) UpdateSettings(s *models.Settings) error {
 	if err := q.Model(&models.Settings{}).Where("org_id = ?", s.OrgID).

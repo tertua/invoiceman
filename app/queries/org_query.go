@@ -75,33 +75,37 @@ func personalOrgName(user models.User) string {
 // EnsurePersonalOrg returns the org the user already belongs to, otherwise provisions an org plus owner membership in one transaction (idempotent).
 func (q *OrgQueries) EnsurePersonalOrg(userID uuid.UUID) (uuid.UUID, error) {
 	var orgID uuid.UUID
-	err := q.Transaction(func(tx *gorm.DB) error {
-		memberships, err := (&MembershipQueries{DB: tx}).ListByUser(userID)
-		if err != nil {
-			return err
-		}
-		if len(memberships) > 0 {
-			orgID = memberships[0].OrgID
-			return nil
-		}
-		user, err := (&UserQueries{DB: tx}).GetUserByID(userID)
-		if err != nil {
-			return err
-		}
-		org, err := (&OrgQueries{DB: tx}).CreateOrg(personalOrgName(user))
-		if err != nil {
-			return err
-		}
-		if err := (&MembershipQueries{DB: tx}).CreateOwner(org.ID, userID); err != nil {
-			return err
-		}
-		orgID = org.ID
-		return nil
-	})
-	if err != nil {
+	if err := q.Transaction(func(tx *gorm.DB) error {
+		var err error
+		orgID, err = EnsurePersonalOrgTx(tx, userID)
+		return err
+	}); err != nil {
 		return uuid.Nil, err
 	}
 	return orgID, nil
+}
+
+// EnsurePersonalOrgTx is EnsurePersonalOrg inside a caller-owned transaction; it never opens a nested tx.
+func EnsurePersonalOrgTx(tx *gorm.DB, userID uuid.UUID) (uuid.UUID, error) {
+	memberships, err := (&MembershipQueries{DB: tx}).ListByUser(userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if len(memberships) > 0 {
+		return memberships[0].OrgID, nil
+	}
+	user, err := (&UserQueries{DB: tx}).GetUserByID(userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	org, err := (&OrgQueries{DB: tx}).CreateOrg(personalOrgName(user))
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if err := (&MembershipQueries{DB: tx}).CreateOwner(org.ID, userID); err != nil {
+		return uuid.Nil, err
+	}
+	return org.ID, nil
 }
 
 // ResolveActiveOrgID applies D3: a hinted org wins when the membership exists, otherwise auto-provision or take the oldest membership.
