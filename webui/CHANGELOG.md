@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.3.1] - 2026-10-02
+
+### Added
+- Architecture Decision Records under `docs/adr/`: ADR 0001 defines the
+  `INTEGRATION CONTRACT` marker so a deliberate not-yet-used integration
+  point is never deleted as dead code, and `AGENTS.md` gains the
+  "buka pintu integrasi" command protocol (DB schema + ADR + door stub).
+
+### Fixed
+- Module map is back in sync: every controller owner file is referenced
+  in its domain row, and the stale `auth_verify.go` entry now points at
+  its split files (`auth_verify_handlers.go`, `auth_verify_token.go`).
+
 ## [v2.3.0] - 2026-10-02
 
 ### Added
