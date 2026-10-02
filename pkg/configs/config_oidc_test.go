@@ -108,3 +108,81 @@ func TestOIDCIssuerNormalized(t *testing.T) {
 	assert.Equal(t, "https://idp.example.com", cfg.OIDC.Issuer)
 	assert.True(t, cfg.OIDC.Active())
 }
+
+// TestOIDCRoleClaimDefaults verifies role sync is off out of the box.
+func TestOIDCRoleClaimDefaults(t *testing.T) {
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.False(t, cfg.OIDC.RoleSyncEnabled())
+	assert.Empty(t, cfg.OIDC.RoleClaim)
+	assert.Equal(t, "admin", cfg.OIDC.AdminRole)
+}
+
+// TestOIDCRoleClaimEnabled verifies a configured path activates role sync and
+// keeps the default admin value.
+func TestOIDCRoleClaimEnabled(t *testing.T) {
+	t.Setenv("OIDC_ENABLED", "true")
+	t.Setenv("OIDC_ISSUER", "https://idp.example.com")
+	t.Setenv("OIDC_CLIENT_ID", "client-1")
+	t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+	t.Setenv("OIDC_ROLE_CLAIM", "realm_access.roles")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.True(t, cfg.OIDC.RoleSyncEnabled())
+	assert.Equal(t, "realm_access.roles", cfg.OIDC.RoleClaim)
+	assert.Equal(t, "admin", cfg.OIDC.AdminRole)
+}
+
+// TestOIDCRoleClaimCustomAdmin verifies OIDC_ADMIN_ROLE overrides the default.
+func TestOIDCRoleClaimCustomAdmin(t *testing.T) {
+	t.Setenv("OIDC_ENABLED", "true")
+	t.Setenv("OIDC_ISSUER", "https://idp.example.com")
+	t.Setenv("OIDC_CLIENT_ID", "client-1")
+	t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+	t.Setenv("OIDC_ROLE_CLAIM", "roles")
+	t.Setenv("OIDC_ADMIN_ROLE", "superuser")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "superuser", cfg.OIDC.AdminRole)
+}
+
+// TestOIDCRoleClaimEmptySegment rejects a malformed dot-path when enabled.
+func TestOIDCRoleClaimEmptySegment(t *testing.T) {
+	t.Setenv("OIDC_ENABLED", "true")
+	t.Setenv("OIDC_ISSUER", "https://idp.example.com")
+	t.Setenv("OIDC_CLIENT_ID", "client-1")
+	t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+	t.Setenv("OIDC_ROLE_CLAIM", "a..b")
+
+	_, err := Load()
+	require.ErrorContains(t, err, "OIDC_ROLE_CLAIM")
+}
+
+// TestOIDCRoleClaimBlankAdminFallsBack verifies a blank OIDC_ADMIN_ROLE keeps
+// the "admin" default (envOr fallback), so role sync never fails startup over
+// it; the empty-admin guard in Validate is a programmatic-only safety net.
+func TestOIDCRoleClaimBlankAdminFallsBack(t *testing.T) {
+	t.Setenv("OIDC_ENABLED", "true")
+	t.Setenv("OIDC_ISSUER", "https://idp.example.com")
+	t.Setenv("OIDC_CLIENT_ID", "client-1")
+	t.Setenv("OIDC_CLIENT_SECRET", "secret-1")
+	t.Setenv("OIDC_ROLE_CLAIM", "roles")
+	t.Setenv("OIDC_ADMIN_ROLE", "  ")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "admin", cfg.OIDC.AdminRole)
+}
+
+// TestOIDCRoleClaimDisabledInert verifies a path with SSO off stays inert and
+// never trips validation (no role mapping runs while SSO is disabled).
+func TestOIDCRoleClaimDisabledInert(t *testing.T) {
+	t.Setenv("OIDC_ENABLED", "false")
+	t.Setenv("OIDC_ROLE_CLAIM", "a..b")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.True(t, cfg.OIDC.RoleSyncEnabled())
+}
