@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"io"
-	"net/http"
-	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/tertua/tupay/app/models"
@@ -83,14 +81,6 @@ func UpdateSettings(c fiber.Ctx) error {
 	return utils.OK(c, fiber.StatusOK, fiber.Map{"settings": settingsResponse(settings)})
 }
 
-// maxLogoSize caps uploaded company logos (matches the MPA hint).
-const maxLogoSize = 400 << 10
-
-var allowedLogoTypes = map[string]string{
-	"image/png": ".png", "image/jpeg": ".jpg",
-	"image/gif": ".gif", "image/webp": ".webp",
-}
-
 // UploadLogo stores the company logo file and points LogoURL at it.
 // Legacy data-URL and absolute values keep rendering unchanged; only new
 // uploads go through storage.
@@ -116,6 +106,7 @@ func UploadLogo(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "failed to load settings", nil)
 	}
+	const maxLogoSize = 400 << 10 // local constant, kept for clarity
 	file, err := c.FormFile("logo")
 	if err != nil || file == nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "logo file is required", nil)
@@ -128,12 +119,9 @@ func UploadLogo(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read logo file", nil)
 	}
 	defer func() { _ = reader.Close() }()
-	head := make([]byte, 512)
-	n, _ := io.ReadFull(reader, head)
-	ct := http.DetectContentType(head[:n])
-	ext, ok := allowedLogoTypes[strings.ToLower(strings.TrimSpace(ct))]
+	ct, ext, ok := utils.ValidateImage(reader, utils.LogoAllowedTypes)
 	if !ok {
-		// SVG is rejected: logos render on public pages, and inline SVG executes scripts in the viewer's origin (stored XSS).
+		// SVG is rejected by the helper (inline SVG executes scripts in the viewer's origin — stored XSS); other invalid types fail the allow list.
 		return utils.Fail(c, fiber.StatusBadRequest, "logo must be a PNG, JPEG, GIF or WEBP image", nil)
 	}
 	store, err := storage.Shared()

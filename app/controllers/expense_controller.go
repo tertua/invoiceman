@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"io"
-	"net/http"
 	"strings"
 	"time"
 
@@ -253,27 +252,6 @@ func DeleteExpense(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// maxReceiptUploadSize caps stored receipt attachments.
-const maxReceiptUploadSize = 10 << 20
-
-// receiptContentType sniffs the uploaded content; only raster images and
-// PDFs are accepted. SVG is rejected even though it sniffs as image/*:
-// stored SVG executes scripts in the viewer's origin when proxied.
-func receiptContentType(header, sniffed string) (string, bool) {
-	ct := sniffed
-	if ct == "" || ct == "application/octet-stream" {
-		ct = header
-	}
-	ct = strings.ToLower(strings.TrimSpace(ct))
-	if ct == "image/svg+xml" {
-		return "", false
-	}
-	if strings.HasPrefix(ct, "image/") || ct == "application/pdf" {
-		return ct, true
-	}
-	return "", false
-}
-
 // UploadReceipt stores a receipt attachment for an expense owned by the
 // current user, replacing any previous one.
 // @Description Upload an expense receipt.
@@ -310,6 +288,7 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err != nil || file == nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "receipt file is required", nil)
 	}
+	const maxReceiptUploadSize = 10 << 20 // local constant, kept for clarity
 	if file.Size > maxReceiptUploadSize {
 		return utils.Fail(c, fiber.StatusBadRequest, "receipt file is too large", nil)
 	}
@@ -318,7 +297,7 @@ func UploadReceipt(c fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
 	}
 	defer func() { _ = reader.Close() }()
-	ct, ok := receiptContentType(file.Header.Get("Content-Type"), sniffContentType(reader))
+	ct, ext, ok := utils.ValidateImage(reader, utils.ReceiptAllowedTypes)
 	if !ok {
 		return utils.Fail(c, fiber.StatusBadRequest, "receipt must be an image or PDF", nil)
 	}
@@ -326,7 +305,7 @@ func UploadReceipt(c fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "file storage is not configured", nil)
 	}
-	key := storage.ReceiptKey(orgID.String(), id.String(), extForContentType(ct))
+	key := storage.ReceiptKey(orgID.String(), id.String(), ext)
 	if _, err := reader.Seek(0, io.SeekStart); err != nil {
 		return utils.Fail(c, fiber.StatusBadRequest, "failed to read receipt file", nil)
 	}
@@ -439,31 +418,4 @@ func DeleteReceipt(c fiber.Ctx) error {
 	}
 	recordAudit(c, db, utils.CurrentActorID(c), "expense.receipt.delete", "expense", id.String(), "")
 	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// sniffContentType reads the first bytes for mime sniffing. The reader is
-// left consumed; callers must Seek back before uploading.
-func sniffContentType(r io.Reader) string {
-	head := make([]byte, 512)
-	n, _ := io.ReadFull(r, head)
-	return http.DetectContentType(head[:n])
-}
-
-func extForContentType(ct string) string {
-	switch strings.ToLower(strings.TrimSpace(ct)) {
-	case "image/png":
-		return ".png"
-	case "image/jpeg":
-		return ".jpg"
-	case "image/gif":
-		return ".gif"
-	case "image/webp":
-		return ".webp"
-	case "image/svg+xml":
-		return ".svg"
-	case "application/pdf":
-		return ".pdf"
-	default:
-		return ".bin"
-	}
 }
