@@ -17,6 +17,8 @@ type OIDCConfig struct {
 	ClientID     string // OIDC_CLIENT_ID
 	ClientSecret string // OIDC_CLIENT_SECRET
 	Scopes       string // OIDC_SCOPES (default "openid email profile")
+	RoleClaim    string // OIDC_ROLE_CLAIM: dot-path to the role list in the ID token ("" = off)
+	AdminRole    string // OIDC_ADMIN_ROLE: claim value that grants platform "admin" (default "admin")
 }
 
 // Active reports whether SSO login is usable: enabled with the mandatory
@@ -34,6 +36,12 @@ func (o OIDCConfig) ScopeList() []string {
 		}
 	}
 	return out
+}
+
+// RoleSyncEnabled reports whether role mapping is active: a claim path is set.
+// An empty path keeps the feature off (the default), so role is never touched.
+func (o OIDCConfig) RoleSyncEnabled() bool {
+	return strings.TrimSpace(o.RoleClaim) != ""
 }
 
 // Validate fail-fasts when SSO is switched on without the fields it needs;
@@ -60,6 +68,18 @@ func (o OIDCConfig) Validate() error {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return fmt.Errorf("OIDC_ISSUER must be an http(s) URL, got %q", o.Issuer)
 	}
+	// Role sync, when a path is configured, must be a usable dot-path and an
+	// admin value must exist to match against.
+	if o.RoleSyncEnabled() {
+		for _, seg := range strings.Split(o.RoleClaim, ".") {
+			if seg == "" {
+				return fmt.Errorf("OIDC_ROLE_CLAIM must be a dot-path with non-empty segments, got %q", o.RoleClaim)
+			}
+		}
+		if strings.TrimSpace(o.AdminRole) == "" {
+			return fmt.Errorf("OIDC_ADMIN_ROLE must not be empty")
+		}
+	}
 	return nil
 }
 
@@ -71,5 +91,7 @@ func loadOIDC() OIDCConfig {
 		ClientID:     strings.TrimSpace(os.Getenv("OIDC_CLIENT_ID")),
 		ClientSecret: strings.TrimSpace(os.Getenv("OIDC_CLIENT_SECRET")),
 		Scopes:       envOr("OIDC_SCOPES", "openid email profile"),
+		RoleClaim:    strings.TrimSpace(os.Getenv("OIDC_ROLE_CLAIM")),
+		AdminRole:    envOr("OIDC_ADMIN_ROLE", "admin"),
 	}
 }

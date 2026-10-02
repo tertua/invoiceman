@@ -173,6 +173,10 @@ func OIDCCallback(c fiber.Ctx) error {
 	if err := idToken.Claims(&claims); err != nil || claims.Sub == "" || claims.Email == "" {
 		return oidcErrorRedirect(c, "email")
 	}
+	// Decode the full verified payload once more so the configurable role path
+	// (OIDC_ROLE_CLAIM) can be walked; same source, same verification guarantees.
+	var allClaims map[string]any
+	_ = idToken.Claims(&allClaims)
 
 	db, err := database.OpenDBConnection()
 	if err != nil {
@@ -190,6 +194,10 @@ func OIDCCallback(c fiber.Ctx) error {
 		recordLoginFailure(c, db, user.Email, accountStatusReason(user.UserStatus), user.ID)
 		return oidcErrorRedirect(c, "denied")
 	}
+	// Sync after the status gate: a denied account must not change its role.
+	// The role is read from the DB per request, so this write is enough for the
+	// fresh session to see the mapped role (no token re-issue needed).
+	syncOIDCRole(c, db, &user, extractRawClaim(allClaims, cfg.RoleClaim))
 
 	tokens, err := utils.IssueSession(c, user.ID, "")
 	if err != nil {
