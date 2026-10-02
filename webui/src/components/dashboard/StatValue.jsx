@@ -6,7 +6,8 @@ import { CountUpValue } from "./CountUpValue";
 // so StatCard stays under its line budget and the count-up can be toggled
 // without touching the card chrome. `renderValue` is the money formatter used
 // on the animated path; the static path prints the preformatted string.
-export function StatValue({ Icon, label, value, suffix, delta, accent, animateValue, valueNumber, renderValue }) {
+// `sub` is the small count line under the value (e.g. "3 success").
+export function StatValue({ Icon, label, value, suffix, sub, delta, accent, animateValue, valueNumber, renderValue }) {
   const positive = delta == null ? null : delta >= 0;
   const displayValue = value == null || value === "" ? "—" : value;
   const animated = animateValue && valueNumber != null && renderValue;
@@ -41,6 +42,9 @@ export function StatValue({ Icon, label, value, suffix, delta, accent, animateVa
           </span>
         )}
       </div>
+      {sub && (
+        <div className={cn("text-xs", accent ? "text-white/70" : "text-[var(--ink-muted)]")}>{sub}</div>
+      )}
       {delta != null && (
         <Badge
           tone={accent ? "ink" : positive ? "success" : "danger"}

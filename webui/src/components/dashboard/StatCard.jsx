@@ -25,6 +25,7 @@ export function StatCard({
   label,
   value,
   suffix,
+  sub,
   delta,
   data = [],
   icon: Icon,
@@ -50,6 +51,7 @@ export function StatCard({
           label={label}
           value={value}
           suffix={suffix}
+          sub={sub}
           delta={delta}
           accent={accent}
           animateValue={animateValue}

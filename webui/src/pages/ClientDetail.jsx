@@ -136,7 +136,7 @@ export default function ClientDetail() {
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil size={15} /> {t("common.edit")}
           </Button>
-          <Button variant="ghost" onClick={onDelete} className="text-[var(--danger)] hover:bg-[var(--danger)]/10">
+          <Button variant="ghost" onClick={onDelete} aria-label={t("common.delete")} title={t("common.delete")} className="text-[var(--danger)] hover:bg-[var(--danger)]/10">
             <Trash2 size={15} />
           </Button>
         </div>

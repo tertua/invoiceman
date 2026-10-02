@@ -103,6 +103,8 @@ export default function InvoiceDetail() {
           <Button
             variant="ghost"
             onClick={onDelete}
+            aria-label={t("common.delete")}
+            title={t("common.delete")}
             className="text-[var(--danger)] hover:bg-[var(--danger)]/10"
           >
             <Trash2 size={15} />
