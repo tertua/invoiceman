@@ -43,11 +43,16 @@ func resolveOIDCUser(c fiber.Ctx, db *database.Queries, provider, sub, email str
 	// 2. Existing account with this email.
 	if user, err := db.GetUserByEmail(email); err == nil {
 		if !emailVerified {
-			// Email matches but the IdP has not proven mailbox ownership:
-			// linking here would allow account takeover via pre-registration.
+			// Unproven mailbox: linking here would allow takeover via pre-registration.
 			return models.User{}, "", errOIDCEmailUnverified
 		}
 		if err := db.LinkIdentity(user.ID, provider, sub, email); err != nil {
+			// Lost the link race: the row owner already claimed this exact subject.
+			if isUniqueViolation(err) {
+				if winner, ok := oidcIdentityWinner(db, provider, sub); ok {
+					return winner, "auth.login.oidc", nil
+				}
+			}
 			return models.User{}, "", errOIDCBusy
 		}
 		return user, "auth.identity.linked", nil
@@ -59,14 +64,14 @@ func resolveOIDCUser(c fiber.Ctx, db *database.Queries, provider, sub, email str
 	if !configs.Get().Auth.AllowRegistration {
 		return models.User{}, "", errOIDCDenied
 	}
-	return provisionOIDCUser(c, db, provider, sub, email, name)
+	return provisionOIDCUser(c, db, provider, sub, email, emailVerified, name)
 }
 
 // provisionOIDCUser creates a password-less account plus its identity and
 // personal org (same tenant path as register). PasswordHash stays empty:
 // ComparePasswords("", x) is always false, so an OIDC-only account can never
 // log in with a password.
-func provisionOIDCUser(c fiber.Ctx, db *database.Queries, provider, sub, email, name string) (models.User, string, error) {
+func provisionOIDCUser(c fiber.Ctx, db *database.Queries, provider, sub, email string, emailVerified bool, name string) (models.User, string, error) {
 	if strings.TrimSpace(name) == "" {
 		name = email
 	}
@@ -80,25 +85,45 @@ func provisionOIDCUser(c fiber.Ctx, db *database.Queries, provider, sub, email, 
 		UserStatus:   models.UserStatusActive,
 		UserRole:     repository.UserRoleName,
 	}
-	if err := db.CreateUser(user); err != nil {
-		return models.User{}, "", errOIDCBusy
-	}
-	if err := db.CreateIdentity(&models.UserIdentity{
-		ID:        uuid.New(),
-		UserID:    user.ID,
-		Provider:  provider,
-		Sub:       sub,
-		Email:     email,
-		CreatedAt: time.Now(),
-	}); err != nil {
-		return models.User{}, "", errOIDCBusy
-	}
-	orgID, err := db.EnsurePersonalOrg(user.ID)
-	if err != nil {
-		return models.User{}, "", errOIDCBusy
-	}
-	if err := db.CreateSettings(models.DefaultSettings(orgID)); err != nil {
+	if err := db.ProvisionOIDCUser(user, provider, sub, email); err != nil {
+		if isUniqueViolation(err) {
+			// Same subject linked first: the row's owner is this same login.
+			if winner, ok := oidcIdentityWinner(db, provider, sub); ok {
+				return winner, "auth.login.oidc", nil
+			}
+			// Email inserted first: only a verified mailbox may claim that account.
+			if !emailVerified {
+				return models.User{}, "", errOIDCEmailUnverified
+			}
+			if winner, ok := oidcEmailWinner(db, email); ok {
+				return winner, "auth.login.oidc", nil
+			}
+		}
 		return models.User{}, "", errOIDCBusy
 	}
 	return *user, "auth.register.oidc", nil
+}
+
+// oidcIdentityWinner resolves the user that owns a (provider, sub) identity,
+// used when our insert lost the unique race on that key.
+func oidcIdentityWinner(db *database.Queries, provider, sub string) (models.User, bool) {
+	identity, err := db.GetByIdentity(provider, sub)
+	if err != nil {
+		return models.User{}, false
+	}
+	user, err := db.GetUserByID(identity.UserID)
+	if err != nil {
+		return models.User{}, false
+	}
+	return user, true
+}
+
+// oidcEmailWinner resolves the account owning an email that won a provision
+// race (oldest account wins, matching GetUserByEmail's deterministic ordering).
+func oidcEmailWinner(db *database.Queries, email string) (models.User, bool) {
+	user, err := db.GetUserByEmail(email)
+	if err != nil {
+		return models.User{}, false
+	}
+	return user, true
 }

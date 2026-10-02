@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -133,4 +134,127 @@ func TestResolveOIDCUser(t *testing.T) {
 			assert.False(t, utils.ComparePasswords(got.PasswordHash, "anything"), "empty hash must never match a password")
 		})
 	}
+}
+
+// TestProvisionOIDCUserRollback proves the atomic provision leaves no partial
+// account. The query layer is exercised directly (no controller re-fetch): a
+// duplicate (provider, sub) fails the identity insert inside the tx, so the
+// whole user row is rolled back.
+func TestProvisionOIDCUserRollback(t *testing.T) {
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+
+	// The subject is already linked to another user, so the new identity insert
+	// hits the unique index and fails in the middle of the transaction.
+	owner := oidcSeedUser(t, "rollback-owner@example.com", models.UserStatusActive)
+	require.NoError(t, db.LinkIdentity(owner.ID, models.IdentityProviderOIDC, "sub-rollback", owner.Email))
+
+	email := "rollback-new@example.com"
+	user := &models.User{
+		ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), Name: "Rollback",
+		Email: email, PasswordHash: "", UserStatus: models.UserStatusActive, UserRole: "user",
+	}
+	require.Error(t, db.ProvisionOIDCUser(user, models.IdentityProviderOIDC, "sub-rollback", email))
+
+	// The user row must NOT exist: the tx rolled back all five inserts.
+	_, uerr := db.GetUserByEmail(email)
+	assert.ErrorIs(t, uerr, sql.ErrNoRows, "no user row may survive a rolled-back provision")
+	// The original identity is untouched.
+	identity, ierr := db.GetByIdentity(models.IdentityProviderOIDC, "sub-rollback")
+	require.NoError(t, ierr)
+	assert.Equal(t, owner.ID, identity.UserID)
+}
+
+// TestResolveOIDCUserRaceLoser proves a lost link race logs into the winner
+// instead of surfacing busy: the identity row already exists by the time we
+// try to link it, so the unique-violation re-fetch resolves to its owner.
+func TestResolveOIDCUserRaceLoser(t *testing.T) {
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+	t.Setenv("ALLOW_REGISTRATION", "true")
+
+	// The winner linked first; our resolve sees the identity as "known" and
+	// logs straight in (the same path a loser's re-fetch takes).
+	winner := oidcSeedUser(t, "race-loser@example.com", models.UserStatusActive)
+	require.NoError(t, db.LinkIdentity(winner.ID, models.IdentityProviderOIDC, "sub-race-loser", winner.Email))
+
+	var got models.User
+	var event string
+	var gotErr error
+	oidcTestCtx(t, func(c fiber.Ctx) error {
+		got, event, gotErr = resolveOIDCUser(c, db, models.IdentityProviderOIDC, "sub-race-loser", winner.Email, true, "Race")
+		return c.SendStatus(fiber.StatusOK)
+	})
+	require.NoError(t, gotErr)
+	assert.Equal(t, "auth.login.oidc", event)
+	assert.Equal(t, winner.ID, got.ID)
+}
+
+// TestProvisionOIDCUserRaceCreate proves a create-path unique-violation
+// re-fetches the existing owner: provisioning a subject that is already linked
+// returns that account (login), never busy, and adds no second user.
+func TestProvisionOIDCUserRaceCreate(t *testing.T) {
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+
+	existing := oidcSeedUser(t, "race-create@example.com", models.UserStatusActive)
+	require.NoError(t, db.LinkIdentity(existing.ID, models.IdentityProviderOIDC, "sub-race-create", existing.Email))
+
+	var got models.User
+	var event string
+	var gotErr error
+	oidcTestCtx(t, func(c fiber.Ctx) error {
+		got, event, gotErr = provisionOIDCUser(c, db, models.IdentityProviderOIDC, "sub-race-create", "race-create-new@example.com", true, "Race")
+		return c.SendStatus(fiber.StatusOK)
+	})
+	require.NoError(t, gotErr)
+	assert.Equal(t, "auth.login.oidc", event)
+	assert.Equal(t, existing.ID, got.ID)
+	_, uerr := db.GetUserByEmail("race-create-new@example.com")
+	assert.ErrorIs(t, uerr, sql.ErrNoRows, "the losing provision must not create a second user")
+}
+
+// TestProvisionOIDCUserRaceEmailUnverified proves the email re-fetch respects
+// the verified-mailbox gate: a lost race on users.email must NOT log into the
+// existing account when the IdP has not verified the email.
+func TestProvisionOIDCUserRaceEmailUnverified(t *testing.T) {
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+
+	// The account owning the email already exists; our provision loses on the
+	// users.email unique index. With email_verified=false it must be rejected
+	// (email), not silently logged in.
+	existing := oidcSeedUser(t, "race-email@example.com", models.UserStatusActive)
+
+	var got models.User
+	var event string
+	var gotErr error
+	oidcTestCtx(t, func(c fiber.Ctx) error {
+		got, event, gotErr = provisionOIDCUser(c, db, models.IdentityProviderOIDC, "sub-race-email", existing.Email, false, "Race")
+		return c.SendStatus(fiber.StatusOK)
+	})
+	require.Error(t, gotErr)
+	assert.Equal(t, "email", oidcResolveCode(gotErr))
+	assert.Equal(t, models.User{}, got)
+	assert.Empty(t, event)
+}
+
+// TestProvisionOIDCUserRaceEmailVerified proves the email re-fetch still logs
+// in when the mailbox is verified (the legitimate concurrent sign-up).
+func TestProvisionOIDCUserRaceEmailVerified(t *testing.T) {
+	db, err := database.OpenDBConnection()
+	require.NoError(t, err)
+
+	existing := oidcSeedUser(t, "race-email-ok@example.com", models.UserStatusActive)
+
+	var got models.User
+	var event string
+	var gotErr error
+	oidcTestCtx(t, func(c fiber.Ctx) error {
+		got, event, gotErr = provisionOIDCUser(c, db, models.IdentityProviderOIDC, "sub-race-email-ok", existing.Email, true, "Race")
+		return c.SendStatus(fiber.StatusOK)
+	})
+	require.NoError(t, gotErr)
+	assert.Equal(t, "auth.login.oidc", event)
+	assert.Equal(t, existing.ID, got.ID)
 }
