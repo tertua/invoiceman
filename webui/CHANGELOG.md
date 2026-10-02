@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.3.0] - 2026-10-02
+
+### Added
+- OIDC login can map a configurable role claim (`OIDC_ROLE_CLAIM` /
+  `OIDC_ADMIN_ROLE`) to the platform role on sign-in.
+
+### Changed
+- The public pay shell no longer shows a language switcher.
+- OIDC provider discovery is cached per issuer, and the issuer is
+  validated/normalized at startup.
+
+### Fixed
+- OIDC provisioning is atomic and transactional: identity linking is
+  TOCTOU-safe and role-claim extraction walks the claims payload once.
+- WebUI: settlement count renders correctly, icon-only buttons are
+  labelled, and the expenses empty-state receipt outline is straightened.
+- ID copy keeps familiar English terms.
+
 ## [v2.2.0] - 2026-10-01
 
 ### Added
