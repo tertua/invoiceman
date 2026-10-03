@@ -14,8 +14,8 @@ const docTemplate = `{
             "name": "API Support"
         },
         "license": {
-            "name": "GNU GPLv3",
-            "url": "https://www.gnu.org/licenses/gpl-3.0.html"
+            "name": "GNU AGPLv3",
+            "url": "https://www.gnu.org/licenses/agpl-3.0.html"
         },
         "version": "{{.Version}}"
     },

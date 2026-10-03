@@ -7,7 +7,7 @@
 <p align="center"><em>Invoicing &amp; payments, minus the busywork.</em></p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue.svg"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg"></a>
   <a href="VERSION"><img alt="Version" src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftertua%2Ftupay%2Fdev%2FVERSION&amp;search=(.*)&amp;label=version&amp;color=blue"></a>
   <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8.svg?logo=go&amp;logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&amp;logoColor=white">
@@ -69,4 +69,4 @@ make dev-fe   # Vite dev server on :5173
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
+AGPL-3.0 — see [LICENSE](LICENSE).

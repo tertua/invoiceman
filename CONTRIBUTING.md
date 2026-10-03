@@ -169,4 +169,4 @@ If any of these fail, the CI pipeline will reject the PR.
 ## License
 
 By contributing, you agree that your contributions are licensed under the
-project's [GPL-3.0 license](LICENSE).
+project's [AGPL-3.0 license](LICENSE).

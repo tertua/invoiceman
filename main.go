@@ -62,8 +62,8 @@ import (
 // @description 501 without GEMINI_API_KEY.
 // @termsOfService http://swagger.io/terms/
 // @contact.name API Support
-// @license.name GNU GPLv3
-// @license.url https://www.gnu.org/licenses/gpl-3.0.html
+// @license.name GNU AGPLv3
+// @license.url https://www.gnu.org/licenses/agpl-3.0.html
 // @BasePath /api
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
