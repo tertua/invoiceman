@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.4.0] - 2026-10-03
+
 ### Changed
 - Project license switched from GPLv3 to AGPLv3: the network interaction
   clause now requires offering source to users who interact with TuPay
