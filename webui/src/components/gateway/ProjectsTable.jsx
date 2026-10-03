@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, RotateCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adminGatewayApi } from "@/api/adminGateway";
+import { AdminDenseCell, AdminDenseRow, AdminDenseTable } from "@/components/admin/AdminDenseTable";
 import { StatusPill } from "@/components/gateway/StatusPill";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { useLang } from "@/context/LangContext";
 import { gatewayProjectsKey } from "@/hooks/useGatewayAdmin";
 import {
@@ -47,38 +47,32 @@ export function ProjectsTable({ projects, onCredentials }) {
     }
   }
   return (
-    <Card padding="none" className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
-          <thead className="bg-[var(--surface-2)] text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-            <tr>
-              <th className="px-4 py-3">{t("gateway.project")}</th>
-              <th className="px-4 py-3">{t("gateway.gateway")}</th>
-              <th className="px-4 py-3">{t("gateway.webhook")}</th>
-              <th className="px-4 py-3">{t("gateway.status")}</th>
-              <th className="px-4 py-3 text-right">{t("gateway.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((project) => (
-              <tr key={project.slug} className="border-t border-[var(--border)] align-top">
-                <td className="px-4 py-4"><div className="font-medium text-[var(--ink)]">{project.name}</div><div className="mt-1 text-xs text-[var(--ink-muted)]">{project.slug}</div></td>
-                <td className="px-4 py-4"><code className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs">{project.default_gateway || t("gateway.noDefault")}</code></td>
-                <td className="max-w-[260px] truncate px-4 py-4 text-xs text-[var(--ink-muted)]" title={project.webhook_url}>{project.webhook_url}</td>
-                <td className="px-4 py-4"><StatusPill active={project.is_active} t={t} /></td>
-                <td className="px-4 py-4 text-right">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => toggle(project)} disabled={update.isPending}>{project.is_active ? t("gateway.disable") : t("gateway.enable")}</Button>
-                    <Button size="sm" variant="outline" onClick={() => rotate(rotateKey, project.slug)} disabled={rotateKey.isPending}><KeyRound size={13} />{t("gateway.rotateKey")}</Button>
-                    <Button size="sm" variant="outline" onClick={() => rotate(rotateSecret, project.slug)} disabled={rotateSecret.isPending}><RotateCw size={13} />{t("gateway.rotateSecret")}</Button>
-                    <Button size="sm" variant="ghost" className="text-[var(--danger)] hover:bg-[var(--danger)]/10" onClick={() => destroy(project)} disabled={remove.isPending}><Trash2 size={13} />{t("common.delete")}</Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+    <AdminDenseTable
+      minWidthClassName="min-w-[900px]"
+      columns={[
+        { key: "project", label: t("gateway.project") },
+        { key: "gateway", label: t("gateway.gateway") },
+        { key: "webhook", label: t("gateway.webhook") },
+        { key: "status", label: t("gateway.status") },
+        { key: "actions", label: t("gateway.actions"), align: "right" },
+      ]}
+    >
+      {projects.map((project) => (
+        <AdminDenseRow key={project.slug} className="align-top">
+          <AdminDenseCell><div className="font-medium text-[var(--ink)]">{project.name}</div><div className="mt-0.5 text-xs text-[var(--ink-muted)]">{project.slug}</div></AdminDenseCell>
+          <AdminDenseCell><code className="rounded bg-[var(--surface-2)] px-2 py-1 text-xs">{project.default_gateway || t("gateway.noDefault")}</code></AdminDenseCell>
+          <AdminDenseCell className="max-w-[260px] truncate text-xs text-[var(--ink-muted)]" title={project.webhook_url}>{project.webhook_url}</AdminDenseCell>
+          <AdminDenseCell><StatusPill active={project.is_active} t={t} /></AdminDenseCell>
+          <AdminDenseCell className="text-right">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => toggle(project)} disabled={update.isPending}>{project.is_active ? t("gateway.disable") : t("gateway.enable")}</Button>
+              <Button size="sm" variant="outline" onClick={() => rotate(rotateKey, project.slug)} disabled={rotateKey.isPending}><KeyRound size={13} />{t("gateway.rotateKey")}</Button>
+              <Button size="sm" variant="outline" onClick={() => rotate(rotateSecret, project.slug)} disabled={rotateSecret.isPending}><RotateCw size={13} />{t("gateway.rotateSecret")}</Button>
+              <Button size="sm" variant="ghost" className="text-[var(--danger)] hover:bg-[var(--danger)]/10" onClick={() => destroy(project)} disabled={remove.isPending}><Trash2 size={13} />{t("common.delete")}</Button>
+            </div>
+          </AdminDenseCell>
+        </AdminDenseRow>
+      ))}
+    </AdminDenseTable>
   );
 }

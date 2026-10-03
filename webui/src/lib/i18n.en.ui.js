@@ -28,6 +28,21 @@ export const uiEn = {
     "finish.successAnimAria": "Payment successful",
     /* invite-only registration */
     "auth.invite.subhead": "You've been invited — create your account to join the team.",
+    /* console admin — shell header strip + page stat tiles */
+    "admin.stripConfigured": "{count} configured",
+    "admin.stripSandbox": "Sandbox",
+    "admin.stripLive": "Live",
+    "admin.statProjects": "Projects",
+    "admin.statActive": "Active",
+    "admin.statDeliveries": "Deliveries",
+    "admin.statFailed": "Failed",
+    "admin.statUsers": "Accounts",
+    "admin.statAdmins": "Admins",
+    "admin.statBlocked": "Blocked",
+    "admin.statSettled": "Settled",
+    "admin.sectionProjects": "Connected projects",
+    "admin.sectionDeliveries": "Webhook deliveries",
+    "status.delivered": "Delivered",
     /* admin user block/unblock */
     "admin.block": "Block",
     "admin.unblock": "Unblock",

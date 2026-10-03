@@ -26,6 +26,21 @@ export const uiId = {
     "finish.successAnimAria": "Pembayaran berhasil",
     /* invite-only registration */
     "auth.invite.subhead": "Anda diundang — buat akun untuk bergabung dengan tim.",
+    /* console admin — shell header strip + page stat tiles */
+    "admin.stripConfigured": "{count} terkonfigurasi",
+    "admin.stripSandbox": "Sandbox",
+    "admin.stripLive": "Live",
+    "admin.statProjects": "Proyek",
+    "admin.statActive": "Aktif",
+    "admin.statDeliveries": "Pengiriman",
+    "admin.statFailed": "Gagal",
+    "admin.statUsers": "Akun",
+    "admin.statAdmins": "Admin",
+    "admin.statBlocked": "Diblokir",
+    "admin.statSettled": "Settled",
+    "admin.sectionProjects": "Proyek terhubung",
+    "admin.sectionDeliveries": "Pengiriman webhook",
+    "status.delivered": "Terkirim",
     /* admin user block/unblock */
     "admin.block": "Blokir",
     "admin.unblock": "Buka blokir",
